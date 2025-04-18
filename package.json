@@ -1,6 +1,6 @@
 {
   "name": "@ripwords/myinvois-client",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "MyInvois client",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
