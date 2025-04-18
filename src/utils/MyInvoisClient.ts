@@ -10,7 +10,7 @@ export class MyInvoisClient {
   private readonly clientId: string
   private readonly clientSecret: string
   private token = ''
-  private tokenExpiration = new Date()
+  private tokenExpiration: Date | undefined
 
   constructor(
     clientId: string,
@@ -21,7 +21,7 @@ export class MyInvoisClient {
     this.clientSecret = clientSecret
 
     if (environment === 'sandbox') {
-      this.baseUrl = 'https://preprod-mytax.hasil.gov.my/'
+      this.baseUrl = 'https://preprod-mytax.hasil.gov.my'
     } else {
       this.baseUrl = 'https://mytax.hasil.gov.my'
     }
@@ -51,7 +51,7 @@ export class MyInvoisClient {
   }
 
   private async getToken() {
-    if (this.tokenExpiration < new Date()) {
+    if (!this.tokenExpiration || this.tokenExpiration < new Date()) {
       await this.refreshToken()
     }
 
