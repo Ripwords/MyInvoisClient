@@ -1,4 +1,4 @@
-import { ofetch } from 'ofetch'
+import { ofetch } from 'ofetch/node'
 
 interface TokenResponse {
   access_token: string

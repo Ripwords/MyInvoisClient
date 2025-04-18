@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MyInvoisClient } from '../src/utils/MyInvoisClient'
-import { ofetch } from 'ofetch'
+import { ofetch } from 'ofetch/node'
 
 vi.mock('ofetch', () => ({
   ofetch: vi.fn(),
