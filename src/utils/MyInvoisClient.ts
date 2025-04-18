@@ -1,5 +1,3 @@
-import { ofetch } from 'ofetch/node'
-
 interface TokenResponse {
   access_token: string
   expires_in: number
@@ -21,33 +19,36 @@ export class MyInvoisClient {
     this.clientSecret = clientSecret
 
     if (environment === 'sandbox') {
-      this.baseUrl = 'https://preprod-mytax.hasil.gov.my'
+      this.baseUrl = 'https://preprod-api.myinvois.hasil.gov.my'
     } else {
-      this.baseUrl = 'https://mytax.hasil.gov.my'
+      this.baseUrl = 'https://api.myinvois.hasil.gov.my'
     }
   }
 
   private async refreshToken() {
-    const tokenResponse = await ofetch<TokenResponse>(
-      `${this.baseUrl}/connect/token`,
-      {
+    try {
+      const response = await fetch(`${this.baseUrl}/connect/token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: {
+        body: new URLSearchParams({
           grant_type: 'client_credentials',
           client_id: this.clientId,
           client_secret: this.clientSecret,
           scope: 'InvoicingAPI',
-        },
-      },
-    )
+        }),
+      })
 
-    this.token = tokenResponse.access_token
-    this.tokenExpiration = new Date(
-      Date.now() + tokenResponse.expires_in * 1000,
-    )
+      const tokenResponse: TokenResponse = await response.json()
+
+      this.token = tokenResponse.access_token
+      this.tokenExpiration = new Date(
+        Date.now() + tokenResponse.expires_in * 1000,
+      )
+    } catch (error) {
+      console.error(error)
+    }
   }
 
   private async getToken() {
@@ -58,16 +59,12 @@ export class MyInvoisClient {
     return this.token
   }
 
-  private async fetch<T>(
-    path: string,
-    options: Parameters<typeof ofetch>[1] = {},
-  ) {
+  private async fetch(path: string, options: Parameters<typeof fetch>[1] = {}) {
     const token = await this.getToken()
 
-    return ofetch<T>(`${this.baseUrl}${path}`, {
+    return fetch(`${this.baseUrl}${path}`, {
       ...options,
       headers: { ...options.headers, Authorization: `Bearer ${token}` },
-      responseType: 'json',
     })
   }
 
@@ -80,15 +77,20 @@ export class MyInvoisClient {
    */
   async verifyTin(tin: string, nric: string) {
     try {
-      await this.fetch<void>(
+      const response = await this.fetch(
         `/api/v1.0/taxpayer/validate/${tin}?idType=NRIC&idValue=${nric}`,
         {
           method: 'GET',
         },
       )
 
-      return true
-    } catch {
+      if (response.status === 200) {
+        return true
+      }
+
+      return false
+    } catch (error) {
+      console.error(error)
       return false
     }
   }

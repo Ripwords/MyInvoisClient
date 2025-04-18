@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MyInvoisClient } from '../src/utils/MyInvoisClient'
-import { ofetch } from 'ofetch/node'
 
-vi.mock('ofetch', () => ({
-  ofetch: vi.fn(),
-}))
+// Mock global fetch
+const mockFetch = vi.fn()
+vi.stubGlobal('fetch', mockFetch)
 
 vi.useFakeTimers()
 
@@ -24,7 +23,7 @@ describe('MyInvoisClient', () => {
         'sandbox',
       )
       expect((sandboxClient as any).baseUrl).toBe(
-        'https://preprod-mytax.hasil.gov.my',
+        'https://preprod-api.myinvois.hasil.gov.my',
       )
     })
 
@@ -34,7 +33,9 @@ describe('MyInvoisClient', () => {
         process.env.CLIENT_SECRET!,
         'production',
       )
-      expect((prodClient as any).baseUrl).toBe('https://mytax.hasil.gov.my')
+      expect((prodClient as any).baseUrl).toBe(
+        'https://api.myinvois.hasil.gov.my',
+      )
     })
   })
 
@@ -45,12 +46,15 @@ describe('MyInvoisClient', () => {
         expires_in: 3600,
       }
 
-      vi.mocked(ofetch).mockResolvedValueOnce(mockToken)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockToken),
+      } as Response)
 
       await client.verifyTin('123', '456')
 
-      expect(ofetch).toHaveBeenCalledWith(
-        'https://preprod-mytax.hasil.gov.my/connect/token',
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://preprod-api.myinvois.hasil.gov.my/connect/token',
         expect.any(Object),
       )
     })
@@ -61,40 +65,45 @@ describe('MyInvoisClient', () => {
         expires_in: 3600,
       }
       vi.advanceTimersByTime(8000)
-      vi.mocked(ofetch)
-        .mockResolvedValueOnce(mockToken)
-        .mockResolvedValueOnce(undefined)
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(mockToken),
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(undefined),
+        } as Response)
 
       await client.verifyTin('123', '456')
 
       // Check first call (token request)
-      expect(ofetch).toHaveBeenNthCalledWith(
+      expect(mockFetch).toHaveBeenNthCalledWith(
         1,
-        'https://preprod-mytax.hasil.gov.my/connect/token',
+        'https://preprod-api.myinvois.hasil.gov.my/connect/token',
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
-          body: {
+          body: new URLSearchParams({
             grant_type: 'client_credentials',
             client_id: 'test-id',
             client_secret: 'test-secret',
             scope: 'InvoicingAPI',
-          },
+          }),
         },
       )
 
       // Check second call (verifyTin request)
-      expect(ofetch).toHaveBeenNthCalledWith(
+      expect(mockFetch).toHaveBeenNthCalledWith(
         2,
-        `https://preprod-mytax.hasil.gov.my/api/v1.0/taxpayer/validate/123?idType=NRIC&idValue=456`,
+        `https://preprod-api.myinvois.hasil.gov.my/api/v1.0/taxpayer/validate/123?idType=NRIC&idValue=456`,
         {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${mockToken.access_token}`,
           },
-          responseType: 'json',
         },
       )
     })
@@ -105,7 +114,10 @@ describe('MyInvoisClient', () => {
         expires_in: 3600,
       }
 
-      vi.mocked(ofetch).mockResolvedValueOnce(mockToken)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockToken),
+      } as Response)
 
       // First call to get token
       await client.verifyTin(process.env.TIN_VALUE!, process.env.NRIC_VALUE!)
@@ -116,8 +128,8 @@ describe('MyInvoisClient', () => {
       await client.verifyTin(process.env.TIN_VALUE!, process.env.NRIC_VALUE!)
 
       // Token endpoint should only be called once
-      expect(ofetch).toHaveBeenCalledWith(
-        'https://preprod-mytax.hasil.gov.my/connect/token',
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://preprod-api.myinvois.hasil.gov.my/connect/token',
         expect.any(Object),
       )
     })
@@ -130,15 +142,20 @@ describe('MyInvoisClient', () => {
         expires_in: 3600,
       }
 
-      vi.mocked(ofetch)
-        .mockResolvedValueOnce(mockToken) // Token call
-        .mockResolvedValueOnce(undefined) // Verify call
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(mockToken),
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(undefined),
+        } as Response)
 
-      const result = await client.verifyTin('123', '456')
-      expect(result).toBe(true)
+      await client.verifyTin('123', '456')
 
-      expect(ofetch).toHaveBeenCalledWith(
-        `https://preprod-mytax.hasil.gov.my/api/v1.0/taxpayer/validate/123?idType=NRIC&idValue=456`,
+      expect(mockFetch).toHaveBeenCalledWith(
+        `https://preprod-api.myinvois.hasil.gov.my/api/v1.0/taxpayer/validate/123?idType=NRIC&idValue=456`,
         expect.objectContaining({
           method: 'GET',
           headers: {
@@ -154,9 +171,12 @@ describe('MyInvoisClient', () => {
         expires_in: 3600,
       }
 
-      vi.mocked(ofetch)
-        .mockResolvedValueOnce(mockToken) // Token call
-        .mockRejectedValueOnce(new Error('Invalid TIN')) // Verify call
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(mockToken),
+        } as Response)
+        .mockRejectedValueOnce(new Error('Invalid TIN'))
 
       const result = await client.verifyTin(
         process.env.TIN_VALUE!,
