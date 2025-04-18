@@ -8,6 +8,7 @@
   "type": "module",
   "scripts": {
     "build": "rolldown -c rolldown.config.ts",
+    "release": "bun build && npm publish && git push --follow-tags",
     "lint": "oxlint",
     "test": "vitest"
   },
