@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    /* Base Options: */
+    "esModuleInterop": true,
+    "skipLibCheck": false,
+    "target": "ESNext",
+    "allowJs": false,
+    "resolveJsonModule": true,
+    "moduleDetection": "force",
+    "isolatedModules": true, // Often recommended for bundlers
+    /* Strictness */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitAny": true,
+    /* Bundler Behavior */
+    "moduleResolution": "Bundler", // Or "NodeNext"
+    "module": "ESNext",
+    "noEmit": true, // Rolldown handles emission
+    /* Path Resolution */
+    "baseUrl": ".", // Important for resolving paths relative to root
+    /* Type Checking */
+    "types": [
+      "bun"
+    ] // Include Bun types if using Bun runtime features
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "rolldown.config.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "name": "myinvois-client",
+  "module": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "build": "rolldown -c rolldown.config.ts",
+    "lint": "oxlint",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "oxlint": "^0.16.6",
+    "prettier": "^3.5.3",
+    "vitest": "^3.1.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "ofetch": "^1.4.1",
+    "rolldown": "^1.0.0-beta.7",
+    "rolldown-plugin-dts": "^0.7.0"
+  }
+}
