@@ -12,15 +12,16 @@ describe('MyInvoisClient', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    client = new MyInvoisClient('test-id', 'test-secret', 'sandbox')
+    client = new MyInvoisClient('test-id', 'test-secret', 'sandbox', false)
   })
 
   describe('constructor', () => {
     it('should set sandbox URL when environment is sandbox', () => {
       const sandboxClient = new MyInvoisClient(
-        process.env.CLIENT_ID!,
-        process.env.CLIENT_SECRET!,
+        'test-id',
+        'test-secret',
         'sandbox',
+        true,
       )
       expect((sandboxClient as any).baseUrl).toBe(
         'https://preprod-api.myinvois.hasil.gov.my',
@@ -29,9 +30,10 @@ describe('MyInvoisClient', () => {
 
     it('should set production URL when environment is production', () => {
       const prodClient = new MyInvoisClient(
-        process.env.CLIENT_ID!,
-        process.env.CLIENT_SECRET!,
+        'test-id',
+        'test-secret',
         'production',
+        true,
       )
       expect((prodClient as any).baseUrl).toBe(
         'https://api.myinvois.hasil.gov.my',
@@ -64,7 +66,7 @@ describe('MyInvoisClient', () => {
         access_token: 'test-token',
         expires_in: 3600,
       }
-      vi.advanceTimersByTime(8000)
+
       mockFetch
         .mockResolvedValueOnce({
           ok: true,
@@ -152,6 +154,8 @@ describe('MyInvoisClient', () => {
           json: () => Promise.resolve(undefined),
         } as Response)
 
+      await client.verifyTin('123', '456')
+      vi.setSystemTime(new Date(Date.now() + 1000 * 8000))
       await client.verifyTin('123', '456')
 
       expect(mockFetch).toHaveBeenCalledWith(

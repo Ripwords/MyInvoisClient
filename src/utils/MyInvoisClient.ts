@@ -7,6 +7,7 @@ export class MyInvoisClient {
   private readonly baseUrl: string
   private readonly clientId: string
   private readonly clientSecret: string
+  private readonly debug: boolean
   private token = ''
   private tokenExpiration: Date | undefined
 
@@ -14,10 +15,11 @@ export class MyInvoisClient {
     clientId: string,
     clientSecret: string,
     environment: 'sandbox' | 'production',
+    debug: boolean = false,
   ) {
     this.clientId = clientId
     this.clientSecret = clientSecret
-
+    this.debug = debug
     if (environment === 'sandbox') {
       this.baseUrl = 'https://preprod-api.myinvois.hasil.gov.my'
     } else {
@@ -47,12 +49,17 @@ export class MyInvoisClient {
         Date.now() + tokenResponse.expires_in * 1000,
       )
     } catch (error) {
-      console.error(error)
+      if (this.debug) {
+        console.error(error)
+      }
     }
   }
 
   private async getToken() {
     if (!this.tokenExpiration || this.tokenExpiration < new Date()) {
+      if (this.debug) {
+        console.log('Refreshing token')
+      }
       await this.refreshToken()
     }
 
@@ -90,7 +97,9 @@ export class MyInvoisClient {
 
       return false
     } catch (error) {
-      console.error(error)
+      if (this.debug) {
+        console.error(error)
+      }
       return false
     }
   }
