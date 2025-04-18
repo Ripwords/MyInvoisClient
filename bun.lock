@@ -5,13 +5,14 @@
       "name": "e-invoice-client",
       "dependencies": {
         "ofetch": "^1.4.1",
-        "rolldown": "^1.0.0-beta.7",
-        "rolldown-plugin-dts": "^0.7.0",
       },
       "devDependencies": {
         "@types/bun": "latest",
+        "dotenv": "^16.5.0",
         "oxlint": "^0.16.6",
         "prettier": "^3.5.3",
+        "rolldown": "^1.0.0-beta.7",
+        "rolldown-plugin-dts": "^0.7.0",
         "vitest": "^3.1.1",
       },
       "peerDependencies": {
@@ -267,6 +268,8 @@
     "deep-eql": ["deep-eql@5.0.2", "", {}, "sha512-h5k/5U50IJJFpzfL6nO9jaaumfjO/f2NjK/oYB2Djzm4p9L+3T9qWpZqZ2hAbLPuuYq9wrU08WQyBTL5GbPk5Q=="],
 
     "destr": ["destr@2.0.5", "", {}, "sha512-ugFTXCtDZunbzasqBxrK93Ik/DRYsO6S/fedkWEMKqt04xZ4csmnmwGDBAb07QWNaGMAmnTIemsYZCksjATwsA=="],
+
+    "dotenv": ["dotenv@16.5.0", "", {}, "sha512-m/C+AwOAr9/W1UOIZUo232ejMNnJAJtYQjUbHoNTBNTJSvqzzDh7vnrei3o3r3m9blf6ZoDkvcw0VmozNRFJxg=="],
 
     "dts-resolver": ["dts-resolver@0.1.1", "", { "dependencies": { "oxc-resolver": "^5.2.0", "pathe": "^2.0.3" } }, "sha512-Pj0AEP6US2fH1kwYAUHPh5f8XBawGKr25PGzCRnCQne/MW9CvFczL4u++FC8+jO0ZtquRy4J512FJca4zH39rg=="],
 

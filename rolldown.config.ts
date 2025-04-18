@@ -12,8 +12,9 @@ export default defineConfig([
   {
     input: 'src/index.ts',
     output: {
-      dir: 'dist',
+      dir: 'dist/cjs',
       format: 'commonjs',
+      sourcemap: true,
       entryFileNames: 'index.cjs',
       chunkFileNames: '[name]-[hash].cjs',
     },
