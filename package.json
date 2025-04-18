@@ -1,17 +1,8 @@
 {
   "name": "@ripwords/myinvois-client",
-  "version": "0.0.5",
-  "description": "MyInvois client",
+  "version": "0.0.6",
   "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "module": "src/index.ts",
-  "type": "module",
-  "scripts": {
-    "build": "rolldown -c rolldown.config.ts",
-    "release": "bun run build && npm publish --access public && git push --follow-tags",
-    "lint": "oxlint",
-    "test": "vitest"
-  },
   "devDependencies": {
     "@types/bun": "latest",
     "dotenv": "^16.5.0",
@@ -24,7 +15,13 @@
   "peerDependencies": {
     "typescript": "^5"
   },
-  "dependencies": {
-    "ofetch": "^1.4.1"
-  }
+  "description": "MyInvois client",
+  "scripts": {
+    "build": "rolldown -c rolldown.config.ts",
+    "release": "bun run build && npm publish --access public && git push --follow-tags",
+    "lint": "oxlint",
+    "test": "vitest"
+  },
+  "type": "module",
+  "types": "dist/index.d.ts"
 }
