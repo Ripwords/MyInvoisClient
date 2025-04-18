@@ -12,7 +12,7 @@ export default defineConfig([
   {
     input: 'src/index.ts',
     output: {
-      dir: 'dist/cjs',
+      dir: 'dist',
       format: 'commonjs',
       sourcemap: true,
       entryFileNames: 'index.cjs',

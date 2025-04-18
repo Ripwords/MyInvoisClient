@@ -1,6 +1,6 @@
 {
   "name": "@ripwords/myinvois-client",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "main": "dist/index.js",
   "module": "src/index.ts",
   "devDependencies": {
@@ -11,6 +11,10 @@
     "rolldown": "^1.0.0-beta.7",
     "rolldown-plugin-dts": "^0.7.0",
     "vitest": "^3.1.1"
+  },
+  "exports": {
+    "import": "./dist/index.js",
+    "require": "./dist/index.cjs"
   },
   "peerDependencies": {
     "typescript": "^5"
