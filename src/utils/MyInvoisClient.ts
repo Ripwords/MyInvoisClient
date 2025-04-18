@@ -71,6 +71,13 @@ export class MyInvoisClient {
     })
   }
 
+  /**
+   * Validates a TIN against a NRIC
+   *
+   * @param tin
+   * @param nric
+   * @returns
+   */
   async verifyTin(tin: string, nric: string) {
     try {
       await this.fetch<void>(
