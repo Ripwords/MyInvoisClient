@@ -1,8 +1,21 @@
 {
   "name": "@ripwords/myinvois-client",
   "version": "0.0.7",
+  "description": "MyInvois client",
+  "scripts": {
+    "build": "rolldown -c rolldown.config.ts",
+    "release": "bun run build && npm publish --access public && git push --follow-tags",
+    "lint": "oxlint",
+    "test": "vitest"
+  },
   "main": "dist/index.js",
   "module": "src/index.ts",
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "exports": {
+    "import": "./dist/index.js",
+    "require": "./dist/index.cjs"
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "dotenv": "^16.5.0",
@@ -12,20 +25,7 @@
     "rolldown-plugin-dts": "^0.7.0",
     "vitest": "^3.1.1"
   },
-  "exports": {
-    "import": "./dist/index.js",
-    "require": "./dist/index.cjs"
-  },
   "peerDependencies": {
     "typescript": "^5"
-  },
-  "description": "MyInvois client",
-  "scripts": {
-    "build": "rolldown -c rolldown.config.ts",
-    "release": "bun run build && npm publish --access public && git push --follow-tags",
-    "lint": "oxlint",
-    "test": "vitest"
-  },
-  "type": "module",
-  "types": "dist/index.d.ts"
+  }
 }
