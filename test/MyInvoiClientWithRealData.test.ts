@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { MyInvoisClient } from '../src/utils/MyInvoisClient'
 
-describe('MyInvoisClientRealData', () => {
+describe('MyInvoisClientWithRealData', () => {
   it('should verify TIN with real data', async () => {
     const client = new MyInvoisClient(
       process.env.CLIENT_ID!,

@@ -1,7 +1,5 @@
-interface TokenResponse {
-  access_token: string
-  expires_in: number
-}
+import { getBaseUrl } from './getBaseUrl'
+import { taxpayerLogin } from 'src/api/platform/taxpayerLogin'
 
 export class MyInvoisClient {
   private readonly baseUrl: string
@@ -19,40 +17,20 @@ export class MyInvoisClient {
   ) {
     this.clientId = clientId
     this.clientSecret = clientSecret
+    this.baseUrl = getBaseUrl(environment)
     this.debug = debug
-    if (environment === 'sandbox') {
-      this.baseUrl = 'https://preprod-api.myinvois.hasil.gov.my'
-    } else {
-      this.baseUrl = 'https://api.myinvois.hasil.gov.my'
-    }
   }
 
   private async refreshToken() {
-    try {
-      const response = await fetch(`${this.baseUrl}/connect/token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          grant_type: 'client_credentials',
-          client_id: this.clientId,
-          client_secret: this.clientSecret,
-          scope: 'InvoicingAPI',
-        }),
-      })
+    const tokenResponse = await taxpayerLogin({
+      clientId: this.clientId,
+      clientSecret: this.clientSecret,
+      baseUrl: this.baseUrl,
+      debug: this.debug,
+    })
 
-      const tokenResponse: TokenResponse = await response.json()
-
-      this.token = tokenResponse.access_token
-      this.tokenExpiration = new Date(
-        Date.now() + tokenResponse.expires_in * 1000,
-      )
-    } catch (error) {
-      if (this.debug) {
-        console.error(error)
-      }
-    }
+    this.token = tokenResponse.token
+    this.tokenExpiration = tokenResponse.tokenExpiration
   }
 
   private async getToken() {
