@@ -1,10 +1,11 @@
 import { getBaseUrl } from './getBaseUrl'
-import { taxpayerLogin } from '../api/platform/taxpayerLogin'
+import { platformLogin } from '../api/platform/platformLogin'
 
 export class MyInvoisClient {
   private readonly baseUrl: string
   private readonly clientId: string
   private readonly clientSecret: string
+  private readonly onBehalfOf?: string
   private readonly debug: boolean
   private token = ''
   private tokenExpiration: Date | undefined
@@ -13,19 +14,22 @@ export class MyInvoisClient {
     clientId: string,
     clientSecret: string,
     environment: 'sandbox' | 'production',
-    debug: boolean = false,
+    onBehalfOf?: string,
+    debug?: boolean,
   ) {
     this.clientId = clientId
     this.clientSecret = clientSecret
     this.baseUrl = getBaseUrl(environment)
-    this.debug = debug
+    this.debug = (debug ?? process.env.MYINVOIS_DEBUG === 'true') ? true : false
+    this.onBehalfOf = onBehalfOf
   }
 
   private async refreshToken() {
-    const tokenResponse = await taxpayerLogin({
+    const tokenResponse = await platformLogin({
       clientId: this.clientId,
       clientSecret: this.clientSecret,
       baseUrl: this.baseUrl,
+      onBehalfOf: this.onBehalfOf,
       debug: this.debug,
     })
 
