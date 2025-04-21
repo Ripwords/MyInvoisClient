@@ -1,5 +1,5 @@
 import { getBaseUrl } from './getBaseUrl'
-import { taxpayerLogin } from 'src/api/platform/taxpayerLogin'
+import { taxpayerLogin } from '../api/platform/taxpayerLogin'
 
 export class MyInvoisClient {
   private readonly baseUrl: string
@@ -58,9 +58,9 @@ export class MyInvoisClient {
    *
    * @param tin
    * @param nric
-   * @returns
+   * @returns true if the TIN is valid, false otherwise
    */
-  async verifyTin(tin: string, nric: string) {
+  async verifyTin(tin: string, nric: string): Promise<boolean> {
     try {
       const response = await this.fetch(
         `/api/v1.0/taxpayer/validate/${tin}?idType=NRIC&idValue=${nric}`,

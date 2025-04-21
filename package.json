@@ -1,10 +1,11 @@
 {
   "name": "@ripwords/myinvois-client",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "MyInvois client",
   "scripts": {
-    "build": "rolldown -c rolldown.config.ts",
+    "build": "bun run clean && rolldown -c rolldown.config.ts",
     "release": "bun run build && npm publish --access public",
+    "clean": "rimraf dist",
     "lint": "oxlint",
     "test": "vitest"
   },
@@ -21,6 +22,7 @@
     "dotenv": "^16.5.0",
     "oxlint": "^0.16.6",
     "prettier": "^3.5.3",
+    "rimraf": "^6.0.1",
     "rolldown": "^1.0.0-beta.7",
     "rolldown-plugin-dts": "^0.7.13",
     "vitest": "^3.1.1"
