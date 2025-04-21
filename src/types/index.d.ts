@@ -19,5 +19,6 @@ export interface ClientCredentials {
   clientId: string
   clientSecret: string
   baseUrl: string
+  onBehalfOf?: string
   debug?: boolean
 }

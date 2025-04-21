@@ -1,12 +1,13 @@
 import type { ClientCredentials, TokenResponse } from 'src/types'
 
-export const taxpayerLogin = async (client: ClientCredentials) => {
-  const { clientId, clientSecret, baseUrl, debug } = client
+export const platformLogin = async (client: ClientCredentials) => {
+  const { clientId, clientSecret, baseUrl, onBehalfOf, debug } = client
   try {
     const response = await fetch(`${baseUrl}/connect/token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
+        ...(onBehalfOf ? { onbehalfof: onBehalfOf } : {}),
       },
       body: new URLSearchParams({
         grant_type: 'client_credentials',
