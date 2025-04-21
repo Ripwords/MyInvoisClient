@@ -1,6 +1,6 @@
 {
   "name": "@ripwords/myinvois-client",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "MyInvois client",
   "scripts": {
     "build": "bun run clean && rolldown -c rolldown.config.ts",
