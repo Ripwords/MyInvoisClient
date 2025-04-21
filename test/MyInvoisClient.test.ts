@@ -122,12 +122,12 @@ describe('MyInvoisClient', () => {
       } as Response)
 
       // First call to get token
-      await client.verifyTin(process.env.TIN_VALUE!, process.env.NRIC_VALUE!)
+      await client.verifyTin('123', '456')
 
-      vi.advanceTimersByTime(10)
+      vi.setSystemTime(new Date(Date.now() + 1000))
 
       // Second call should reuse token
-      await client.verifyTin(process.env.TIN_VALUE!, process.env.NRIC_VALUE!)
+      await client.verifyTin('123', '456')
 
       // Token endpoint should only be called once
       expect(mockFetch).toHaveBeenCalledWith(
@@ -182,10 +182,7 @@ describe('MyInvoisClient', () => {
         } as Response)
         .mockRejectedValueOnce(new Error('Invalid TIN'))
 
-      const result = await client.verifyTin(
-        process.env.TIN_VALUE!,
-        process.env.NRIC_VALUE!,
-      )
+      const result = await client.verifyTin('123', '456')
 
       expect(result).toBe(false)
     })
