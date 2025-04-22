@@ -1,6 +1,4 @@
 import * as xpath from 'xpath-ts'
-// Assuming Document and Node types from xmldom-ts are available globally or via import
-// import type { Document, Node } from 'xmldom-ts';
 
 export interface FinalDocumentData {
   signatureValue: string // Base64 encoded RSA signature (Sig from Step 4)

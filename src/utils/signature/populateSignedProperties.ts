@@ -1,6 +1,4 @@
 import * as xpath from 'xpath-ts'
-// Assuming Document and Node types from xmldom-ts are available globally or via import
-// import type { Document, Node } from 'xmldom-ts';
 
 export interface SignedPropertiesData {
   certDigest: string // Base64 encoded SHA-256 hash of certificate (Step 5)
