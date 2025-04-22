@@ -1,8 +1,6 @@
 import * as crypto from 'crypto'
 import * as xpath from 'xpath-ts'
 import c14nFactory from 'xml-c14n'
-// Assuming Document and Node types from xmldom-ts are available globally or via import
-// import type { Document, Node } from 'xmldom-ts';
 
 /**
  * Selects the SignedProperties element, canonicalizes it (Exclusive C14N),
