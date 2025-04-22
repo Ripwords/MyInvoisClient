@@ -27,7 +27,9 @@
     "src/**/*.ts",
     "src/**/*.d.ts",
     "rolldown.config.ts",
-    "test/MyInvoisClient.test.ts"
+    "test/MyInvoisClient.test.ts",
+    "test/base64.test.ts",
+    "test/transform.test.ts"
   ],
   "exclude": [
     "node_modules",
