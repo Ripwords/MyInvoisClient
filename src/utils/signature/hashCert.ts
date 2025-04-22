@@ -12,48 +12,56 @@ function extractBase64FromPem(pemCert: string): string {
   const beginMarker = '-----BEGIN CERTIFICATE-----'
   const endMarker = '-----END CERTIFICATE-----'
 
-  const startIndex = pemCert.indexOf(beginMarker)
-  const endIndex = pemCert.indexOf(endMarker)
+  let startIndex = pemCert.indexOf(beginMarker)
+  let endIndex = pemCert.indexOf(endMarker)
+  let currentBeginMarker = beginMarker
 
+  // Check for primary markers
   if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
     // Try finding other common markers if the primary one fails
-    const altBeginMarker = '-----BEGIN PUBLIC KEY-----' // Example, adjust if needed
+    const altBeginMarker = '-----BEGIN PUBLIC KEY-----'
     const altEndMarker = '-----END PUBLIC KEY-----'
-    const altStartIndex = pemCert.indexOf(altBeginMarker)
-    const altEndIndex = pemCert.indexOf(altEndMarker)
+    startIndex = pemCert.indexOf(altBeginMarker)
+    endIndex = pemCert.indexOf(altEndMarker)
+    currentBeginMarker = altBeginMarker
 
-    if (
-      altStartIndex === -1 ||
-      altEndIndex === -1 ||
-      altEndIndex <= altStartIndex
-    ) {
+    if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
       throw new Error(
         'Invalid PEM format: Missing or misplaced BEGIN/END markers (CERTIFICATE or other expected type).',
       )
-    } else {
-      // Use alt markers if found
-      const content = pemCert.substring(
-        altStartIndex + altBeginMarker.length,
-        altEndIndex,
-      )
-      const base64Der = content.replace(/[^A-Za-z0-9+/=]/g, '')
-      if (base64Der.length === 0)
-        throw new Error(
-          'Invalid PEM format: No Base64 content found between markers.',
-        )
-      return base64Der
     }
   }
 
-  // Extract the content between primary markers
-  const content = pemCert.substring(startIndex + beginMarker.length, endIndex)
+  // Extract the raw content between markers (including newlines, etc.)
+  const content = pemCert.substring(
+    startIndex + currentBeginMarker.length,
+    endIndex,
+  )
 
-  // Remove any non-Base64 characters (like newlines, spaces, comments)
-  const base64Der = content.replace(/[^A-Za-z0-9+/=]/g, '')
+  // Validate the raw content *before* cleaning - check for invalid chars within the block
+  // This regex checks if there's anything *other than* whitespace or Base64 characters.
+  const invalidCharRegex = /[^A-Za-z0-9+/=\s]/
+  if (invalidCharRegex.test(content)) {
+    throw new Error(
+      'Invalid non-Base64, non-whitespace characters detected in PEM content block.',
+    )
+  }
+
+  // Clean the extracted content: remove only whitespace (newlines, spaces)
+  const base64Der = content.replace(/\s/g, '')
+
+  // Final check: ensure the cleaned string is valid Base64 format (e.g., correct padding)
+  const base64FormatRegex = /^[A-Za-z0-9+/]*={0,2}$/
+  if (!base64FormatRegex.test(base64Der)) {
+    // This might catch incorrect padding or other structural issues post-cleaning
+    throw new Error(
+      'Invalid Base64 structure (e.g., padding) after cleaning PEM content.',
+    )
+  }
 
   if (base64Der.length === 0) {
     throw new Error(
-      'Invalid PEM format: No Base64 content found between markers.',
+      'Invalid PEM format: No Base64 content found between markers after cleaning.',
     )
   }
 
@@ -72,24 +80,21 @@ function extractBase64FromPem(pemCert: string): string {
  */
 export function hashCertificate(certificatePem: string): string {
   try {
-    // 1. Extract Base64 DER content from PEM
+    // 1. Extract *and validate* Base64 DER content from PEM
     const base64Der = extractBase64FromPem(certificatePem)
 
-    // Add stricter validation: Check if the extracted string contains only valid Base64 characters.
-    // This regex allows A-Z, a-z, 0-9, +, /, and = (padding) only.
-    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/
-    if (base64Der.length > 0 && !base64Regex.test(base64Der)) {
-      throw new Error(
-        'Invalid Base64 characters detected in PEM certificate content.',
-      )
-    }
+    // Base64 validation is now done inside extractBase64FromPem
+    // const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+    // if (base64Der.length > 0 && !base64Regex.test(base64Der)) {
+    //   throw new Error('Invalid Base64 characters detected in PEM certificate content.')
+    // }
 
     // 2. Decode Base64 to get the raw DER bytes
     const rawDer = Buffer.from(base64Der, 'base64')
 
-    // Existing check (kept for belts and suspenders, though regex should catch most cases)
+    // The check below might be redundant now with the improved extraction/validation,
+    // but kept as a fallback safety measure.
     if (base64Der.length > 0 && rawDer.length === 0) {
-      // This might catch edge cases the regex misses or different Buffer.from behavior
       throw new Error(
         'Invalid Base64 content characters in PEM certificate (Buffer decoding check).',
       )
