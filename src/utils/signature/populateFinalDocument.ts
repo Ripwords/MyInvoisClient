@@ -59,30 +59,7 @@ export function populateFinalDocument(
   // Helper function to find a single node and set its text content
   const setElementValue = (xpathExpr: string, value: string) => {
     try {
-      console.log(`DEBUG: Evaluating XPath: ${xpathExpr}`) // Log the XPath
       const selectionResult = select(xpathExpr, doc) // Store the result first
-      // Log the raw result, its type, and if it's an array, its length and first element
-      console.log(`DEBUG: selectionResult raw:`, selectionResult)
-      console.log(`DEBUG: typeof selectionResult: ${typeof selectionResult}`)
-      if (Array.isArray(selectionResult)) {
-        console.log(
-          `DEBUG: selectionResult is array, length: ${selectionResult.length}`,
-        )
-        if (selectionResult.length > 0) {
-          console.log(`DEBUG: selectionResult[0]:`, selectionResult[0])
-          // Also log nodeType if it exists
-          if (
-            selectionResult[0] &&
-            typeof selectionResult[0] === 'object' &&
-            'nodeType' in selectionResult[0]
-          ) {
-            console.log(
-              `DEBUG: selectionResult[0].nodeType:`,
-              (selectionResult[0] as any).nodeType,
-            )
-          }
-        }
-      }
 
       // Check 0: Explicitly check for null/undefined before array check
       if (selectionResult == null) {
