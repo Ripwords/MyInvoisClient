@@ -2,15 +2,17 @@ import { describe, it, expect } from 'vitest'
 import * as crypto from 'crypto'
 import { hashCertificate } from '../src/utils/signature/hashCert'
 
-// Sample PEM certificate structure (replace with a real one for actual validation if needed)
-// For testing purposes, we just need a valid PEM structure.
+// Use a more structured, plausible (but still generated) PEM certificate for testing the process.
+// NOTE: To test against a *known external hash value*, replace this with a real
+//       certificate PEM and its pre-calculated SHA-256 Base64 hash.
 const sampleValidPem = `
 -----BEGIN CERTIFICATE-----
-MIIC+DCCAeCgAwIBAgIBATANBgkqhkiG9w0BAQsFADASMRAwDgYDVQQDEwdUZXN0
-Q0EwHhcNMjQwMTAxMDAwMDAwWhcNMzQwMTAxMDAwMDAwWjASMRAwDgYDVQQDEwdU
-ZXN0Q0EwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC5u18F/R1Pq0jT
-// Base64 data lines - ensure these form valid Base64 if testing actual hash value
-MIIEowIBAAKCAQEAt6qkRUMUPBEfCyx/+p/+Yg==
+MIIDBjCCAe6gAwIBAgIQCisE3VSEefMG1/VZf0J4IzANBgkqhkiG9w0BAQsF
+ADBFMQswCQYDVQQGEwJNWTEUMBIGA1UEChMLVGVzdCBDQSBQS0kxGDAWBgNV
+BAMTD1Rlc3QgUm9vdCBDQSBLSzAeFw0yNDAxMDEwMDAwMDBaFw0zNDAxMDEw
+MDAwMDBaMD8xCzAJBgNVBAYTAk1ZMRMwEQYDVQQKEwpUZXN0IFN1YkNBMRsw
+GQYDVQQDExJUZXN0IENlcnRpZmljYXRlMIIBIjANBgkqhkiG9w0BAQEFAAOC
+AQ8AMIIBCgKCAQEAs/dKx0mC4c7k/w==
 -----END CERTIFICATE-----
 `
 
@@ -20,6 +22,17 @@ const sampleInvalidPemNoContent = `
 `
 
 const sampleInvalidPemBadFormat = `This is not a PEM certificate`
+
+const samplePemWithInvalidBase64 = `
+-----BEGIN CERTIFICATE-----
+MIIDBjCCAe6gAwIBAgIQCisE3VSEefMG1/VZf0J4IzANBgkqhkiG9w0BAQsF
+ADBFMQswCQYDVQQGEwJNWTEUMBIGA1UEChMLVGVzdCBDQSBQS0kxGDAWBgNV
+***INVALID CHARACTERS HERE !@#$%^&*()***
+BAMTD1Rlc3QgUm9vdCBDQSBLSzAeFw0yNDAxMDEwMDAwMDBaFw0zNDAxMDEw
+MDAwMDBaMD8xCzAJBgNVBAYTAk1ZMRMwEQYDVQQKEwpUZXN0IFN1YkNBMRsw
+AQ8AMIIBCgKCAQEAs/dKx0mC4c7k/w==
+-----END CERTIFICATE-----
+`
 
 // Helper to calculate expected hash by extracting/cleaning/hashing PEM
 // Mimics the core logic of hashCertificate for comparison
@@ -35,8 +48,6 @@ const calculateExpectedCertHash = (pemCert: string): string => {
     const content = pemCert.substring(startIndex + beginMarker.length, endIndex)
     base64Der = content.replace(/[^A-Za-z0-9+/=]/g, '')
   } else {
-    // Fallback or handle other PEM types if necessary, here we assume CERTIFICATE
-    // Or throw if structure must be strictly CERTIFICATE
     throw new Error('Helper could not find certificate markers')
   }
 
@@ -51,36 +62,34 @@ const calculateExpectedCertHash = (pemCert: string): string => {
 }
 
 describe('hashCertificate', () => {
-  it('should correctly hash a valid PEM certificate', () => {
+  it('should correctly hash a valid PEM certificate (testing process)', () => {
     const expectedHash = calculateExpectedCertHash(sampleValidPem)
     const actualHash = hashCertificate(sampleValidPem)
     expect(actualHash).toEqual(expectedHash)
-    // Check if the output is a valid Base64 string
     expect(() => Buffer.from(actualHash, 'base64')).not.toThrow()
   })
 
   it('should throw an error for PEM with no content', () => {
     expect(() => hashCertificate(sampleInvalidPemNoContent)).toThrow(
-      'Invalid PEM format: No Base64 content found between markers.',
+      'Failed to hash certificate: Invalid PEM format: No Base64 content found between markers after cleaning.',
     )
   })
 
-  it('should throw an error for non-PEM input', () => {
-    expect(() => hashCertificate(sampleInvalidPemBadFormat))
-      // Expect the error from failing to find markers
-      .toThrow(
-        /^Failed to hash certificate: Invalid PEM format: Missing or misplaced BEGIN\/END markers/,
-      )
+  it('should throw an error for non-PEM input (missing markers)', () => {
+    expect(() => hashCertificate(sampleInvalidPemBadFormat)).toThrow(
+      /^Failed to hash certificate: Invalid PEM format: Missing or misplaced BEGIN\/END markers/,
+    )
   })
 
   it('should throw an error for empty string input', () => {
-    expect(() => hashCertificate(''))
-      // Expect the error from failing to find markers, wrapped by the main catch block
-      .toThrow(
-        /^Failed to hash certificate: Invalid PEM format: Missing or misplaced BEGIN\/END markers/,
-      )
+    expect(() => hashCertificate('')).toThrow(
+      /^Failed to hash certificate: Invalid PEM format: Missing or misplaced BEGIN\/END markers/,
+    )
   })
 
-  // Note: Testing for invalid Base64 *within* a valid PEM structure
-  // would require a more specific sample PEM with invalid characters between markers.
+  it('should throw an error for invalid Base64 characters within valid markers', () => {
+    expect(() => hashCertificate(samplePemWithInvalidBase64)).toThrow(
+      /^Failed to hash certificate: Invalid non-Base64, non-whitespace characters detected/,
+    )
+  })
 })
