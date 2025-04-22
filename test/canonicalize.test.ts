@@ -83,23 +83,27 @@ describe('canonicalizeAndHashDocument', () => {
     )
   })
 
-  it('should reject if canonicalization itself fails (mocking needed for true test)', async () => {
-    // This test is difficult without mocking the c14n library internal failure
-    // For now, we test with a structurally sound but potentially problematic doc
-    // If the library handles it, fine. If it throws, the test checks rejection.
-    const potentiallyProblematicXml = `<doc><unusual /></doc>`
+  it('should handle potential canonicalization failures gracefully', async () => {
+    // This test checks if the function either resolves to a string (graceful handling)
+    // or rejects with a specific error pattern if canonicalization truly fails.
+    // Testing actual canonicalization failure usually requires mocking the underlying library.
+    const potentiallyProblematicXml = `<doc><unusual /></doc>` // Example input
     const doc = parser.parseFromString(
       potentiallyProblematicXml,
       'application/xml',
     )
 
-    // We expect it to either resolve successfully or reject with a specific error
-    await expect(canonicalizeAndHashDocument(doc))
-      .resolves.toBeTypeOf('string')
-      .catch(error => {
-        expect(error).toBeInstanceOf(Error)
-        expect(error.message).toMatch(/Canonicalization failed/)
-      })
+    try {
+      const result = await canonicalizeAndHashDocument(doc)
+      // If it resolves, check the type
+      expect(result).toEqual(expect.any(String))
+      // console.warn("Test Warning: Canonicalization succeeded for potentially problematic XML.");
+    } catch (error: any) {
+      // If it rejects, check the error
+      expect(error).toBeInstanceOf(Error)
+      // Check if the error message starts with the expected text
+      expect(error.message).toMatch(/^Canonicalization failed/)
+    }
   })
 
   // Add more tests for edge cases like comments (if using #WithComments algorithm), PIs, etc.
