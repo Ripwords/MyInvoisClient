@@ -2,7 +2,6 @@
  * Example of submitting a JSON invoice to the MyInvois API
  */
 
-import * as fs from 'fs'
 import { MyInvoisClient } from '../src/utils/MyInvoisClient'
 
 /**
@@ -19,7 +18,7 @@ async function submitJsonInvoice() {
   try {
     // Example invoice in JSON format following the UBL structure
     // You can also load this from a file: JSON.parse(fs.readFileSync('invoice.json', 'utf8'))
-    const invoice = {
+    const invoiceDocument = {
       Invoice: [
         {
           ID: [
@@ -1050,10 +1049,161 @@ async function submitJsonInvoice() {
         },
       ],
     }
+    const invoice = {
+      supplier: {
+        name: 'ABC Company Sdn Bhd',
+        tin: 'ABC12345678',
+        registrationNumber: '202001234567',
+        sstRegistrationNumber: 'W10-1808-32000001',
+        email: 'accounting@abc-company.com',
+        contactNumber: '+60312345678',
+        address: {
+          addressLine0: '123, Jalan Perdana',
+          addressLine1: 'Taman Bukit Indah',
+          cityName: 'Kuala Lumpur',
+          postalZone: '50000',
+          state: '14', // WP Kuala Lumpur
+          country: 'MYS', // Malaysia
+        },
+      },
+      buyer: {
+        name: 'XYZ Enterprise',
+        tin: 'XYZ87654321',
+        registrationNumber: '201912345678',
+        sstRegistrationNumber: 'NA',
+        email: 'finance@xyz-enterprise.com',
+        contactNumber: '+60323456789',
+        address: {
+          addressLine0: '456, Jalan Merdeka',
+          addressLine1: 'Taman Sri Mutiara',
+          cityName: 'Petaling Jaya',
+          postalZone: '47810',
+          state: '10', // Selangor
+          country: 'MYS', // Malaysia
+        },
+      },
+      eInvoiceVersion: '1.1',
+      eInvoiceTypeCode: '01', // Standard invoice
+      eInvoiceCodeOrNumber: 'INV-2023-001',
+      eInvoiceDate: '2023-05-15',
+      eInvoiceTime: '09:30:00Z',
+      issuerDigitalSignature: {
+        // Placeholder for digital signature
+        // In a real implementation, this would be populated with a valid digital signature
+        Id: 'DocSig',
+        'ds:SignedInfo': {
+          'ds:CanonicalizationMethod': {
+            Algorithm: 'http://www.w3.org/2006/12/xml-c14n11',
+          },
+          'ds:SignatureMethod': {
+            Algorithm: 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256',
+          },
+          'ds:Reference': [
+            {
+              Id: 'id-doc-signed-data',
+              URI: '',
+              'ds:DigestMethod': {
+                Algorithm: 'http://www.w3.org/2001/04/xmlenc#sha256',
+              },
+              'ds:DigestValue': 'placeholder-document-digest-value',
+            },
+            {
+              URI: '#id-xades-signed-props',
+              'ds:DigestMethod': {
+                Algorithm: 'http://www.w3.org/2001/04/xmlenc#sha256',
+              },
+              'ds:DigestValue': 'placeholder-properties-digest-value',
+            },
+          ],
+        },
+        'ds:SignatureValue': 'placeholder-signature-value',
+        'ds:KeyInfo': {
+          'ds:X509Data': {
+            'ds:X509Certificate': 'placeholder-certificate-data',
+          },
+        },
+        'ds:Object': {
+          'xades:QualifyingProperties': {
+            Target: 'signature',
+            'xades:SignedProperties': {
+              Id: 'id-xades-signed-props',
+              'xades:SignedSignatureProperties': {
+                'xades:SigningTime': '2023-05-15T09:30:00Z',
+                'xades:SigningCertificate': {
+                  'xades:Cert': {
+                    'xades:CertDigest': {
+                      'ds:DigestMethod': {
+                        Algorithm: 'http://www.w3.org/2001/04/xmlenc#sha256',
+                      },
+                      'ds:DigestValue': 'placeholder-cert-digest-value',
+                    },
+                    'xades:IssuerSerial': {
+                      'ds:X509IssuerName': 'CN=Certificate Authority',
+                      'ds:X509SerialNumber': '1234567890',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      invoiceCurrencyCode: 'MYR',
+      invoiceLineItems: [
+        {
+          itemClassificationCode: '003', // Computer, smartphone or tablet
+          itemDescription: 'Laptop Model X Pro',
+          unitPrice: 3500.0,
+          taxType: '01', // Sales Tax
+          taxRate: 6.0,
+          taxAmount: 210.0,
+          totalTaxableAmountPerLine: 3500.0,
+          totalAmountPerLine: 3710.0,
+          quantity: 1,
+          measurement: 'EA', // Each
+        },
+        {
+          itemClassificationCode: '022', // Others
+          itemDescription: 'Extended Warranty (2 years)',
+          unitPrice: 500.0,
+          taxType: '01', // Sales Tax
+          taxRate: 6.0,
+          taxAmount: 30.0,
+          totalTaxableAmountPerLine: 500.0,
+          totalAmountPerLine: 530.0,
+          quantity: 1,
+          measurement: 'EA', // Each
+        },
+      ],
+      legalMonetaryTotal: {
+        taxExclusiveAmount: 4000.0,
+        taxInclusiveAmount: 4240.0,
+        payableAmount: 4240.0,
+      },
+      taxTotal: {
+        taxAmount: 240.0,
+        taxSubtotals: [
+          {
+            taxableAmount: 4000.0,
+            taxAmount: 240.0,
+            taxCategory: {
+              taxTypeCode: '01', // Sales Tax
+              taxRate: 6.0,
+            },
+          },
+        ],
+      },
+      paymentMeans: [
+        {
+          paymentMeansCode: '03', // Bank Transfer
+          payeeFinancialAccountID: 'MY12ABCD1234567890',
+          paymentTerms: 'Net 30',
+        },
+      ],
+    }
 
     // Submit the JSON invoice
-    const response = await client.submitJsonInvoice(invoice, 'JSON-INV12345')
-
+    const response = await client.submitJsonInvoice(invoice)
     console.log('JSON invoice submission successful!')
     console.log(`Document ID: ${response.documentId}`)
     console.log(`Response code: ${response.code}`)
@@ -1069,97 +1219,6 @@ async function submitJsonInvoice() {
     return response
   } catch (error) {
     console.error('Error submitting JSON invoice:', error)
-    throw error
-  }
-}
-
-/**
- * Load and submit a JSON invoice from a file
- */
-async function loadAndSubmitJsonInvoice(filePath: string) {
-  const client = new MyInvoisClient(
-    'YOUR_CLIENT_ID',
-    'YOUR_CLIENT_SECRET',
-    'sandbox',
-  )
-
-  try {
-    // Read the JSON invoice from file
-    const invoiceData = JSON.parse(fs.readFileSync(filePath, 'utf8'))
-
-    console.log(`Submitting invoice from file: ${filePath}`)
-
-    // Submit the JSON invoice
-    const response = await client.submitJsonInvoice(invoiceData)
-
-    console.log('JSON invoice submission successful!')
-    console.log(`Document ID: ${response.documentId}`)
-
-    return response
-  } catch (error) {
-    console.error(`Error submitting JSON invoice from file ${filePath}:`, error)
-    throw error
-  }
-}
-
-/**
- * Submit multiple JSON invoices from a directory
- */
-async function submitMultipleJsonInvoices(directoryPath: string) {
-  const client = new MyInvoisClient(
-    'YOUR_CLIENT_ID',
-    'YOUR_CLIENT_SECRET',
-    'sandbox',
-  )
-
-  try {
-    // Read all JSON files from the directory
-    const files = fs
-      .readdirSync(directoryPath)
-      .filter(file => file.endsWith('.json'))
-
-    if (files.length === 0) {
-      console.log('No JSON files found in the directory')
-      return []
-    }
-
-    console.log(`Found ${files.length} JSON invoice files to submit`)
-
-    // Load all invoices
-    const invoices = files.map(file => {
-      const filePath = `${directoryPath}/${file}`
-      console.log(`Loading invoice from ${filePath}`)
-      return JSON.parse(fs.readFileSync(filePath, 'utf8'))
-    })
-
-    // Submit all invoices
-    console.log('Submitting invoices in batch...')
-    const results = await client.submitMultipleJsonInvoices(invoices)
-
-    // Print results
-    console.log('\nSubmission results:')
-    files.forEach((file, index) => {
-      const result = results[index]
-      console.log(
-        `- ${file}: ${result.code === 'SUCCESS' ? 'SUCCESS' : 'FAILED'}`,
-      )
-      if (result.documentId) {
-        console.log(`  Document ID: ${result.documentId}`)
-      }
-      if (result.code !== 'SUCCESS') {
-        console.log(`  Error: ${result.message}`)
-      }
-    })
-
-    // Summary
-    const successCount = results.filter(r => r.code === 'SUCCESS').length
-    console.log(
-      `\nSummary: ${successCount}/${results.length} invoices submitted successfully`,
-    )
-
-    return results
-  } catch (error) {
-    console.error('Error in batch submission:', error)
     throw error
   }
 }

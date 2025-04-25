@@ -1,7 +1,9 @@
 import * as crypto from 'crypto'
+import { InvoiceV1_1 } from 'src/types'
 import { platformLogin } from '../api/platform/platformLogin'
 import { encodeToBase64 } from '../utils/base64'
 import { getBaseUrl } from '../utils/getBaseUrl'
+import { transformInvoiceToDocument } from './transformers/invoiceToDocument'
 
 /**
  * Response from document submission
@@ -231,11 +233,30 @@ export class MyInvoisClient {
    * @returns Promise resolving to the submission response
    */
   public async submitJsonInvoice(
-    jsonInvoice: Record<string, any>,
-    codeNumber: string,
+    invoice: InvoiceV1_1,
+    codeNumber: string = '',
     options: SubmitDocumentOptions = {},
   ): Promise<SubmitDocumentResponse> {
-    return await this.submitDocument(jsonInvoice, codeNumber, 'json', options)
+    // Use the code number from the invoice if not provided as parameter
+    const invoiceCodeNumber = codeNumber || invoice.eInvoiceCodeOrNumber
+
+    // Transform the InvoiceV1_1 format to the nested array document format
+    const transformedDocument = transformInvoiceToDocument(invoice)
+
+    if (this.debug) {
+      console.log(
+        'Transformed document:',
+        JSON.stringify(transformedDocument, null, 2),
+      )
+    }
+
+    // Submit the transformed document
+    return await this.submitDocument(
+      transformedDocument,
+      invoiceCodeNumber,
+      'json',
+      options,
+    )
   }
 
   /**
@@ -245,34 +266,34 @@ export class MyInvoisClient {
    * @param options - Options for document submission
    * @returns Promise resolving to an array of submission responses
    */
-  public async submitMultipleJsonInvoices(
-    jsonInvoices: Record<string, any>[],
-    options: SubmitDocumentOptions = {},
-  ): Promise<SubmitDocumentResponse[]> {
-    const results: SubmitDocumentResponse[] = []
+  // public async submitMultipleJsonInvoices(
+  //   jsonInvoices: Record<string, any>[],
+  //   options: SubmitDocumentOptions = {},
+  // ): Promise<SubmitDocumentResponse[]> {
+  //   const results: SubmitDocumentResponse[] = []
 
-    for (const jsonInvoice of jsonInvoices) {
-      try {
-        const result = await this.submitJsonInvoice(jsonInvoice, '', options)
-        results.push(result)
-      } catch (error) {
-        if (this.debug) {
-          console.error('Error submitting JSON invoice in batch:', error)
-        }
+  //   for (const jsonInvoice of jsonInvoices) {
+  //     try {
+  //       const result = await this.submitJsonInvoice(jsonInvoice, '', options)
+  //       results.push(result)
+  //     } catch (error) {
+  //       if (this.debug) {
+  //         console.error('Error submitting JSON invoice in batch:', error)
+  //       }
 
-        // Add failed response to results
-        results.push({
-          code: 'ERROR',
-          message:
-            error instanceof Error
-              ? error.message
-              : 'Unknown error during invoice submission',
-        })
-      }
-    }
+  //       // Add failed response to results
+  //       results.push({
+  //         code: 'ERROR',
+  //         message:
+  //           error instanceof Error
+  //             ? error.message
+  //             : 'Unknown error during invoice submission',
+  //       })
+  //     }
+  //   }
 
-    return results
-  }
+  //   return results
+  // }
 
   /**
    * Validates a TIN against a NRIC
