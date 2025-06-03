@@ -12,7 +12,13 @@ describe('MyInvoisClient', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    client = new MyInvoisClient('test-id', 'test-secret', 'sandbox', false)
+    client = new MyInvoisClient(
+      'test-id',
+      'test-secret',
+      'sandbox',
+      undefined,
+      true,
+    )
   })
 
   describe('constructor', () => {
@@ -21,6 +27,7 @@ describe('MyInvoisClient', () => {
         'test-id',
         'test-secret',
         'sandbox',
+        undefined,
         true,
       )
       expect((sandboxClient as any).baseUrl).toBe(
@@ -33,6 +40,7 @@ describe('MyInvoisClient', () => {
         'test-id',
         'test-secret',
         'production',
+        undefined,
         true,
       )
       expect((prodClient as any).baseUrl).toBe(
@@ -53,7 +61,7 @@ describe('MyInvoisClient', () => {
         json: () => Promise.resolve(mockToken),
       } as Response)
 
-      await client.verifyTin('123', '456')
+      await client.verifyTin('123', 'NRIC', '456')
 
       expect(mockFetch).toHaveBeenCalledWith(
         'https://preprod-api.myinvois.hasil.gov.my/connect/token',
@@ -77,7 +85,7 @@ describe('MyInvoisClient', () => {
           json: () => Promise.resolve(undefined),
         } as Response)
 
-      await client.verifyTin('123', '456')
+      await client.verifyTin('123', 'NRIC', '456')
 
       // Check first call (token request)
       expect(mockFetch).toHaveBeenNthCalledWith(
@@ -122,12 +130,12 @@ describe('MyInvoisClient', () => {
       } as Response)
 
       // First call to get token
-      await client.verifyTin('123', '456')
+      await client.verifyTin('123', 'NRIC', '456')
 
       vi.setSystemTime(new Date(Date.now() + 1000))
 
       // Second call should reuse token
-      await client.verifyTin('123', '456')
+      await client.verifyTin('123', 'NRIC', '456')
 
       // Token endpoint should only be called once
       expect(mockFetch).toHaveBeenCalledWith(
@@ -154,9 +162,9 @@ describe('MyInvoisClient', () => {
           json: () => Promise.resolve(undefined),
         } as Response)
 
-      await client.verifyTin('123', '456')
+      await client.verifyTin('123', 'NRIC', '456')
       vi.setSystemTime(new Date(Date.now() + 1000 * 8000))
-      await client.verifyTin('123', '456')
+      await client.verifyTin('123', 'NRIC', '456')
 
       expect(mockFetch).toHaveBeenCalledWith(
         `https://preprod-api.myinvois.hasil.gov.my/api/v1.0/taxpayer/validate/123?idType=NRIC&idValue=456`,
@@ -182,7 +190,7 @@ describe('MyInvoisClient', () => {
         } as Response)
         .mockRejectedValueOnce(new Error('Invalid TIN'))
 
-      const result = await client.verifyTin('123', '456')
+      const result = await client.verifyTin('123', 'NRIC', '456')
 
       expect(result).toBe(false)
     })
