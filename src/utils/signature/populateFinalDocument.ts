@@ -53,6 +53,8 @@ export function populateFinalDocument(
     ds: 'http://www.w3.org/2000/09/xmldsig#',
     // No xades needed here, but cac might be needed if populating /Invoice/cac:Signature
     // cac: 'urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2'
+    cac: 'urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2',
+    cbc: 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2',
   }
   const select = xpath.useNamespaces(ns)
 
@@ -167,8 +169,19 @@ export function populateFinalDocument(
   }
   setElementValue(docDigestPath, finalData.docDigest)
 
-  // Note: The final `/Invoice/cac:Signature` element population is omitted here.
-  // Its role is unclear from the docs vs standard UBL/XAdES structure.
+  // Populate the /Invoice/cac:Signature elements
+  const cacSignatureIdPath = '/inv:Invoice/cac:Signature/cbc:ID'
+  const cacSignatureMethodPath =
+    '/inv:Invoice/cac:Signature/cbc:SignatureMethod'
+
+  // Static values based on the user's example XML
+  const cacSignatureIdValue =
+    'urn:oasis:names:specification:ubl:signature:Invoice'
+  const cacSignatureMethodValue =
+    'urn:oasis:names:specification:ubl:dsig:enveloped:xades'
+
+  setElementValue(cacSignatureIdPath, cacSignatureIdValue)
+  setElementValue(cacSignatureMethodPath, cacSignatureMethodValue)
 
   // Document `doc` is modified in place.
 }
