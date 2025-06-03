@@ -8,7 +8,7 @@ export class MyInvoisClient {
   private readonly onBehalfOf?: string
   private readonly debug: boolean
   private token = ''
-  private tokenExpiration: Date | undefined
+  private tokenExpiration: Date | undefined = undefined
 
   constructor(
     clientId: string,
@@ -38,7 +38,14 @@ export class MyInvoisClient {
   }
 
   private async getToken() {
-    if (!this.tokenExpiration || this.tokenExpiration < new Date()) {
+    if (
+      !this.tokenExpiration ||
+      this.tokenExpiration < new Date() ||
+      isNaN(this.tokenExpiration.getTime())
+    ) {
+      if (this.debug) {
+        console.log('Token expired')
+      }
       if (this.debug) {
         console.log('Refreshing token')
       }

@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest'
 import { MyInvoisClient } from '../src/utils/MyInvoisClient'
 
-describe('MyInvoisClientWithRealData', () => {
-  it('should verify TIN with real data', async () => {
+describe('MyInvoisClientWithBRN', () => {
+  it('should verify TIN with BRN', async () => {
     // Skip the test if the environment variables are not set
     if (
       !process.env.CLIENT_ID ||
       !process.env.CLIENT_SECRET ||
       !process.env.TIN_VALUE ||
-      !process.env.NRIC_VALUE
+      !process.env.BRN_VALUE
     ) {
       expect
         .soft(false, 'Skipping test: Missing required environment variables')
@@ -19,13 +19,15 @@ describe('MyInvoisClientWithRealData', () => {
       process.env.CLIENT_ID!,
       process.env.CLIENT_SECRET!,
       'sandbox',
+      undefined,
+      true,
     )
     // @ts-ignore - refreshToken is a private method
     await client.refreshToken()
     const result = await client.verifyTin(
       process.env.TIN_VALUE!,
-      'NRIC',
-      process.env.NRIC_VALUE!,
+      'BRN',
+      process.env.BRN_VALUE!,
     )
     expect(result).toBe(true)
   })
