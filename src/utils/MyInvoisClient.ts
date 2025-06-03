@@ -58,16 +58,21 @@ export class MyInvoisClient {
   }
 
   /**
-   * Validates a TIN against a NRIC
+   * Validates a TIN against a NRIC/ARMY/PASSPORT/BRN (Business Registration Number)
    *
-   * @param tin
-   * @param nric
+   * @param tin - The TIN to validate
+   * @param idType - The type of ID to validate against
+   * @param idValue - The value of the ID to validate against
    * @returns true if the TIN is valid, false otherwise
    */
-  async verifyTin(tin: string, nric: string): Promise<boolean> {
+  async verifyTin(
+    tin: string,
+    idType: 'NRIC' | 'ARMY' | 'PASSPORT' | 'BRN',
+    idValue: string,
+  ): Promise<boolean> {
     try {
       const response = await this.fetch(
-        `/api/v1.0/taxpayer/validate/${tin}?idType=NRIC&idValue=${nric}`,
+        `/api/v1.0/taxpayer/validate/${tin}?idType=${idType}&idValue=${idValue}`,
         {
           method: 'GET',
         },
