@@ -63,7 +63,7 @@ export function hashSignedProperties(
       let algorithmUri = algorithm
 
       // If C14N 1.1 is requested but not available, use Exclusive C14N
-      if (algorithm === 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315') {
+      if (algorithm === 'https://www.w3.org/TR/xml-c14n11') {
         console.warn(
           'C14N 1.1 requested for SignedProperties but may not be supported, falling back to Exclusive C14N',
         )
@@ -139,7 +139,7 @@ export async function hashSignedPropertiesWithC14N11Fallback(
     // Try C14N 1.1 first (may not be supported by xml-c14n library)
     return await hashSignedProperties(
       doc,
-      'http://www.w3.org/TR/2001/REC-xml-c14n-20010315',
+      'http://www.w3.org/2006/12/xml-c14n11',
     )
   } catch (error) {
     console.warn(
