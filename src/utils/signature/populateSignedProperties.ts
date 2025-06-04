@@ -84,6 +84,4 @@ export function populateSignedProperties(
   setElementValue(signingTimePath, properties.signingTime)
   setElementValue(issuerNamePath, properties.issuerName)
   setElementValue(serialNumberPath, properties.serialNumber)
-
-  // Document `doc` is modified in place, no return value needed.
 }
