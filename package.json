@@ -1,6 +1,6 @@
 {
   "name": "@ripwords/myinvois-client",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "description": "MyInvois client",
   "scripts": {
     "build": "bun run clean && rolldown -c rolldown.config.ts",
@@ -34,6 +34,7 @@
   },
   "dependencies": {
     "@xmldom/xmldom": "^0.9.8",
+    "crypto": "^1.0.1",
     "xml-c14n": "^0.0.6",
     "xml-crypto": "^6.1.2",
     "xmldom-ts": "^0.3.1",

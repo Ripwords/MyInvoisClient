@@ -1,5 +1,5 @@
 import * as crypto from 'crypto'
-import type { InvoiceV1_1 } from 'src/types'
+import type { InvoiceV1_1 } from '../types/documents/invoice-1_1.d.ts'
 import { DOMParserImpl, XMLSerializerImpl } from 'xmldom-ts'
 import { canonicalizeAndHashDocumentWithC14N11Fallback } from './signature/canonicalize'
 import { hashCertificate } from './signature/hashCert'
@@ -604,7 +604,7 @@ export function generateUBLXMLTemplate(invoiceInfo: InvoiceV1_1): string {
 export const generateSignedInvoiceXML = async (
   invoiceInfo: InvoiceV1_1,
   signingCredentials: SigningCredentials,
-) => {
+): Promise<string> => {
   // Step 1: Generate the UBL XML template with signature structure
   const xmlTemplate = generateUBLXMLTemplate(invoiceInfo)
 

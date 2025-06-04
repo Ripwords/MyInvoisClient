@@ -1,6 +1,5 @@
 import { getBaseUrl } from './getBaseUrl'
 import { platformLogin } from '../api/platform/platformLogin'
-import { InvoiceV1_1 } from 'src/types'
 import {
   createSigningCredentials,
   encodeDocumentForSubmission,
@@ -8,6 +7,7 @@ import {
   generateSignedInvoiceXML,
   SubmissionResponse,
 } from './invoice1-1'
+import type { InvoiceV1_1 } from '../types/documents/invoice-1_1.d.ts'
 
 export class MyInvoisClient {
   private readonly baseUrl: string
@@ -106,7 +106,10 @@ export class MyInvoisClient {
     }
   }
 
-  async submitDocument(documents: InvoiceV1_1[]) {
+  async submitDocument(documents: InvoiceV1_1[]): Promise<{
+    data: SubmissionResponse
+    status: number
+  }> {
     // Check if basic signing credentials are available
     if (!process.env.PRIVATE_KEY || !process.env.CERTIFICATE) {
       throw new Error(
