@@ -20,6 +20,7 @@ const sampleXmlTemplate = `
              xmlns:ext="urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2"
              xmlns:sig="urn:oasis:names:specification:ubl:schema:xsd:CommonSignatureComponents-2"
              xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+             xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
              xmlns:sac="urn:oasis:names:specification:ubl:schema:xsd:SignatureAggregateComponents-2"
              xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
              xmlns:xades="http://uri.etsi.org/01903/v1.3.2#">
@@ -50,8 +51,11 @@ const sampleXmlTemplate = `
             </ext:ExtensionContent>
         </ext:UBLExtension>
     </ext:UBLExtensions>
-    <!-- Optional final cac:Signature -->
-    <!-- <cac:Signature><cbc:ID>urn:oasis:names:specification:ubl:signature:Invoice</cbc:ID></cac:Signature> -->
+    <!-- Required cac:Signature element that populateFinalDocument populates -->
+    <cac:Signature>
+        <cbc:ID></cbc:ID>
+        <cbc:SignatureMethod></cbc:SignatureMethod>
+    </cac:Signature>
 </inv:Invoice>
 `
 
