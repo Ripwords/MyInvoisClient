@@ -6,6 +6,7 @@ import type { CountryCode } from '../country-code.d.ts'
 import type { ClassificationCode } from '../classification-codes.d.ts'
 import type { UnitTypeCode } from '../unit-types.d.ts'
 import type { PaymentModeCode } from '../payment-modes.d.ts'
+import type { MSICCode } from '../msic-codes.d.ts'
 
 // Based on https://sdk.myinvois.hasil.gov.my/documents/invoice-v1-1/
 
@@ -71,6 +72,10 @@ export interface Supplier {
    * @example +60123456789
    */
   contactNumber: string
+  /** Industry classification code. Max 10 chars.
+   * @example 46510
+   */
+  industryClassificationCode?: MSICCode['code']
 }
 
 /**
