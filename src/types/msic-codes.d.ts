@@ -9,19 +9,13 @@ import type { MSIC_7X_CODE } from './msic/7X.d.ts'
 import type { MSIC_8X_CODE } from './msic/8X.d.ts'
 import type { MSIC_9X_CODE } from './msic/9X.d.ts'
 
-export type MSICCode = {
-  code: string
-  description: string
-  msicCategoryReference: string
-}
-
 /**
  * Represents the allowed 5-digit Malaysia Standard Industrial Classification (MSIC) codes.
  * Based on the documentation: https://sdk.myinvois.hasil.gov.my/codes/msic-codes/
  * Interface representing an MSIC code entry.
  * Contains the 5-digit code and its description.
  */
-export interface MsicEntry {
+export interface MSICCode {
   code:
     | MSIC_0X_CODE
     | MSIC_1X_CODE
