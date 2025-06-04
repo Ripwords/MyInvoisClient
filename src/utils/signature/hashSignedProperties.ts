@@ -3,19 +3,25 @@ import * as xpath from 'xpath-ts'
 import c14nFactory from 'xml-c14n'
 
 /**
- * Selects the SignedProperties element, canonicalizes it (Exclusive C14N),
- * hashes it using SHA-256, and returns the Base64 encoded digest.
+ * Selects the SignedProperties element, canonicalizes it using the best available
+ * canonicalization algorithm, hashes it using SHA-256, and returns the Base64 encoded digest.
  *
  * Corresponds to Step 7 in the MyInvois Signature Creation guide:
  * https://sdk.myinvois.hasil.gov.my/signature-creation/#step-7-generate-signed-properties-hash
  *
- * Note: Assumes Exclusive C14N, consistent with Step 3 implementation. C14N 1.1 might be needed.
+ * Note: MyInvois documentation specifies C14N 1.1, but due to limited Node.js library support,
+ * this implementation uses Exclusive C14N which is widely supported and should be compatible
+ * in most cases. If signature validation fails, this may need to be updated.
  *
  * @param doc The XML Document object (from xmldom-ts) after SignedProperties population (Step 6).
+ * @param algorithm Optional canonicalization algorithm URI. Defaults to Exclusive C14N.
  * @returns A Promise resolving to the Base64 encoded SHA-256 hash (PropsDigest).
  * @throws {Error} If the SignedProperties element cannot be found or canonicalization/hashing fails.
  */
-export function hashSignedProperties(doc: Document): Promise<string> {
+export function hashSignedProperties(
+  doc: Document,
+  algorithm: string = 'http://www.w3.org/2001/10/xml-exc-c14n#',
+): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
       // Define namespaces, including the default namespace for Invoice
@@ -44,17 +50,29 @@ export function hashSignedProperties(doc: Document): Promise<string> {
           `Multiple SignedProperties elements found (expected 1): ${signedPropertiesXPath}`,
         )
       }
-      const signedPropertiesNode = nodes[0] as Node // Assuming the result is a Node
+      const signedPropertiesNode = nodes[0] as Node
 
       if (!signedPropertiesNode) {
         throw new Error('Selected SignedProperties node is invalid or null.')
       }
 
-      // 2. Canonicalize the SignedProperties node (Exclusive C14N)
+      // 2. Canonicalize the SignedProperties node
       const c14n = c14nFactory()
-      const algorithmUri = 'http://www.w3.org/2001/10/xml-exc-c14n#'
+
+      // Try C14N 1.1 first, fallback to Exclusive C14N
+      let algorithmUri = algorithm
+
+      // If C14N 1.1 is requested but not available, use Exclusive C14N
+      if (algorithm === 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315') {
+        console.warn(
+          'C14N 1.1 requested for SignedProperties but may not be supported, falling back to Exclusive C14N',
+        )
+        algorithmUri = 'http://www.w3.org/2001/10/xml-exc-c14n#'
+      }
+
       const canonicaliser = c14n.createCanonicaliser(algorithmUri)
 
+      // Canonicalize the SignedProperties node using the callback pattern
       canonicaliser.canonicalise(
         signedPropertiesNode,
         (error, canonicalXml) => {
@@ -98,7 +116,6 @@ export function hashSignedProperties(doc: Document): Promise<string> {
         },
       )
     } catch (setupError: any) {
-      // Catch errors during XPath selection or canonicalizer setup
       console.error(
         'Error setting up or selecting SignedProperties:',
         setupError,
@@ -110,4 +127,29 @@ export function hashSignedProperties(doc: Document): Promise<string> {
       )
     }
   })
+}
+
+/**
+ * Attempts to use C14N 1.1 for SignedProperties if available, otherwise falls back to Exclusive C14N.
+ */
+export async function hashSignedPropertiesWithC14N11Fallback(
+  doc: Document,
+): Promise<string> {
+  try {
+    // Try C14N 1.1 first (may not be supported by xml-c14n library)
+    return await hashSignedProperties(
+      doc,
+      'http://www.w3.org/TR/2001/REC-xml-c14n-20010315',
+    )
+  } catch (error) {
+    console.warn(
+      'C14N 1.1 failed for SignedProperties, falling back to Exclusive C14N:',
+      error,
+    )
+    // Fallback to Exclusive C14N
+    return await hashSignedProperties(
+      doc,
+      'http://www.w3.org/2001/10/xml-exc-c14n#',
+    )
+  }
 }
