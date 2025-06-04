@@ -1,6 +1,8 @@
 import { defineConfig } from 'rolldown'
 import { dts } from 'rolldown-plugin-dts'
 
+const external = ['xmldom-ts', 'xpath-ts', 'xml-c14n']
+
 export default defineConfig([
   {
     input: 'src/index.ts',
@@ -12,6 +14,7 @@ export default defineConfig([
     output: {
       dir: 'dist',
     },
+    external,
   },
   {
     input: 'src/index.ts',
@@ -22,5 +25,6 @@ export default defineConfig([
       entryFileNames: 'index.cjs',
       chunkFileNames: '[name]-[hash].cjs',
     },
+    external,
   },
 ])

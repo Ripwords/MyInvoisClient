@@ -20,10 +20,11 @@ describe('MyInvoisClientWithRealData', () => {
       process.env.CLIENT_SECRET!,
       'sandbox',
     )
-    // @ts-ignore
+    // @ts-ignore - refreshToken is a private method
     await client.refreshToken()
     const result = await client.verifyTin(
       process.env.TIN_VALUE!,
+      'NRIC',
       process.env.NRIC_VALUE!,
     )
     expect(result).toBe(true)

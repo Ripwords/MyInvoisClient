@@ -6,6 +6,7 @@ import type { CountryCode } from '../country-code.d.ts'
 import type { ClassificationCode } from '../classification-codes.d.ts'
 import type { UnitTypeCode } from '../unit-types.d.ts'
 import type { PaymentModeCode } from '../payment-modes.d.ts'
+import type { MSICCode } from '../msic-codes.d.ts'
 
 // Based on https://sdk.myinvois.hasil.gov.my/documents/invoice-v1-1/
 
@@ -52,6 +53,11 @@ export interface Supplier {
    */
   tin: string
   /**
+   * Supplier's Registration Type. NRIC, BRN, PASSPORT
+   * @example NRIC
+   */
+  registrationType: 'BRN' | 'NRIC' | 'PASSPORT'
+  /**
    * Supplier's Registration / Identification Number / Passport Number.
    * Format depends on schemeID: NRIC (12), BRN (20), PASSPORT (12), ARMY (12).
    * @example BRN: 202001234567
@@ -71,6 +77,10 @@ export interface Supplier {
    * @example +60123456789
    */
   contactNumber: string
+  /** Industry classification code. Max 10 chars.
+   * @example 46510
+   */
+  industryClassificationCode?: MSICCode['code']
 }
 
 /**
