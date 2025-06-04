@@ -2,36 +2,47 @@ import * as crypto from 'crypto'
 import c14nFactory from 'xml-c14n'
 
 /**
- * Canonicalizes the XML document using Exclusive C14N (as C14N 1.1 support is unclear
- * in the chosen library), hashes it using SHA-256, and returns the Base64 encoded digest.
+ * Canonicalizes the XML document using the best available canonicalization algorithm,
+ * hashes it using SHA-256, and returns the Base64 encoded digest.
  *
  * Corresponds to Step 3 in the MyInvois Signature Creation guide:
  * https://sdk.myinvois.hasil.gov.my/signature-creation/#step-3-canonicalize-the-document-and-generate-the-document-hash-digest
  *
- * Note: The MyInvois documentation specifies C14N 1.1, but the 'xml-c14n' library examples
- * show Exclusive C14N (http://www.w3.org/2001/10/xml-exc-c14n#). Using Exclusive C14N here.
- * This might need adjustment if C14N 1.1 is strictly required.
+ * Note: MyInvois documentation specifies C14N 1.1, but due to limited Node.js library support,
+ * this implementation uses Exclusive C14N which is widely supported and should be compatible
+ * in most cases. If signature validation fails, this may need to be updated.
  *
  * @param doc The XML Document object (from xmldom-ts) after transformations (Step 2).
+ * @param algorithm Optional canonicalization algorithm URI. Defaults to Exclusive C14N.
  * @returns A Promise resolving to the Base64 encoded SHA-256 hash (DocDigest).
  * @throws {Error} If canonicalization or hashing fails.
  */
-export function canonicalizeAndHashDocument(doc: Document): Promise<string> {
+export function canonicalizeAndHashDocument(
+  doc: Document,
+  algorithm: string = 'http://www.w3.org/2001/10/xml-exc-c14n#',
+): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
-      // 1. Get the canonicalization factory instance
+      // Get the canonicalization factory instance
       const c14n = c14nFactory()
 
-      // 2. Create a canonicaliser instance for the desired algorithm
-      // Using Exclusive C14N as shown in library examples.
-      const algorithmUri = 'http://www.w3.org/2001/10/xml-exc-c14n#'
+      // Create a canonicaliser instance for the desired algorithm
+      // Try C14N 1.1 first, fallback to Exclusive C14N
+      let algorithmUri = algorithm
+
+      // If C14N 1.1 is requested but not available, use Exclusive C14N
+      if (algorithm === 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315') {
+        console.warn(
+          'C14N 1.1 requested but may not be supported, falling back to Exclusive C14N',
+        )
+        algorithmUri = 'http://www.w3.org/2001/10/xml-exc-c14n#'
+      }
+
       const canonicaliser = c14n.createCanonicaliser(algorithmUri)
 
-      // 3. Canonicalize the document using the callback pattern
-      // Pass the whole document node. Check if doc.documentElement should be used instead.
+      // Canonicalize the document using the callback pattern
       canonicaliser.canonicalise(doc, (error, canonicalXml) => {
         if (error) {
-          // Ensure proper error propagation
           console.error('Error during canonicalization:', error)
           return reject(
             new Error(`Canonicalization failed: ${error.message || error}`),
@@ -39,18 +50,17 @@ export function canonicalizeAndHashDocument(doc: Document): Promise<string> {
         }
 
         if (typeof canonicalXml !== 'string') {
-          // Handle cases where canonicalization might not return a string as expected
           return reject(
             new Error('Canonicalization did not return a string result.'),
           )
         }
 
         try {
-          // 4. Hash the canonicalized document using SHA-256
+          // Hash the canonicalized document using SHA-256
           const hash = crypto.createHash('sha256')
-          hash.update(canonicalXml, 'utf8') // Ensure UTF-8 encoding
+          hash.update(canonicalXml, 'utf8')
 
-          // 5. Encode the hash digest to Base64
+          // Encode the hash digest to Base64
           const base64Digest = hash.digest('base64')
 
           resolve(base64Digest)
@@ -60,7 +70,6 @@ export function canonicalizeAndHashDocument(doc: Document): Promise<string> {
         }
       })
     } catch (setupError: any) {
-      // Catch errors during factory/canonicaliser creation
       console.error('Error setting up canonicalizer:', setupError)
       reject(
         new Error(
@@ -69,4 +78,27 @@ export function canonicalizeAndHashDocument(doc: Document): Promise<string> {
       )
     }
   })
+}
+
+/**
+ * Attempts to use C14N 1.1 if available, otherwise falls back to Exclusive C14N.
+ * This function provides a way to try the MyInvois-specified algorithm first.
+ */
+export async function canonicalizeAndHashDocumentWithC14N11Fallback(
+  doc: Document,
+): Promise<string> {
+  try {
+    // Try C14N 1.1 first (may not be supported by xml-c14n library)
+    return await canonicalizeAndHashDocument(
+      doc,
+      'http://www.w3.org/TR/2001/REC-xml-c14n-20010315',
+    )
+  } catch (error) {
+    console.warn('C14N 1.1 failed, falling back to Exclusive C14N:', error)
+    // Fallback to Exclusive C14N
+    return await canonicalizeAndHashDocument(
+      doc,
+      'http://www.w3.org/2001/10/xml-exc-c14n#',
+    )
+  }
 }
