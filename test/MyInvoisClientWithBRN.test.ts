@@ -22,8 +22,7 @@ describe('MyInvoisClientWithBRN', () => {
       undefined,
       true,
     )
-    // @ts-ignore - refreshToken is a private method
-    await client.refreshToken()
+
     const result = await client.verifyTin(
       process.env.TIN_VALUE!,
       'BRN',
