@@ -53,6 +53,11 @@ export interface Supplier {
    */
   tin: string
   /**
+   * Supplier's Registration Type. NRIC, BRN, PASSPORT
+   * @example NRIC
+   */
+  registrationType: 'BRN' | 'NRIC' | 'PASSPORT'
+  /**
    * Supplier's Registration / Identification Number / Passport Number.
    * Format depends on schemeID: NRIC (12), BRN (20), PASSPORT (12), ARMY (12).
    * @example BRN: 202001234567
