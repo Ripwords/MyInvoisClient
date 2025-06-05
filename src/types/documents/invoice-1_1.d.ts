@@ -357,3 +357,83 @@ export interface InvoiceV1_1 {
   /** Delivery information. */
   delivery?: Delivery
 }
+
+export type SubmissionStatus =
+  | 'InProgress'
+  | 'Valid'
+  | 'PartiallyValid'
+  | 'Invalid'
+
+export type DocumentStatus = 'Valid' | 'Invalid' | 'Cancelled' | 'Submitted'
+
+export type StandardError = {
+  code: string
+  message: string
+  target: string
+  details: {
+    code: string
+    message: string
+    target: string
+  }[]
+}
+
+export type DocumentValidationResult = 'Valid' | 'Invalid' | 'Pending'
+export interface DocumentValidationStepResult {
+  name: string
+  status: DocumentValidationResult
+  error?: StandardError
+}
+export interface DocumentSummary {
+  uuid: string
+  submissionUid: string
+  longId: string
+  internalId: string
+  typeName: string
+  typeVersionName: string
+  issuerTin: string
+  issuerName: string
+  receiverId: string
+  receiverName: string
+  dateTimeIssued: string
+  dateTimeReceived: string
+  dateTimeValidated: string
+  totalPayableAmount: number
+  totalExcludingTax: number
+  totalDiscount: number
+  totalNetAmount: number
+  status: DocumentStatus
+  cancelDateTime: string | null
+  rejectRequestDateTime: string | null
+  documentStatusReason: string | null
+  createdByUserId: string
+}
+
+export interface GetSubmissionResponse {
+  submissionUid?: string
+  documentCount?: number
+  dateTimeReceived?: string
+  overallStatus?: SubmissionStatus
+  documentSummary?: DocumentSummary[]
+  error?: StandardError
+}
+
+export interface ResponseDocument {
+  invoiceCodeNumber: string
+  error?: StandardError
+}
+export interface SubmissionResponse {
+  submissionUid: string
+  acceptedDocuments: ResponseDocument[]
+  rejectedDocuments: ResponseDocument[]
+}
+
+export interface SigningCredentials {
+  /** Private key in PEM format for signing */
+  privateKeyPem: string
+  /** Certificate in PEM format */
+  certificatePem: string
+  /** Certificate issuer name (e.g., "CN=Trial LHDNM Sub CA V1, OU=Terms of use at https://www.posdigicert.com.my, O=LHDNM, C=MY") */
+  issuerName: string
+  /** Certificate serial number as string */
+  serialNumber: string
+}

@@ -3,10 +3,12 @@ import {
   extractCertificateInfo,
   generateSignedInvoiceXML,
   generateUBLXMLTemplate,
-  SigningCredentials,
   validateKeyPair,
 } from '../invoice1-1'
-import { InvoiceV1_1 } from 'src/types'
+import type {
+  InvoiceV1_1,
+  SigningCredentials,
+} from '../../types/documents/invoice-1_1.d.ts'
 import { transformXmlInvoice } from '../signature/transform'
 import {
   canonicalizeAndHashDocument,

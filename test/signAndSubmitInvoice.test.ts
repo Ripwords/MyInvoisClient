@@ -7,8 +7,8 @@ import {
   generateDocumentHash,
   generateDocumentHashForSubmission,
   generateSignedInvoiceXML,
-  SigningCredentials,
 } from '../src/utils/invoice1-1'
+import type { SigningCredentials } from '../src/types'
 import {
   debugDocumentHash,
   testSubmissionHashMethods,
@@ -887,6 +887,13 @@ describe('Real API Submission with Self-Signed Certificate', () => {
       expect(status).toBe(202) // MyInvois typically returns 202 Accepted
       expect(submissionResponse.submissionUid).toBeDefined()
       expect(submissionResponse.submissionUid).not.toBeNull()
+
+      const submission = await client.getSubmissionStatus(
+        submissionResponse.submissionUid,
+      )
+      console.log('Submission:', submission)
+      expect(submission).toBeDefined()
+      expect(submission.status).oneOf(['Validated', 'Invalid'])
     } catch (error: any) {
       console.error('Error during real document submission:', error)
 

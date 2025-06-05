@@ -1,11 +1,8 @@
 import * as crypto from 'crypto'
 import { DOMParserImpl } from 'xmldom-ts'
 import type { InvoiceV1_1 } from '../../types'
-import {
-  generateDocumentHash,
-  generateSignedInvoiceXML,
-  SigningCredentials,
-} from '../invoice1-1'
+import { generateDocumentHash, generateSignedInvoiceXML } from '../invoice1-1'
+import type { SigningCredentials } from '../../types/documents/invoice-1_1.d.ts'
 
 /**
  * Debug Document Hash Issues
