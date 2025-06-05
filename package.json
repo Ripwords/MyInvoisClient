@@ -1,6 +1,6 @@
 {
   "name": "@ripwords/myinvois-client",
-  "version": "0.0.11",
+  "version": "0.1.0",
   "description": "MyInvois client",
   "scripts": {
     "build": "tsdown",
