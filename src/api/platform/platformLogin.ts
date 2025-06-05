@@ -1,6 +1,11 @@
 import type { ClientCredentials, TokenResponse } from 'src/types'
 
-export const platformLogin = async (client: ClientCredentials) => {
+export const platformLogin = async (
+  client: ClientCredentials,
+): Promise<{
+  token: string
+  tokenExpiration: Date
+}> => {
   const { clientId, clientSecret, baseUrl, onBehalfOf, debug } = client
   try {
     const response = await fetch(`${baseUrl}/connect/token`, {

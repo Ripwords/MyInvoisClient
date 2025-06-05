@@ -14,33 +14,7 @@ import {
 } from './signature/populateSignedProperties'
 import { signDocumentDigest } from './signature/sign'
 import { transformXmlInvoice } from './signature/transform'
-
-export interface ResponseDocument {
-  invoiceCodeNumber: string
-  error?: {
-    code: string | null
-    message: string
-    target: string
-    propertyPath: string | null
-    details: any[]
-  }
-}
-export interface SubmissionResponse {
-  submissionUid: string
-  acceptedDocuments: ResponseDocument[]
-  rejectedDocuments: ResponseDocument[]
-}
-
-export interface SigningCredentials {
-  /** Private key in PEM format for signing */
-  privateKeyPem: string
-  /** Certificate in PEM format */
-  certificatePem: string
-  /** Certificate issuer name (e.g., "CN=Trial LHDNM Sub CA V1, OU=Terms of use at https://www.posdigicert.com.my, O=LHDNM, C=MY") */
-  issuerName: string
-  /** Certificate serial number as string */
-  serialNumber: string
-}
+import type { SigningCredentials } from '../types/documents/invoice-1_1.d.ts'
 
 /**
  * Escapes XML special characters

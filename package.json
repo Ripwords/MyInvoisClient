@@ -3,7 +3,7 @@
   "version": "0.0.11",
   "description": "MyInvois client",
   "scripts": {
-    "build": "bun run clean && rolldown -c rolldown.config.ts",
+    "build": "tsdown",
     "release": "bun run build && npm publish --access public",
     "clean": "rimraf dist",
     "lint": "oxlint",
@@ -19,15 +19,12 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@vitest/coverage-v8": "^3.1.2",
+    "@types/xml-c14n": "^0.0.3",
     "dotenv": "^16.5.0",
     "oxlint": "^0.16.6",
     "prettier": "^3.5.3",
-    "rimraf": "^6.0.1",
-    "rolldown": "^1.0.0-beta.7",
-    "rolldown-plugin-dts": "^0.7.13",
-    "vitest": "^3.1.1",
-    "@types/xml-c14n": "^0.0.3"
+    "tsdown": "^0.12.6",
+    "vitest": "^3.1.1"
   },
   "peerDependencies": {
     "typescript": "^5.8.3"
