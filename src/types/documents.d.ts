@@ -3,10 +3,9 @@ import type { CurrencyCode } from './currencies.d.ts'
 import type { EInvoiceTypeCode } from './e-invoice.d.ts'
 import type { MSICCode } from './msic-codes.d.ts'
 import type { IssuerDigitalSignature } from './signatures.d.ts'
-import type { Suggested } from './utils.d.ts'
 import type { TaxTypeCode } from './tax-types.d.ts'
 
-export type RegistrationType = 'BRN' | 'NRIC' | 'PASSPORT'
+export type RegistrationType = 'BRN' | 'NRIC' | 'PASSPORT' | 'ARMY'
 
 // Based on https://sdk.myinvois.hasil.gov.my/documents/invoice-v1-1/
 
@@ -47,7 +46,7 @@ export interface Supplier {
   registrationType: RegistrationType
   /**
    * Supplier's Registration / Identification Number / Passport Number.
-   * Format depends on schemeID: NRIC (12), BRN (20), PASSPORT (12), ARMY (12).
+   * Format depends on schemeID: NRIC (12), BRN (20), PASSPORT (12)
    * @example BRN: 202001234567
    */
   registrationNumber: string
@@ -66,7 +65,7 @@ export interface Supplier {
    * Supplier's industry classification description. Max 300 chars.
    * @example Other retail sale in non-specialised stores
    */
-  industryClassificationDescription: Suggested<MSICCode['description']>
+  industryClassificationDescription: MSICCode['description']
 }
 
 /**
@@ -83,13 +82,13 @@ export interface Buyer {
    */
   tin: string
   /**
-   * Buyer's Registration Type. NRIC, BRN, PASSPORT, ARMY
+   * Buyer's Registration Type. NRIC, BRN, PASSPORT
    * @example BRN
    */
   registrationType: RegistrationType
   /**
    * Buyer's Registration / Identification Number / Passport Number.
-   * Format depends on schemeID: NRIC (12), BRN (20), PASSPORT (12), ARMY (12).
+   * Format depends on schemeID: NRIC (12), BRN (20), PASSPORT (12).
    * @example BRN: 202001234567
    */
   registrationNumber: string

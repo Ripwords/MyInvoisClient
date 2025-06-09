@@ -3,6 +3,7 @@ import { platformLogin } from './api/platform/platformLogin'
 import type {
   DocumentStatus,
   InvoiceV1_1,
+  RegistrationType,
   SigningCredentials,
 } from './types/documents'
 import { getBaseUrl } from './utils/getBaseUrl'
@@ -114,7 +115,7 @@ export class MyInvoisClient {
    */
   async verifyTin(
     tin: string,
-    idType: 'NRIC' | 'ARMY' | 'PASSPORT' | 'BRN',
+    idType: RegistrationType,
     idValue: string,
   ): Promise<boolean> {
     try {
