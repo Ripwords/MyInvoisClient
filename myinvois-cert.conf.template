@@ -1,0 +1,23 @@
+[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[req_distinguished_name]
+C = MY
+ST = YOUR_STATE
+L = YOUR_CITY
+O = YOUR_COMPANY_NAME
+CN = YOUR_COMPANY_NAME
+emailAddress = YOUR_EMAIL
+# SERIALNUMBER field - Business registration number (e.g., 202301234567)
+serialNumber = YOUR_BUSINESS_REGISTRATION_NUMBER
+
+[v3_req]
+keyUsage = keyEncipherment, dataEncipherment, digitalSignature, nonRepudiation
+extendedKeyUsage = clientAuth, emailProtection
+subjectAltName = @alt_names
+
+[alt_names]
+email.1 = YOUR_EMAIL
+DNS.1 = YOUR_DOMAIN

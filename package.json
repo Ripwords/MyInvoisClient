@@ -4,8 +4,7 @@
   "description": "MyInvois client",
   "scripts": {
     "build": "tsdown",
-    "release": "bun run build && npm publish --access public",
-    "clean": "rimraf dist",
+    "release": "bun run build && changelogen --release && npm publish --access public && git push --follow-tags",
     "lint": "oxlint",
     "test": "vitest"
   },

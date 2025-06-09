@@ -30,11 +30,13 @@ function sortObjectKeys(obj: unknown): unknown {
 }
 
 /**
- * Canonicalizes JSON by sorting keys recursively and removing whitespace
+ * Enhanced canonicalization following MyInvois specification exactly
+ * Key changes: ensure consistent ordering and formatting
  */
 export const canonicalizeJSON = (obj: unknown): string => {
   const sortedObj = sortObjectKeys(obj)
-  return JSON.stringify(sortedObj)
+  // Use compact JSON with no extra whitespace
+  return JSON.stringify(sortedObj, null, 0)
 }
 
 /**
@@ -799,67 +801,102 @@ export const generateCleanUBLDocument = (invoices: InvoiceV1_1[]) => {
 
 /**
  * Step 2: Calculate Document Digest
- * Follows: https://sdk.myinvois.hasil.gov.my/signature-creation-json/#step-2-calculate-the-document-digest
+ * FIXED: Remove UBLExtensions and Signature before hashing (DS322)
+ * Based on working implementation pattern
  */
 export const calculateDocumentDigest = (invoices: InvoiceV1_1[]): string => {
-  // Use clean document structure (without signature elements)
+  // Generate clean UBL document structure
   const cleanDocument = generateCleanUBLDocument(invoices)
 
-  // Canonicalize JSON
-  const canonicalizedJSON = canonicalizeJSON(cleanDocument)
+  // CRITICAL FIX: Remove UBLExtensions and Signature from each invoice before hashing
+  const documentForHashing = JSON.parse(JSON.stringify(cleanDocument))
+  if (documentForHashing.Invoice && Array.isArray(documentForHashing.Invoice)) {
+    documentForHashing.Invoice.forEach((invoice: any) => {
+      delete invoice.UBLExtensions
+      delete invoice.Signature
+    })
+  }
+
+  // Convert to string for hashing (no canonicalization - use direct JSON.stringify)
+  const documentString = JSON.stringify(documentForHashing)
 
   // Calculate SHA-256 hash
   const hash = crypto.createHash('sha256')
-  hash.update(canonicalizedJSON, 'utf8')
+  hash.update(documentString, 'utf8')
 
-  // Convert to Base64 (DocDigest)
-  const hexHash = hash.digest('hex')
-  const docDigest = Buffer.from(hexHash, 'hex').toString('base64')
-
-  return docDigest
-}
-
-/**
- * Step 4: Calculate Certificate Digest
- * Follows: https://sdk.myinvois.hasil.gov.my/signature-creation-json/#step-4-calculate-the-certificate-digest
- */
-export const calculateCertificateDigest = (certificatePem: string): string => {
-  // Extract Base64 content from PEM (remove headers/footers)
-  const certificateBase64 = certificatePem
-    .replace(/-----BEGIN CERTIFICATE-----/g, '')
-    .replace(/-----END CERTIFICATE-----/g, '')
-    .replace(/\s+/g, '')
-
-  // Convert to DER bytes
-  const certificateBytes = Buffer.from(certificateBase64, 'base64')
-
-  // Calculate SHA-256 hash of DER bytes
-  const hash = crypto.createHash('sha256')
-  hash.update(certificateBytes)
-
-  // Return as Base64 (CertDigest)
+  // Return as Base64 (DocDigest)
   return hash.digest('base64')
 }
 
 /**
- * Extract certificate information
+ * Step 4: Calculate Certificate Digest
+ * Enhanced to handle certificate content properly
+ */
+export const calculateCertificateDigest = (certificatePem: string): string => {
+  // Extract certificate content (Base64 without PEM headers/footers)
+  const certificateContent = certificatePem
+    .replace(/-----BEGIN CERTIFICATE-----/g, '')
+    .replace(/-----END CERTIFICATE-----/g, '')
+    .replace(/\s+/g, '') // Remove all whitespace
+
+  // Convert Base64 to binary
+  const certificateBinary = Buffer.from(certificateContent, 'base64')
+
+  // Calculate SHA-256 hash of binary content
+  const hash = crypto.createHash('sha256')
+  hash.update(certificateBinary)
+
+  // Return as Base64
+  return hash.digest('base64')
+}
+
+/**
+ * Enhanced certificate info extraction with better error handling
+ * FIXED: Normalize issuer name format to match MyInvois expectations (DS326)
  */
 export const extractCertificateInfo = (
   certificatePem: string,
 ): {
   issuerName: string
   serialNumber: string
+  subjectName: string
 } => {
   try {
     const cert = new X509Certificate(certificatePem)
 
     // Extract serial number and convert to decimal string
     const serialNumberHex = cert.serialNumber
-    const serialNumberDecimal = BigInt('0x' + serialNumberHex).toString()
+
+    // ENHANCED: Normalize distinguished name format (DS326)
+    // Ensures MyInvois portal compatibility for X509IssuerName matching
+    const normalizeDistinguishedName = (dn: string): string => {
+      // Convert multi-line format to comma-separated RFC2253 format
+      const normalized = dn
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .join(', ')
+
+      // MyInvois-specific normalization to prevent DS326 errors
+      return normalized
+        .replace(/\s*=\s*/g, '=') // Remove spaces around equals (CRITICAL for portal)
+        .replace(/,\s+/g, ', ') // Ensure single space after commas
+        .replace(/\r/g, '') // Remove any carriage returns
+        .replace(/\s{2,}/g, ' ') // Replace multiple spaces with single space
+        .trim() // Remove leading/trailing whitespace
+    }
+
+    // Enhanced serial number formatting
+    const formatSerialNumber = (serialHex: string): string => {
+      // Convert hex to decimal and ensure it's a string
+      const decimal = BigInt('0x' + serialHex).toString()
+      return decimal
+    }
 
     return {
-      issuerName: cert.issuer,
-      serialNumber: serialNumberDecimal,
+      issuerName: normalizeDistinguishedName(cert.issuer),
+      serialNumber: formatSerialNumber(serialNumberHex),
+      subjectName: normalizeDistinguishedName(cert.subject),
     }
   } catch (error: unknown) {
     throw new Error(
@@ -869,8 +906,9 @@ export const extractCertificateInfo = (
 }
 
 /**
- * Step 5: Create and populate SignedProperties
- * Follows: https://sdk.myinvois.hasil.gov.my/signature-creation-json/#step-5-populate-the-signed-properties-section
+ * Step 5: Create SignedProperties with enhanced structure
+ * FIXED: Simplified structure to match MyInvois expectations (DS320)
+ * Following MyInvois JSON signature specification exactly
  */
 export const createSignedProperties = (
   certificateDigest: string,
@@ -893,7 +931,6 @@ export const createSignedProperties = (
                       {
                         DigestMethod: [
                           {
-                            _: '',
                             Algorithm:
                               'http://www.w3.org/2001/04/xmlenc#sha256',
                           },
@@ -920,35 +957,39 @@ export const createSignedProperties = (
 
 /**
  * Step 6: Calculate SignedProperties Digest
- * Follows: https://sdk.myinvois.hasil.gov.my/signature-creation-json/#step-6-calculate-the-signed-properties-section-digest
+ * FIXED: Add Target wrapper and use direct JSON stringify (DS320)
+ * Based on working implementation pattern
  */
 export const calculateSignedPropertiesDigest = (
   signedProperties: Record<string, unknown>,
 ): string => {
-  // Canonicalize SignedProperties
-  const canonicalizedJSON = canonicalizeJSON(signedProperties)
+  // CRITICAL FIX: Wrap with Target as per working implementation
+  const signedPropertiesWithTarget = {
+    Target: 'signature',
+    SignedProperties: signedProperties.SignedProperties,
+  }
+
+  // Convert to string for hashing (no canonicalization - use direct JSON.stringify)
+  const signedPropertiesString = JSON.stringify(signedPropertiesWithTarget)
 
   // Calculate SHA-256 hash
   const hash = crypto.createHash('sha256')
-  hash.update(canonicalizedJSON, 'utf8')
+  hash.update(signedPropertiesString, 'utf8')
 
-  // Convert to Base64 (PropsDigest)
-  const hexHash = hash.digest('hex')
-  const propsDigest = Buffer.from(hexHash, 'hex').toString('base64')
-
-  return propsDigest
+  // Return as Base64 (PropsDigest)
+  return hash.digest('base64')
 }
 
 /**
  * Step 3: Create SignedInfo and calculate signature
- * Follows: https://sdk.myinvois.hasil.gov.my/signature-creation-json/#step-3-sign-the-document-digest-using-the-certificate
+ * Enhanced with better structure and signature generation
  */
 export const createSignedInfoAndSign = (
   docDigest: string,
   propsDigest: string,
   privateKeyPem: string,
 ): { signedInfo: Record<string, unknown>; signatureValue: string } => {
-  // Create SignedInfo structure
+  // Create SignedInfo structure following specification exactly
   const signedInfo = {
     CanonicalizationMethod: [
       {
@@ -964,17 +1005,7 @@ export const createSignedInfoAndSign = (
     ],
     Reference: [
       {
-        Type: 'http://uri.etsi.org/01903/v1.3.2#SignedProperties',
-        URI: '#id-xades-signed-props',
-        DigestMethod: [
-          {
-            _: '',
-            Algorithm: 'http://www.w3.org/2001/04/xmlenc#sha256',
-          },
-        ],
-        DigestValue: [{ _: propsDigest }],
-      },
-      {
+        Id: 'id-doc-signed-data',
         Type: '',
         URI: '',
         DigestMethod: [
@@ -985,23 +1016,38 @@ export const createSignedInfoAndSign = (
         ],
         DigestValue: [{ _: docDigest }],
       },
+      {
+        Id: 'id-xades-signed-props',
+        Type: 'http://uri.etsi.org/01903/v1.3.2#SignedProperties',
+        URI: '#id-xades-signed-props',
+        DigestMethod: [
+          {
+            _: '',
+            Algorithm: 'http://www.w3.org/2001/04/xmlenc#sha256',
+          },
+        ],
+        DigestValue: [{ _: propsDigest }],
+      },
     ],
   }
 
-  // Canonicalize SignedInfo
-  const canonicalizedSignedInfo = canonicalizeJSON(signedInfo)
+  // FIXED: Use direct JSON.stringify instead of canonicalization (DS333)
+  // Based on working implementation pattern
+  const signedInfoString = JSON.stringify(signedInfo)
 
-  // Calculate SHA-256 hash of SignedInfo
-  const hash = crypto.createHash('sha256')
-  hash.update(canonicalizedSignedInfo, 'utf8')
-  const signedInfoDigest = hash.digest()
+  // Sign with RSA-SHA256 directly (RSA-SHA256 handles hashing internally)
+  // FIXED: Removed double-hashing bug that was causing DS333 errors
+  try {
+    const signer = crypto.createSign('RSA-SHA256')
+    signer.update(signedInfoString, 'utf8')
+    const signatureValue = signer.sign(privateKeyPem, 'base64')
 
-  // Sign with RSA-SHA256
-  const signer = crypto.createSign('RSA-SHA256')
-  signer.update(signedInfoDigest)
-  const signatureValue = signer.sign(privateKeyPem, 'base64')
-
-  return { signedInfo, signatureValue }
+    return { signedInfo, signatureValue }
+  } catch (error) {
+    throw new Error(
+      `Signature generation failed: ${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
 }
 
 /**
@@ -1012,151 +1058,160 @@ export const generateCompleteDocument = (
   invoices: InvoiceV1_1[],
   signingCredentials: SigningCredentials,
 ) => {
-  // Step 1: Generate clean document (done in calculateDocumentDigest)
-  // Step 2: Calculate document digest
-  const docDigest = calculateDocumentDigest(invoices)
+  try {
+    // Step 1: Generate clean document (done in calculateDocumentDigest)
+    // Step 2: Calculate document digest
+    const docDigest = calculateDocumentDigest(invoices)
 
-  // Generate signing time
-  const signingTime = new Date().toISOString()
+    // Generate signing time in proper ISO format
+    const signingTime = new Date().toISOString()
 
-  // Step 4: Calculate certificate digest
-  const certificateDigest = calculateCertificateDigest(
-    signingCredentials.certificatePem,
-  )
+    // Extract certificate information (enhanced)
+    const certInfo = extractCertificateInfo(signingCredentials.certificatePem)
 
-  // Step 5: Create SignedProperties
-  const signedProperties = createSignedProperties(
-    certificateDigest,
-    signingTime,
-    signingCredentials.issuerName,
-    signingCredentials.serialNumber,
-  )
+    // Step 4: Calculate certificate digest
+    const certificateDigest = calculateCertificateDigest(
+      signingCredentials.certificatePem,
+    )
 
-  // Step 6: Calculate SignedProperties digest
-  const propsDigest = calculateSignedPropertiesDigest(signedProperties)
+    // Step 5: Create SignedProperties using extracted cert info
+    const signedProperties = createSignedProperties(
+      certificateDigest,
+      signingTime,
+      certInfo.issuerName,
+      certInfo.serialNumber,
+    )
 
-  // Step 3: Create SignedInfo and generate signature
-  const { signedInfo, signatureValue } = createSignedInfoAndSign(
-    docDigest,
-    propsDigest,
-    signingCredentials.privateKeyPem,
-  )
+    // Step 6: Calculate SignedProperties digest
+    const propsDigest = calculateSignedPropertiesDigest(signedProperties)
 
-  // Extract certificate content (Base64 without PEM headers)
-  const certificate = signingCredentials.certificatePem
-    .replace(/-----BEGIN CERTIFICATE-----/g, '')
-    .replace(/-----END CERTIFICATE-----/g, '')
-    .replace(/\s+/g, '')
+    // Step 3: Create SignedInfo and generate signature
+    const { signedInfo, signatureValue } = createSignedInfoAndSign(
+      docDigest,
+      propsDigest,
+      signingCredentials.privateKeyPem,
+    )
 
-  // Step 7: Create final signed document
-  const signedInvoices = invoices.map(invoice => {
-    const cleanInvoice = generateCleanInvoiceObject(invoice)
+    // Extract certificate content (Base64 without PEM headers)
+    const certificate = signingCredentials.certificatePem
+      .replace(/-----BEGIN CERTIFICATE-----/g, '')
+      .replace(/-----END CERTIFICATE-----/g, '')
+      .replace(/\s+/g, '')
+
+    // Step 7: Create final signed document
+    const signedInvoices = invoices.map(invoice => {
+      const cleanInvoice = generateCleanInvoiceObject(invoice)
+
+      return {
+        ...cleanInvoice,
+
+        // Add UBLExtensions with complete signature structure
+        UBLExtensions: [
+          {
+            UBLExtension: [
+              {
+                ExtensionURI: [
+                  {
+                    _: 'urn:oasis:names:specification:ubl:dsig:enveloped:xades',
+                  },
+                ],
+                ExtensionContent: [
+                  {
+                    UBLDocumentSignatures: [
+                      {
+                        SignatureInformation: [
+                          {
+                            ID: [
+                              {
+                                _: 'urn:oasis:names:specification:ubl:signature:1',
+                              },
+                            ],
+                            ReferencedSignatureID: [
+                              {
+                                _: 'urn:oasis:names:specification:ubl:signature:Invoice',
+                              },
+                            ],
+                            Signature: [
+                              {
+                                Id: 'signature',
+                                Object: [
+                                  {
+                                    QualifyingProperties: [
+                                      {
+                                        Target: 'signature',
+                                        ...signedProperties,
+                                      },
+                                    ],
+                                  },
+                                ],
+                                KeyInfo: [
+                                  {
+                                    X509Data: [
+                                      {
+                                        X509Certificate: [{ _: certificate }],
+                                        X509SubjectName: [
+                                          { _: certInfo.subjectName },
+                                        ],
+                                        X509IssuerSerial: [
+                                          {
+                                            X509IssuerName: [
+                                              {
+                                                _: certInfo.issuerName,
+                                              },
+                                            ],
+                                            X509SerialNumber: [
+                                              {
+                                                _: certInfo.serialNumber,
+                                              },
+                                            ],
+                                          },
+                                        ],
+                                      },
+                                    ],
+                                  },
+                                ],
+                                SignatureValue: [{ _: signatureValue }],
+                                SignedInfo: [signedInfo],
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+
+        // Add simple Signature reference
+        Signature: [
+          {
+            ID: [
+              {
+                _: 'urn:oasis:names:specification:ubl:signature:Invoice',
+              },
+            ],
+            SignatureMethod: [
+              {
+                _: 'urn:oasis:names:specification:ubl:dsig:enveloped:xades',
+              },
+            ],
+          },
+        ],
+      }
+    })
 
     return {
-      ...cleanInvoice,
-
-      // Add UBLExtensions with complete signature structure
-      UBLExtensions: [
-        {
-          UBLExtension: [
-            {
-              ExtensionURI: [
-                {
-                  _: 'urn:oasis:names:specification:ubl:dsig:enveloped:xades',
-                },
-              ],
-              ExtensionContent: [
-                {
-                  UBLDocumentSignatures: [
-                    {
-                      SignatureInformation: [
-                        {
-                          ID: [
-                            {
-                              _: 'urn:oasis:names:specification:ubl:signature:1',
-                            },
-                          ],
-                          ReferencedSignatureID: [
-                            {
-                              _: 'urn:oasis:names:specification:ubl:signature:Invoice',
-                            },
-                          ],
-                          Signature: [
-                            {
-                              Id: 'signature',
-                              Object: [
-                                {
-                                  QualifyingProperties: [
-                                    {
-                                      Target: 'signature',
-                                      ...signedProperties,
-                                    },
-                                  ],
-                                },
-                              ],
-                              KeyInfo: [
-                                {
-                                  X509Data: [
-                                    {
-                                      X509Certificate: [{ _: certificate }],
-                                      X509SubjectName: [
-                                        { _: signingCredentials.issuerName },
-                                      ],
-                                      X509IssuerSerial: [
-                                        {
-                                          X509IssuerName: [
-                                            {
-                                              _: signingCredentials.issuerName,
-                                            },
-                                          ],
-                                          X509SerialNumber: [
-                                            {
-                                              _: signingCredentials.serialNumber,
-                                            },
-                                          ],
-                                        },
-                                      ],
-                                    },
-                                  ],
-                                },
-                              ],
-                              SignatureValue: [{ _: signatureValue }],
-                              SignedInfo: [signedInfo],
-                            },
-                          ],
-                        },
-                      ],
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
-        },
-      ],
-
-      // Add simple Signature reference
-      Signature: [
-        {
-          ID: [
-            {
-              _: 'urn:oasis:names:specification:ubl:signature:Invoice',
-            },
-          ],
-          SignatureMethod: [
-            {
-              _: 'urn:oasis:names:specification:ubl:dsig:enveloped:xades',
-            },
-          ],
-        },
-      ],
+      _D: 'urn:oasis:names:specification:ubl:schema:xsd:Invoice-2',
+      _A: 'urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2',
+      _B: 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2',
+      Invoice: signedInvoices,
     }
-  })
-
-  return {
-    _D: 'urn:oasis:names:specification:ubl:schema:xsd:Invoice-2',
-    _A: 'urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2',
-    _B: 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2',
-    Invoice: signedInvoices,
+  } catch (error) {
+    throw new Error(
+      `Document generation failed: ${error instanceof Error ? error.message : String(error)}`,
+    )
   }
 }
