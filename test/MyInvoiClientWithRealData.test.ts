@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { MyInvoisClient } from '../src'
 
+/**
+ * ⚠️ SECURITY NOTICE: This file uses environment variables for sensitive data.
+ * Never hardcode actual TIN, NRIC, certificates, or API credentials in test files.
+ * Use .env file for your actual values (already gitignored).
+ */
+
 describe('MyInvoisClientWithRealData', () => {
   it('should verify TIN with real data', async () => {
     // Skip the test if the environment variables are not set

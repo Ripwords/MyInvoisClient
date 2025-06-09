@@ -106,7 +106,7 @@ export interface Buyer {
    */
   name: string
   /** Buyer's Tax Identification Number (TIN). Max 14 chars.
-   * @example C00000000000
+   * @example C12345678901
    */
   tin: string
   /**

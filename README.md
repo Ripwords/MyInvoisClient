@@ -8,6 +8,42 @@ A comprehensive Node.js client for Malaysia's MyInvois e-invoicing system with f
 bun install
 ```
 
+## Environment Variables
+
+Create a `.env` file in the project root with your MyInvois credentials:
+
+```bash
+# MyInvois API Credentials (from MyInvois portal)
+CLIENT_ID=your_client_id_here
+CLIENT_SECRET=your_client_secret_here
+
+# Your Certificate and Private Key (PEM format)
+TEST_CERTIFICATE="-----BEGIN CERTIFICATE-----
+your_certificate_content_here
+-----END CERTIFICATE-----"
+
+TEST_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----
+your_private_key_content_here
+-----END PRIVATE KEY-----"
+
+# Your MyInvois TIN (Tax Identification Number)
+TIN_VALUE=IG12345678901
+
+# Your NRIC/Business Registration Number
+NRIC_VALUE=123456789012
+
+# Additional test TINs for comprehensive testing
+TEST_TIN_1=C12345678901
+TEST_TIN_2=C98765432109
+TEST_TIN_3=IG98765432109
+
+# Test buyer information
+BUYER_TIN_VALUE=IG00000000000
+BUYER_NRIC_VALUE=000000000000
+```
+
+⚠️ **Important**: Never commit your actual TIN, NRIC, certificates, or API credentials to version control.
+
 ## Testing
 
 ```bash
@@ -84,7 +120,7 @@ Replace the placeholders with your actual values:
 - `YOUR_COMPANY_NAME`: `My Company Sdn Bhd`
 - `YOUR_EMAIL`: `admin@mycompany.com`
 - `YOUR_BUSINESS_REG`: `202301234567` (SSM registration)
-- `YOUR_TIN`: `IG00000000000` (MyInvois TIN)
+- `YOUR_TIN`: `IG12345678901` (MyInvois TIN)
 - `YOUR_DOMAIN`: `mycompany.com`
 
 ## Production Certificates

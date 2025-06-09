@@ -29,7 +29,7 @@ read -p "City (e.g., 'Kuala Lumpur'): " CITY
 read -p "Email Address: " EMAIL
 read -p "Domain (optional, e.g., 'mycompany.com'): " DOMAIN
 read -p "Business Registration Number (e.g., '202301234567'): " BUSINESS_REG
-read -p "MyInvois TIN (e.g., 'IG00000000000'): " TIN
+read -p "MyInvois TIN (e.g., 'IG12345678901'): " TIN
 
 echo ""
 

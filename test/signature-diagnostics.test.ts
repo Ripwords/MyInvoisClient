@@ -5,6 +5,12 @@ import {
   printDiagnostics,
 } from '../src/utils/signature-diagnostics'
 
+/**
+ * ⚠️ SECURITY NOTICE: This file uses environment variables for sensitive data.
+ * Never hardcode actual TIN, NRIC, certificates, or API credentials in test files.
+ * Use .env file for your actual values (already gitignored).
+ */
+
 describe('Signature Diagnostics', () => {
   it('should analyze current certificate and signature implementation', () => {
     const CLIENT_ID = process.env.CLIENT_ID
@@ -28,7 +34,7 @@ describe('Signature Diagnostics', () => {
 
       supplier: {
         name: 'Test Company Sdn Bhd',
-        tin: 'IG00000000000',
+        tin: process.env.TIN_VALUE || 'IG00000000000', // Replace with your TIN
         registrationType: 'NRIC',
         registrationNumber: process.env.NRIC_VALUE || '123456789012',
         contactNumber: '+60123456789',
@@ -46,7 +52,7 @@ describe('Signature Diagnostics', () => {
         name: 'CONSOLIDATED E-INVOICE BUYER',
         tin: 'EI00000000010',
         registrationType: 'NRIC',
-        registrationNumber: '000000000000 ',
+        registrationNumber: process.env.BUYER_NRIC_VALUE || '000000000000', // Replace with test NRIC
         sstRegistrationNumber: 'NA',
         contactNumber: '+60123456789',
         address: {

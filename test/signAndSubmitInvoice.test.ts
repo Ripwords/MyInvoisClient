@@ -7,6 +7,12 @@ import {
 } from '../src/utils/document'
 
 /**
+ * ⚠️ SECURITY NOTICE: This file uses environment variables for sensitive data.
+ * Never hardcode actual TIN, NRIC, certificates, or API credentials in test files.
+ * Use .env file for your actual values (already gitignored).
+ */
+
+/**
  * Creates minimal test invoice data that meets all mandatory requirements
  * Following MyInvois v1.1 specification exactly
  */
@@ -47,7 +53,7 @@ const createMinimalTestInvoice = (): InvoiceV1_1 => {
       name: 'CONSOLIDATED E-INVOICE BUYER',
       tin: 'EI00000000010', // Standard consolidated buyer TIN
       registrationType: 'NRIC',
-      registrationNumber: '000000000000 ',
+      registrationNumber: process.env.NRIC_VALUE!,
       sstRegistrationNumber: 'NA',
       contactNumber: '+60123456789', // Valid phone number (minimum 8 chars)
       address: {
@@ -228,15 +234,12 @@ describe('MyInvois Document Generation and Submission', () => {
     )
 
     // Test TIN formats that might match the certificate
-    // Certificate is for "Studio Twenty Sdn. Bhd. (248844-A)"
+    // Note: These are example TIN formats - replace with your actual test TINs
     const testTINs = [
       process.env.TIN_VALUE, // Environment variable if set
-      'C00000000000', // Based on BRN 248844-A with padding
-      'C00000000000', // Based on BRN 248844-A
-      'C00000000000', // Based on BRN 248844-A with less padding
-      'C0000000', // Based on BRN 248844-A minimal
-      'C00000000000', // Original company format
-      'IG00000000000', // Individual format that validated but doesn't match cert
+      process.env.TEST_TIN_1, // Additional test TIN from environment
+      process.env.TEST_TIN_2, // Additional test TIN from environment
+      process.env.TEST_TIN_3, // Additional test TIN from environment
       'EI00000000010', // Consolidated buyer (shouldn't work for supplier)
     ].filter(Boolean) // Remove undefined values
 
@@ -323,7 +326,7 @@ describe('MyInvois Document Generation and Submission', () => {
 
     // Use the valid TIN from previous test or fallback
     const supplierTIN =
-      process.env.VALID_SUPPLIER_TIN || process.env.TIN_VALUE || 'C00000000000'
+      process.env.VALID_SUPPLIER_TIN || process.env.TIN_VALUE || 'C00000000000' // Replace with your TIN
     invoice.supplier.tin = supplierTIN
 
     console.log(`Using supplier TIN: ${supplierTIN}`)

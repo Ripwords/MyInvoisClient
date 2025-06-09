@@ -14,6 +14,12 @@ import {
 import { validateInvoice } from '../src/utils/validation'
 import { generateCleanUBLDocument } from '../src/utils/document'
 
+/**
+ * ⚠️ SECURITY NOTICE: This file uses environment variables for sensitive data.
+ * Never hardcode actual TIN, NRIC, certificates, or API credentials in test files.
+ * Use .env file for your actual values (already gitignored).
+ */
+
 describe('Dynamic Invoice Features', () => {
   describe('Helper Functions', () => {
     it('should create different payment methods', () => {
@@ -237,9 +243,9 @@ describe('Dynamic Invoice Features', () => {
 
       buyer: {
         name: 'Test Buyer',
-        tin: 'IG00000000000',
+        tin: process.env.BUYER_TIN_VALUE || 'IG00000000000', // Replace with your buyer TIN
         registrationType: 'NRIC',
-        registrationNumber: '000000000000 ',
+        registrationNumber: process.env.BUYER_NRIC_VALUE || '000000000000', // Replace with test NRIC
         sstRegistrationNumber: 'NA',
         contactNumber: '+60987654321',
         address: {
@@ -451,7 +457,7 @@ function createBasicInvoiceWithIndustry(): InvoiceV1_1 {
       name: 'Test Buyer',
       tin: 'EI00000000010',
       registrationType: 'NRIC',
-      registrationNumber: '000000000000 ',
+      registrationNumber: process.env.BUYER_NRIC_VALUE || '000000000000', // Replace with test NRIC
       sstRegistrationNumber: 'NA',
       contactNumber: '+60123456789',
       address: {
