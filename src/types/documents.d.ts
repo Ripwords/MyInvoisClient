@@ -21,18 +21,6 @@ export interface Address {
    * @example Lot 66
    */
   addressLine0: string
-  /** Additional address line. Max 150 chars.
-   * @example Bangunan Merdeka
-   */
-  addressLine1?: string
-  /** Additional address line. Max 150 chars.
-   * @example Persiaran Jaya
-   */
-  addressLine2?: string
-  /** Postal code. Max 50 chars.
-   * @example 50480
-   */
-  postalZone?: string
   /** City name. Max 50 chars. */
   cityName: string
   /** State code. Refer to /codes/state-codes/. Max 50 chars. */
@@ -65,37 +53,12 @@ export interface Supplier {
    * @example BRN: 202001234567
    */
   registrationNumber: string
-  /** Supplier's SST registration number. Max 35 chars.
-   * @example W10-1808-32000059
-   */
-  sstRegistrationNumber?: string
-  /** Supplier's email address (RFC 5321/5322). Max 320 chars.
-   * @example name@supplier.com
-   */
-  email?: string
   /** Supplier's address. */
   address: Address
   /** Supplier's contact number (E.164 standard). Max 20 chars.
    * @example +60123456789
    */
   contactNumber: string
-  /** Industry classification code. Max 10 chars.
-   * @example 46510
-   */
-  industryClassificationCode?: MSICCode['code']
-  /** Industry classification description. Max 300 chars.
-   * @example Wholesale of computer hardware, software and peripherals
-   */
-  industryClassificationDescription?: string
-  /** Certified exporter authorization number. Max 300 chars.
-   * @example CPT-CCN-W-211111-KL-000002
-   */
-  certifiedExporterAuthNumber?: string
-  /** Additional account ID for certificate reference. Max 50 chars.
-   * Used for CertEx scheme agency references.
-   * @example CERT123456
-   */
-  additionalAccountId?: string
 }
 
 /**
@@ -129,10 +92,6 @@ export interface Buyer {
    * @example W10-1909-32000060
    */
   sstRegistrationNumber: string
-  /** Buyer's email address (RFC 5321/5322). Max 320 chars.
-   * @example name@buyer.com
-   */
-  email?: string
   /** Buyer's address. */
   address: Address
   /** Buyer's contact number (E.164 standard). Max 20 chars.
@@ -199,46 +158,6 @@ export interface InvoiceLineItem {
    * @example 1590.00
    */
   totalAmountPerLine: number
-  /**
-   * Quantity of items. Max 18 digits, 6 decimal places.
-   * @example 1.000000
-   */
-  quantity?: number
-  /**
-   * Measurement unit. Max 50 chars.
-   * @example UNIT
-   */
-  measurement?: UnitTypeCode
-  /**
-   * Discount rate. Max 18 digits, 2 decimal places.
-   * @example 0.00
-   */
-  discountRate?: number
-  /**
-   * Discount amount. Max 18 digits, 2 decimal places.
-   * @example 0.00
-   */
-  discountAmount?: number
-  /**
-   * Payment account ID for self-billed invoices. Max 50 chars.
-   * @example Account123
-   */
-  paymentAccountID?: string
-  /**
-   * Payment terms description. Max 100 chars.
-   * @example Payment within 30 days
-   */
-  paymentTerms?: string
-  /**
-   * Country of origin code (ISO 3166-1). Refer to /codes/countries/. Max 3 chars.
-   * @example MYS
-   */
-  countryOfOrigin?: CountryCode
-  /**
-   * Product tariff code. Max 50 chars.
-   * @example 01012000
-   */
-  productTariffCode?: string
 }
 
 /** Represents monetary totals for the invoice. Based on UBL cac:LegalMonetaryTotal. */
@@ -247,14 +166,6 @@ export interface LegalMonetaryTotal {
   taxExclusiveAmount: number
   /** Total amount inclusive of taxes. Max 18 digits, 2 decimal places. */
   taxInclusiveAmount: number
-  /** Total allowance amount. Max 18 digits, 2 decimal places. */
-  allowanceTotalAmount?: number
-  /** Total charge amount. Max 18 digits, 2 decimal places. */
-  chargeTotalAmount?: number
-  /** Total prepaid amount. Max 18 digits, 2 decimal places. */
-  prepaidAmount?: number
-  /** Rounding amount applied to the total. Max 18 digits, 2 decimal places. */
-  payableRoundingAmount?: number
   /** The final payable amount. Max 18 digits, 2 decimal places. */
   payableAmount: number
 }
@@ -265,10 +176,6 @@ export interface TaxCategory {
   taxTypeCode: TaxTypeCode
   /** Tax rate percentage. Max 18 digits, 2 decimal places. */
   taxRate: number
-  /** Tax exemption reason code. Refer to /codes/tax-exemption-reasons/. Max 2 chars. */
-  taxExemptionReasonCode?: string
-  /** Tax exemption reason description. Max 300 chars. */
-  taxExemptionReason?: string
 }
 
 /** Represents a subtotal for a specific tax category. Based on UBL cac:TaxSubtotal. */
@@ -285,121 +192,6 @@ export interface TaxSubtotal {
 export interface TaxTotal {
   /** Total tax amount for the entire invoice. Max 18 digits, 2 decimal places. */
   taxAmount: number
-  /** Array of tax subtotals. */
-  taxSubtotals?: TaxSubtotal[]
-}
-
-/** Represents payment means information. Based on UBL cac:PaymentMeans. */
-export interface PaymentMeans {
-  /** Payment means code. Refer to /codes/payment-modes/. Max 2 chars. */
-  paymentMeansCode: PaymentModeCode
-  /** Payment due date (YYYY-MM-DD). Max 10 chars. */
-  paymentDueDate?: string
-  /** Payer's financial account ID. Max 50 chars. */
-  payerFinancialAccountID?: string
-  /** Payee's financial account ID. Max 50 chars. */
-  payeeFinancialAccountID?: string
-  /** Payment terms description. Max 100 chars. */
-  paymentTerms?: string
-  /** Payment instruction ID. Max 50 chars. */
-  paymentInstructionId?: string
-  /** Payment channel code. Max 10 chars. */
-  paymentChannelCode?: string
-}
-
-/** Currency exchange rate information for international transactions */
-export interface CurrencyExchangeRate {
-  /** Source currency code (invoice currency). Max 3 chars. */
-  sourceCurrencyCode: CurrencyCode
-  /** Target currency code (typically MYR). Max 3 chars. */
-  targetCurrencyCode: CurrencyCode
-  /** Exchange rate value. Max 15 decimal places. */
-  calculationRate: number
-  /** Date of exchange rate (YYYY-MM-DD). Max 10 chars. */
-  exchangeRateDate?: string
-}
-
-/** Represents allowances or charges at the document level. Based on UBL cac:AllowanceCharge. */
-export interface AllowanceCharge {
-  /** Indicator: true for charge, false for allowance. */
-  chargeIndicator: boolean
-  /** Reason code for the allowance or charge. Refer to codes (if available). Max 50 chars */
-  reasonCode?: string
-  /** Reason description for the allowance or charge. Max 300 chars. */
-  reason: string
-  /** Multiplier factor (e.g., percentage rate). Max 18 digits, 2 decimal places */
-  multiplierFactorNumeric?: number
-  /** Amount of the allowance or charge. Max 18 digits, 2 decimal places. */
-  amount: number
-  /** Base amount for calculation (if applicable). Max 18 digits, 2 decimal places. */
-  baseAmount?: number
-  /** Tax category applied to this allowance/charge (if taxable). */
-  taxCategory?: TaxCategory // Reusing TaxCategory
-}
-
-/** Represents delivery information. Based on UBL cac:Delivery. */
-export interface Delivery {
-  /** Actual delivery date (YYYY-MM-DD). Max 10 chars. */
-  actualDeliveryDate?: string
-  /** Latest delivery date (YYYY-MM-DD). Max 10 chars. */
-  latestDeliveryDate?: string
-  /** Delivery location address. */
-  deliveryLocation?: Address // Reusing Address type
-  /** Party responsible for delivery (optional, structure similar to Buyer/Supplier but minimal). */
-  deliveryParty?: {
-    /** Name of the delivery party. Max 300 chars. */
-    name?: string
-    /** Delivery party address. */
-    address?: Address
-    /** Delivery party TIN. Max 14 chars. */
-    tin?: string
-    /** Delivery party registration number. Max 20 chars. */
-    registrationNumber?: string
-    /** Delivery party registration type. */
-    registrationType?: RegistrationType
-    /** Delivery party contact information */
-    contactNumber?: string
-    /** Delivery party email */
-    email?: string
-  }
-  /** Shipment information for delivery charges. */
-  shipment?: {
-    /** Shipment ID. Max 50 chars. */
-    id?: string
-    /** Tracking number. Max 50 chars. */
-    trackingNumber?: string
-    /** Freight allowance charge information. */
-    freightAllowanceCharge?: {
-      /** Charge indicator: true for charge, false for allowance. */
-      chargeIndicator: boolean
-      /** Reason for the charge. Max 300 chars. */
-      reason: string
-      /** Amount of the charge. Max 18 digits, 2 decimal places. */
-      amount: number
-    }
-  }
-}
-
-/** Represents additional document references like customs forms, FTA info, etc. */
-export interface AdditionalDocumentReference {
-  /** Reference ID. Max 1000 chars. */
-  id: string
-  /** Document type (e.g., 'CustomsImportForm', 'FreeTradeAgreement', 'K2'). Max 50 chars. */
-  documentType: string
-  /** Optional document description. Max 300 chars. */
-  documentDescription?: string
-}
-
-/** Represents prepaid payment information. */
-export interface PrepaidPayment {
-  /** Reference number. Max 150 chars. */
-  referenceNumber: string
-  /** Prepaid amount. Max 18 digits, 2 decimal places. */
-  amount: number
-  /** Payment date (YYYY-MM-DD). Max 10 chars. */
-  date: string
-  /** Payment time (HH:mm:ssZ). Max 9 chars. */
-  time: string
 }
 
 /**
@@ -432,39 +224,11 @@ export interface InvoiceV1_1 {
    * Mandatory if InvoiceCurrencyCode is not MYR.
    */
   currencyExchangeRate?: number // e.g., 1.0 or 4.75
-  /** Enhanced currency exchange rate information for international transactions */
-  taxExchangeRate?: CurrencyExchangeRate
-  /** Frequency of billing description. Max 50 chars. */
-  frequencyOfBilling?: string // e.g., 'Monthly'
-  /** Billing period start date (YYYY-MM-DD). Max 10 chars. */
-  billingPeriodStartDate?: string // e.g., '2017-11-01'
-  /** Billing period end date (YYYY-MM-DD). Max 10 chars. */
-  billingPeriodEndDate?: string // e.g., '2017-11-30'
 
   /** Overall monetary totals for the invoice. */
   legalMonetaryTotal: LegalMonetaryTotal
   /** Total tax amounts and subtotals. */
   taxTotal: TaxTotal
-  /** Payment means details. Can occur multiple times. */
-  paymentMeans?: PaymentMeans[]
-  /** Document-level allowances or charges. Can occur multiple times. */
-  allowanceCharges?: AllowanceCharge[]
-  /** Delivery information. */
-  delivery?: Delivery
-  /** Additional document references (customs forms, FTA info, etc.) */
-  additionalDocumentReferences?: AdditionalDocumentReference[]
-  /** Prepaid payment information. */
-  prepaidPayment?: PrepaidPayment
-  /** Payment terms description. Max 300 chars. */
-  paymentTerms?: string
-  /** Project reference number. Max 50 chars. */
-  projectReference?: string
-  /** Contract reference number. Max 50 chars. */
-  contractReference?: string
-  /** Purchase order reference number. Max 50 chars. */
-  purchaseOrderReference?: string
-  /** Billing reference number. Max 50 chars. */
-  billingReference?: string
 }
 
 export type SubmissionStatus =
@@ -588,44 +352,8 @@ export interface InvoiceSubmission {
     _: string
   }[]
 
-  /** Invoice period information */
-  InvoicePeriod: {
-    StartDate: {
-      _: string
-    }[]
-    EndDate: {
-      _: string
-    }[]
-    Description: {
-      _: string
-    }[]
-  }[]
-
-  /** Billing reference */
-  BillingReference: {
-    AdditionalDocumentReference: {
-      ID: {
-        _: string
-      }[]
-    }[]
-  }[]
-
-  /** Additional document references */
-  AdditionalDocumentReference: {
-    ID: {
-      _: string
-    }[]
-    DocumentType: {
-      _: string
-    }[]
-  }[]
-
   /** Supplier party information */
   AccountingSupplierParty: {
-    AdditionalAccountID: {
-      _: string
-      schemeAgencyName: string
-    }[]
     Party: {
       IndustryClassificationCode: {
         _: string
@@ -639,9 +367,6 @@ export interface InvoiceSubmission {
       }[]
       PostalAddress: {
         CityName: {
-          _: string
-        }[]
-        PostalZone: {
           _: string
         }[]
         CountrySubentityCode: {
@@ -667,9 +392,6 @@ export interface InvoiceSubmission {
       }[]
       Contact: {
         Telephone: {
-          _: string
-        }[]
-        ElectronicMail: {
           _: string
         }[]
       }[]
@@ -689,9 +411,6 @@ export interface InvoiceSubmission {
         CityName: {
           _: string
         }[]
-        PostalZone: {
-          _: string
-        }[]
         CountrySubentityCode: {
           _: string
         }[]
@@ -717,120 +436,7 @@ export interface InvoiceSubmission {
         Telephone: {
           _: string
         }[]
-        ElectronicMail: {
-          _: string
-        }[]
       }[]
-    }[]
-  }[]
-
-  /** Delivery information */
-  Delivery: {
-    DeliveryParty: {
-      PartyLegalEntity: {
-        RegistrationName: {
-          _: string
-        }[]
-      }[]
-      PostalAddress: {
-        CityName: {
-          _: string
-        }[]
-        PostalZone: {
-          _: string
-        }[]
-        CountrySubentityCode: {
-          _: string
-        }[]
-        AddressLine: {
-          Line: {
-            _: string
-          }[]
-        }[]
-        Country: {
-          IdentificationCode: {
-            _: string
-            listID: string
-            listAgencyID: string
-          }[]
-        }[]
-      }[]
-      PartyIdentification: {
-        ID: {
-          _: string
-          schemeID: string
-        }[]
-      }[]
-    }[]
-    Shipment: {
-      ID: {
-        _: string
-      }[]
-      FreightAllowanceCharge: {
-        ChargeIndicator: {
-          _: boolean
-        }[]
-        AllowanceChargeReason: {
-          _: string
-        }[]
-        Amount: {
-          _: number
-          currencyID: string
-        }[]
-      }[]
-    }[]
-  }[]
-
-  /** Payment means */
-  PaymentMeans: {
-    PaymentMeansCode: {
-      _: string
-    }[]
-    PayeeFinancialAccount: {
-      ID: {
-        _: string
-      }[]
-    }[]
-  }[]
-
-  /** Payment terms */
-  PaymentTerms: {
-    Note: {
-      _: string
-    }[]
-  }[]
-
-  /** Prepaid payment */
-  PrepaidPayment: {
-    ID: {
-      _: string
-    }[]
-    PaidAmount: {
-      _: number
-      currencyID: string
-    }[]
-    PaidDate: {
-      _: string
-    }[]
-    PaidTime: {
-      _: string
-    }[]
-  }[]
-
-  /** Allowance charges */
-  AllowanceCharge: {
-    ChargeIndicator: {
-      _: boolean
-    }[]
-    AllowanceChargeReason: {
-      _: string
-    }[]
-    Amount: {
-      _: number
-      currencyID: string
-    }[]
-    MultiplierFactorNumeric?: {
-      _: number
     }[]
   }[]
 
@@ -878,19 +484,7 @@ export interface InvoiceSubmission {
       _: number
       currencyID: string
     }[]
-    AllowanceTotalAmount: {
-      _: number
-      currencyID: string
-    }[]
-    ChargeTotalAmount: {
-      _: number
-      currencyID: string
-    }[]
     PayableAmount: {
-      _: number
-      currencyID: string
-    }[]
-    PayableRoundingAmount: {
       _: number
       currencyID: string
     }[]
@@ -898,27 +492,8 @@ export interface InvoiceSubmission {
 
   /** Invoice line items */
   InvoiceLine: {
-    AllowanceCharge: {
-      Amount: {
-        _: number
-        currencyID: string
-      }[]
-      ChargeIndicator: {
-        _: boolean
-      }[]
-      MultiplierFactorNumeric: {
-        _: number
-      }[]
-      AllowanceChargeReason: {
-        _: string
-      }[]
-    }[]
     ID: {
       _: string
-    }[]
-    InvoicedQuantity?: {
-      _: number
-      unitCode: string
     }[]
     Item: {
       CommodityClassification: {
@@ -929,11 +504,6 @@ export interface InvoiceSubmission {
       }[]
       Description: {
         _: string
-      }[]
-      OriginCountry: {
-        IdentificationCode: {
-          _: string
-        }[]
       }[]
     }[]
     ItemPriceExtension: {
@@ -966,14 +536,6 @@ export interface InvoiceSubmission {
           _: number
           currencyID: string
         }[]
-        PerUnitAmount: {
-          _: number
-          currencyID: string
-        }[]
-        BaseUnitMeasure: {
-          _: number
-          unitCode: string
-        }[]
         TaxCategory: {
           ID: {
             _: string
@@ -990,8 +552,8 @@ export interface InvoiceSubmission {
     }[]
   }[]
 
-  /** Tax exchange rate */
-  TaxExchangeRate: {
+  /** Tax exchange rate - Mandatory where applicable */
+  TaxExchangeRate?: {
     SourceCurrencyCode: {
       _: string
     }[]
@@ -1000,9 +562,6 @@ export interface InvoiceSubmission {
     }[]
     CalculationRate: {
       _: number
-    }[]
-    ExchangeRateDate?: {
-      _: string
     }[]
   }[]
 

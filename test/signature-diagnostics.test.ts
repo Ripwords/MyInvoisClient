@@ -38,11 +38,9 @@ describe('Signature Diagnostics', () => {
         registrationType: 'NRIC',
         registrationNumber: process.env.NRIC_VALUE || '123456789012',
         contactNumber: '+60123456789',
-        email: 'test@company.com',
         address: {
           addressLine0: '123 Test Street',
           cityName: 'Kuala Lumpur',
-          postalZone: '50000',
           state: '14',
           country: 'MYS',
         },
@@ -58,7 +56,6 @@ describe('Signature Diagnostics', () => {
         address: {
           addressLine0: 'NA',
           cityName: 'KUALA LUMPUR',
-          postalZone: '50000',
           state: '14',
           country: 'MYS',
         },
@@ -69,8 +66,6 @@ describe('Signature Diagnostics', () => {
           itemClassificationCode: '001',
           itemDescription: 'Test Product',
           unitPrice: 100.0,
-          quantity: 1,
-          measurement: 'C62',
           taxType: '01',
           taxRate: 6.0,
           taxAmount: 6.0,
@@ -87,16 +82,6 @@ describe('Signature Diagnostics', () => {
 
       taxTotal: {
         taxAmount: 6.0,
-        taxSubtotals: [
-          {
-            taxableAmount: 100.0,
-            taxAmount: 6.0,
-            taxCategory: {
-              taxTypeCode: '01',
-              taxRate: 6.0,
-            },
-          },
-        ],
       },
 
       issuerDigitalSignature: {} as any,

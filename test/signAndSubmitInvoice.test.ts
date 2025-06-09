@@ -38,11 +38,9 @@ const createMinimalTestInvoice = (): InvoiceV1_1 => {
       registrationType: 'NRIC',
       registrationNumber: process.env.NRIC_VALUE!,
       contactNumber: '+60123456789',
-      email: 'test@company.com',
       address: {
         addressLine0: '123 Test Street',
         cityName: 'Kuala Lumpur',
-        postalZone: '50000',
         state: '14', // Wilayah Persekutuan Kuala Lumpur
         country: 'MYS',
       },
@@ -59,7 +57,6 @@ const createMinimalTestInvoice = (): InvoiceV1_1 => {
       address: {
         addressLine0: 'NA',
         cityName: 'KUALA LUMPUR',
-        postalZone: '50000',
         state: '14',
         country: 'MYS',
       },
@@ -71,8 +68,6 @@ const createMinimalTestInvoice = (): InvoiceV1_1 => {
         itemClassificationCode: '001', // General goods
         itemDescription: 'Test Product',
         unitPrice: 100.0,
-        quantity: 1,
-        measurement: 'C62', // Unit
         taxType: '01', // SST
         taxRate: 6.0, // 6% SST
         taxAmount: 6.0, // 6% of 100
@@ -91,25 +86,7 @@ const createMinimalTestInvoice = (): InvoiceV1_1 => {
     // === TAX TOTAL ===
     taxTotal: {
       taxAmount: 6.0,
-      taxSubtotals: [
-        {
-          taxableAmount: 100.0,
-          taxAmount: 6.0,
-          taxCategory: {
-            taxTypeCode: '01', // SST
-            taxRate: 6.0,
-          },
-        },
-      ],
     },
-
-    // === PAYMENT MEANS (optional but common) ===
-    paymentMeans: [
-      {
-        paymentMeansCode: '01', // Cash
-        payeeFinancialAccountID: 'ACCOUNT123',
-      },
-    ],
 
     // === DIGITAL SIGNATURE (placeholder - will be populated by signing process) ===
     issuerDigitalSignature: {

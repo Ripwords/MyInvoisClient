@@ -18,7 +18,7 @@ import {
 /**
  * Helper function to recursively sort object keys for JSON canonicalization
  */
-function sortObjectKeys(obj: unknown): unknown {
+export function sortObjectKeys(obj: unknown): unknown {
   if (obj === null || typeof obj !== 'object') {
     return obj
   }
@@ -72,74 +72,17 @@ export const generateCleanInvoiceObject = (
       },
     ],
     DocumentCurrencyCode: [{ _: invoice.invoiceCurrencyCode }],
-    // NOTE: TaxCurrencyCode REMOVED - not present in working documents
-
-    // === MANDATORY EMPTY FIELDS (must be present) ===
-    InvoicePeriod: [
-      {
-        StartDate: [{ _: invoice.billingPeriodStartDate || '' }],
-        EndDate: [{ _: invoice.billingPeriodEndDate || '' }],
-        Description: [{ _: invoice.frequencyOfBilling || '' }],
-      },
-    ],
-
-    BillingReference: [
-      {
-        AdditionalDocumentReference: [
-          {
-            ID: [{ _: invoice.billingReference || '' }],
-          },
-        ],
-      },
-    ],
-
-    // Build dynamic document references array
-    AdditionalDocumentReference: [
-      // Purchase Order Reference
-      {
-        ID: [{ _: invoice.purchaseOrderReference || '' }],
-        DocumentType: [
-          { _: invoice.purchaseOrderReference ? 'PurchaseOrder' : '' },
-        ],
-      },
-      // Contract Reference
-      {
-        ID: [{ _: invoice.contractReference || '' }],
-        DocumentType: [{ _: invoice.contractReference ? 'Contract' : '' }],
-      },
-      // Project Reference
-      {
-        ID: [{ _: invoice.projectReference || '' }],
-        DocumentType: [{ _: invoice.projectReference ? 'Project' : '' }],
-      },
-      // Additional dynamic references from array
-      {
-        ID: [{ _: invoice.additionalDocumentReferences?.[0]?.id || '' }],
-        DocumentType: [
-          { _: invoice.additionalDocumentReferences?.[0]?.documentType || '' },
-        ],
-      },
-    ],
 
     // === SUPPLIER PARTY (AccountingSupplierParty) ===
     AccountingSupplierParty: [
       {
-        // AdditionalAccountID - required field from working documents
-        AdditionalAccountID: [
-          {
-            _: invoice.supplier?.additionalAccountId || '',
-            schemeAgencyName: 'CertEx',
-          },
-        ],
         Party: [
           {
-            // Industry Classification - use dynamic values when provided
+            // Industry Classification - required field
             IndustryClassificationCode: [
               {
-                _: invoice.supplier?.industryClassificationCode || '01135',
-                name:
-                  invoice.supplier?.industryClassificationDescription ||
-                  'Growing of vegetables seeds, except beet seeds',
+                _: '47900', // Default to trading/general commerce
+                name: 'Other retail sale in non-specialised stores',
               },
             ],
 
@@ -161,36 +104,16 @@ export const generateCleanInvoiceObject = (
                   },
                 ],
               },
-              // Add SST registration if provided
-              ...(invoice.supplier.sstRegistrationNumber
-                ? [
-                    {
-                      ID: [
-                        {
-                          _: invoice.supplier.sstRegistrationNumber,
-                          schemeID: 'SST',
-                        },
-                      ],
-                    },
-                  ]
-                : []),
             ],
 
             // Postal Address - FIXED listID format
             PostalAddress: [
               {
                 CityName: [{ _: invoice.supplier.address.cityName }],
-                PostalZone: [{ _: invoice.supplier.address.postalZone || '' }],
                 CountrySubentityCode: [{ _: invoice.supplier.address.state }],
                 AddressLine: [
                   {
                     Line: [{ _: invoice.supplier.address.addressLine0 }],
-                  },
-                  {
-                    Line: [{ _: invoice.supplier.address.addressLine1 || '' }],
-                  },
-                  {
-                    Line: [{ _: invoice.supplier.address.addressLine2 || '' }],
                   },
                 ],
                 Country: [
@@ -218,7 +141,6 @@ export const generateCleanInvoiceObject = (
             Contact: [
               {
                 Telephone: [{ _: invoice.supplier.contactNumber || '' }],
-                ElectronicMail: [{ _: invoice.supplier.email || '' }],
               },
             ],
           },
@@ -263,17 +185,10 @@ export const generateCleanInvoiceObject = (
             PostalAddress: [
               {
                 CityName: [{ _: invoice.buyer.address.cityName }],
-                PostalZone: [{ _: invoice.buyer.address.postalZone || '' }],
                 CountrySubentityCode: [{ _: invoice.buyer.address.state }],
                 AddressLine: [
                   {
                     Line: [{ _: invoice.buyer.address.addressLine0 }],
-                  },
-                  {
-                    Line: [{ _: invoice.buyer.address.addressLine1 || '' }],
-                  },
-                  {
-                    Line: [{ _: invoice.buyer.address.addressLine2 || '' }],
                   },
                 ],
                 Country: [
@@ -301,225 +216,11 @@ export const generateCleanInvoiceObject = (
             Contact: [
               {
                 Telephone: [{ _: invoice.buyer.contactNumber || '' }],
-                ElectronicMail: [{ _: invoice.buyer.email || '' }],
               },
             ],
           },
         ],
       },
-    ],
-
-    // === DELIVERY (mandatory empty structure) ===
-    Delivery: [
-      {
-        DeliveryParty: [
-          {
-            PartyLegalEntity: [
-              {
-                RegistrationName: [
-                  { _: invoice.delivery?.deliveryParty?.name || '' },
-                ],
-              },
-            ],
-            PostalAddress: [
-              {
-                CityName: [
-                  { _: invoice.delivery?.deliveryLocation?.cityName || '' },
-                ],
-                PostalZone: [
-                  { _: invoice.delivery?.deliveryLocation?.postalZone || '' },
-                ],
-                CountrySubentityCode: [
-                  { _: invoice.delivery?.deliveryLocation?.state || '' },
-                ],
-                AddressLine: [
-                  {
-                    Line: [
-                      {
-                        _:
-                          invoice.delivery?.deliveryLocation?.addressLine0 ||
-                          '',
-                      },
-                    ],
-                  },
-                  {
-                    Line: [
-                      {
-                        _:
-                          invoice.delivery?.deliveryLocation?.addressLine1 ||
-                          '',
-                      },
-                    ],
-                  },
-                  {
-                    Line: [
-                      {
-                        _:
-                          invoice.delivery?.deliveryLocation?.addressLine2 ||
-                          '',
-                      },
-                    ],
-                  },
-                ],
-                Country: [
-                  {
-                    IdentificationCode: [
-                      {
-                        _: invoice.delivery?.deliveryLocation?.country || '',
-                        listID: invoice.delivery?.deliveryLocation?.country
-                          ? '3166-1'
-                          : '',
-                        listAgencyID: invoice.delivery?.deliveryLocation
-                          ?.country
-                          ? 'ISO'
-                          : '',
-                      },
-                    ],
-                  },
-                ],
-              },
-            ],
-            PartyIdentification: [
-              {
-                ID: [
-                  {
-                    _: invoice.delivery?.deliveryParty?.tin || '',
-                    schemeID:
-                      invoice.delivery?.deliveryParty?.registrationType || '',
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-        Shipment: [
-          {
-            ID: [{ _: invoice.delivery?.shipment?.id || '' }],
-            FreightAllowanceCharge: [
-              {
-                ChargeIndicator: [
-                  {
-                    _:
-                      invoice.delivery?.shipment?.freightAllowanceCharge
-                        ?.chargeIndicator ?? true,
-                  },
-                ],
-                AllowanceChargeReason: [
-                  {
-                    _:
-                      invoice.delivery?.shipment?.freightAllowanceCharge
-                        ?.reason || '',
-                  },
-                ],
-                Amount: [
-                  {
-                    _:
-                      invoice.delivery?.shipment?.freightAllowanceCharge
-                        ?.amount || 0,
-                    currencyID: invoice.invoiceCurrencyCode,
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-    ],
-
-    // === PAYMENT MEANS (mandatory) ===
-    PaymentMeans: [
-      {
-        PaymentMeansCode: [
-          { _: invoice.paymentMeans?.[0]?.paymentMeansCode || '01' },
-        ],
-        PayeeFinancialAccount: [
-          {
-            ID: [
-              { _: invoice.paymentMeans?.[0]?.payeeFinancialAccountID || '' },
-            ],
-          },
-        ],
-      },
-    ],
-
-    // === PAYMENT TERMS (mandatory empty structure) ===
-    PaymentTerms: [
-      {
-        Note: [{ _: invoice.paymentTerms || '' }],
-      },
-    ],
-
-    // === PREPAID PAYMENT (mandatory empty structure) ===
-    PrepaidPayment: [
-      {
-        ID: [{ _: '' }],
-        PaidAmount: [
-          {
-            _: 0,
-            currencyID: invoice.invoiceCurrencyCode,
-          },
-        ],
-        PaidDate: [{ _: '' }],
-        PaidTime: [{ _: '' }],
-      },
-    ],
-
-    // === ALLOWANCE CHARGES (mandatory - both allowance and charge) ===
-    AllowanceCharge: [
-      // Document-level charges
-      ...(invoice.allowanceCharges
-        ?.filter(ac => ac.chargeIndicator)
-        .map(charge => ({
-          ChargeIndicator: [{ _: true }],
-          AllowanceChargeReason: [{ _: charge.reason }],
-          Amount: [
-            {
-              _: charge.amount,
-              currencyID: invoice.invoiceCurrencyCode,
-            },
-          ],
-          MultiplierFactorNumeric: charge.multiplierFactorNumeric
-            ? [{ _: charge.multiplierFactorNumeric }]
-            : undefined,
-        })) || [
-        {
-          ChargeIndicator: [{ _: true }],
-          AllowanceChargeReason: [{ _: '' }],
-          Amount: [
-            {
-              _: 0,
-              currencyID: invoice.invoiceCurrencyCode,
-            },
-          ],
-        },
-      ]),
-      // Document-level allowances
-      ...(invoice.allowanceCharges
-        ?.filter(ac => !ac.chargeIndicator)
-        .map(allowance => ({
-          ChargeIndicator: [{ _: false }],
-          AllowanceChargeReason: [{ _: allowance.reason }],
-          Amount: [
-            {
-              _: allowance.amount,
-              currencyID: invoice.invoiceCurrencyCode,
-            },
-          ],
-          MultiplierFactorNumeric: allowance.multiplierFactorNumeric
-            ? [{ _: allowance.multiplierFactorNumeric }]
-            : undefined,
-        })) || [
-        {
-          ChargeIndicator: [{ _: false }],
-          AllowanceChargeReason: [{ _: '' }],
-          Amount: [
-            {
-              _: 0,
-              currencyID: invoice.invoiceCurrencyCode,
-            },
-          ],
-        },
-      ]),
     ],
 
     // === TAX TOTAL ===
@@ -531,23 +232,24 @@ export const generateCleanInvoiceObject = (
             currencyID: invoice.invoiceCurrencyCode,
           },
         ],
-        TaxSubtotal:
-          invoice.taxTotal.taxSubtotals?.map(subtotal => ({
+        TaxSubtotal: [
+          // Generate basic tax subtotal from invoice line items
+          {
             TaxableAmount: [
               {
-                _: subtotal.taxableAmount,
+                _: invoice.legalMonetaryTotal.taxExclusiveAmount,
                 currencyID: invoice.invoiceCurrencyCode,
               },
             ],
             TaxAmount: [
               {
-                _: subtotal.taxAmount,
+                _: invoice.taxTotal.taxAmount,
                 currencyID: invoice.invoiceCurrencyCode,
               },
             ],
             TaxCategory: [
               {
-                ID: [{ _: subtotal.taxCategory.taxTypeCode }],
+                ID: [{ _: invoice.invoiceLineItems[0]?.taxType || '01' }],
                 TaxScheme: [
                   {
                     ID: [
@@ -561,7 +263,8 @@ export const generateCleanInvoiceObject = (
                 ],
               },
             ],
-          })) || [],
+          },
+        ],
       },
     ],
 
@@ -586,27 +289,9 @@ export const generateCleanInvoiceObject = (
             currencyID: invoice.invoiceCurrencyCode,
           },
         ],
-        AllowanceTotalAmount: [
-          {
-            _: invoice.legalMonetaryTotal.allowanceTotalAmount || 0,
-            currencyID: invoice.invoiceCurrencyCode,
-          },
-        ],
-        ChargeTotalAmount: [
-          {
-            _: invoice.legalMonetaryTotal.chargeTotalAmount || 0,
-            currencyID: invoice.invoiceCurrencyCode,
-          },
-        ],
         PayableAmount: [
           {
             _: invoice.legalMonetaryTotal.payableAmount,
-            currencyID: invoice.invoiceCurrencyCode,
-          },
-        ],
-        PayableRoundingAmount: [
-          {
-            _: invoice.legalMonetaryTotal.payableRoundingAmount || 0,
             currencyID: invoice.invoiceCurrencyCode,
           },
         ],
@@ -615,46 +300,7 @@ export const generateCleanInvoiceObject = (
 
     // === INVOICE LINES ===
     InvoiceLine: invoice.invoiceLineItems.map((item, index) => ({
-      // Line-level allowance/charge - mandatory for each line
-      AllowanceCharge: [
-        {
-          Amount: [
-            {
-              _: 0,
-              currencyID: invoice.invoiceCurrencyCode,
-            },
-          ],
-          ChargeIndicator: [{ _: true }],
-          MultiplierFactorNumeric: [{ _: 0 }],
-          AllowanceChargeReason: [{ _: '' }],
-        },
-        {
-          Amount: [
-            {
-              _: item.discountAmount || 0,
-              currencyID: invoice.invoiceCurrencyCode,
-            },
-          ],
-          ChargeIndicator: [{ _: false }],
-          MultiplierFactorNumeric: [
-            { _: item.discountRate ? item.discountRate / 100 : 0 },
-          ],
-          AllowanceChargeReason: [{ _: '' }],
-        },
-      ],
-
       ID: [{ _: (index + 1).toString() }],
-
-      // Quantity (conditional)
-      ...(item.quantity &&
-        item.measurement && {
-          InvoicedQuantity: [
-            {
-              _: item.quantity,
-              unitCode: item.measurement,
-            },
-          ],
-        }),
 
       // Item Information
       Item: [
@@ -670,11 +316,6 @@ export const generateCleanInvoiceObject = (
             },
           ],
           Description: [{ _: item.itemDescription }],
-          OriginCountry: [
-            {
-              IdentificationCode: [{ _: item.countryOfOrigin || '' }],
-            },
-          ],
         },
       ],
 
@@ -731,18 +372,6 @@ export const generateCleanInvoiceObject = (
                   currencyID: invoice.invoiceCurrencyCode,
                 },
               ],
-              PerUnitAmount: [
-                {
-                  _: item.taxAmount,
-                  currencyID: invoice.invoiceCurrencyCode,
-                },
-              ],
-              BaseUnitMeasure: [
-                {
-                  _: item.quantity || 1,
-                  unitCode: item.measurement || 'C62',
-                },
-              ],
               TaxCategory: [
                 {
                   ID: [{ _: item.taxType }],
@@ -765,35 +394,28 @@ export const generateCleanInvoiceObject = (
       ],
     })),
 
-    // === TAX EXCHANGE RATE (mandatory) ===
-    TaxExchangeRate: [
-      {
-        SourceCurrencyCode: [
+    // === TAX EXCHANGE RATE (mandatory where applicable) ===
+    TaxExchangeRate: invoice.currencyExchangeRate
+      ? [
           {
-            _:
-              invoice.taxExchangeRate?.sourceCurrencyCode ||
-              invoice.invoiceCurrencyCode,
+            SourceCurrencyCode: [
+              {
+                _: invoice.invoiceCurrencyCode,
+              },
+            ],
+            TargetCurrencyCode: [
+              {
+                _: 'MYR',
+              },
+            ],
+            CalculationRate: [
+              {
+                _: invoice.currencyExchangeRate,
+              },
+            ],
           },
-        ],
-        TargetCurrencyCode: [
-          {
-            _:
-              invoice.taxExchangeRate?.targetCurrencyCode ||
-              invoice.invoiceCurrencyCode,
-          },
-        ],
-        CalculationRate: [
-          {
-            _:
-              invoice.taxExchangeRate?.calculationRate ||
-              (invoice.currencyExchangeRate ?? 0),
-          },
-        ],
-        ...(invoice.taxExchangeRate?.exchangeRateDate && {
-          ExchangeRateDate: [{ _: invoice.taxExchangeRate.exchangeRateDate }],
-        }),
-      },
-    ],
+        ]
+      : undefined,
   }
 }
 
