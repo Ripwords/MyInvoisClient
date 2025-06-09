@@ -1,6 +1,19 @@
 # Changelog
 
 
+## v0.1.7
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.1.6...v0.1.7)
+
+### 🏡 Chore
+
+- Clean up dependencies by removing unused packages and updating external configurations ([886c95c](https://github.com/Ripwords/MyInvoisClient/commit/886c95c))
+- Add 'dist' directory to package.json files for improved module exports ([c52ed75](https://github.com/Ripwords/MyInvoisClient/commit/c52ed75))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.1.6
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.1.5...v0.1.6)
