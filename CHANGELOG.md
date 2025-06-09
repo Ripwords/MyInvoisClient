@@ -1,6 +1,19 @@
 # Changelog
 
 
+## v0.1.5
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.1.4...v0.1.5)
+
+### 🏡 Chore
+
+- Update release scripts to include 'bun publish' for public access after changelog generation ([3ace843](https://github.com/Ripwords/MyInvoisClient/commit/3ace843))
+- Update release scripts to use 'npm publish' instead of 'bun publish' for public access after changelog generation ([cd6854f](https://github.com/Ripwords/MyInvoisClient/commit/cd6854f))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.1.4
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.1.3...v0.1.4)
