@@ -1,13 +1,6 @@
 import { defineConfig } from 'tsdown'
 
-const external = [
-  'xmldom-ts',
-  'xpath-ts',
-  'xml-c14n',
-  'xml-crypto',
-  'crypto',
-  '@xmldom/xmldom',
-]
+const external = ['crypto']
 
 export default [
   defineConfig({
