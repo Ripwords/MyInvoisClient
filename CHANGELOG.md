@@ -1,6 +1,28 @@
 # Changelog
 
 
+## v0.1.2
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.1.1...v0.1.2)
+
+### 🚀 Enhancements
+
+- Introduce RegistrationType type and update registrationType fields in Supplier and Buyer interfaces for improved type safety ([28bcd5b](https://github.com/Ripwords/MyInvoisClient/commit/28bcd5b))
+- Consolidate and expand invoice type definitions by merging index.ts into index.d.ts, enhancing type safety and clarity across various invoice-related interfaces ([e8ba3f9](https://github.com/Ripwords/MyInvoisClient/commit/e8ba3f9))
+
+### 💅 Refactors
+
+- Update type exports by removing the deprecated index.d.ts file and directly exporting from documents.d.ts to streamline type definitions and improve clarity ([b5fcd79](https://github.com/Ripwords/MyInvoisClient/commit/b5fcd79))
+- Streamline invoice type definitions by removing unused fields and enhancing clarity in the documents.d.ts and document.ts files, while updating tests to reflect these changes ([834bb63](https://github.com/Ripwords/MyInvoisClient/commit/834bb63))
+
+### 🏡 Chore
+
+- Enhance release script to run linting before building and publishing ([230e15c](https://github.com/Ripwords/MyInvoisClient/commit/230e15c))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.1.1
 
 

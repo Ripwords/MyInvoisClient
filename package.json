@@ -1,10 +1,16 @@
 {
   "name": "@ripwords/myinvois-client",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MyInvois client",
   "scripts": {
     "build": "tsdown",
-    "release": "bun run lint && bun run build && changelogen --release && npm publish --access public && git push --follow-tags",
+    "prerelease": "bun run lint && bun run build",
+    "postrelease": "git push --follow-tags",
+    "changelog": "changelogen --release",
+    "publish": "npm publish --access public && git push --follow-tags",
+    "release": "bun run prerelease && bun run changelog && bun run publish",
+    "release:minor": "bun run prerelease && bun run changelog --minor && bun run publish",
+    "release:major": "bun run prerelease && bun run changelog --major && bun run publish",
     "lint": "oxlint",
     "test": "vitest"
   },
