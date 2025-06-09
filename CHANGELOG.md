@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.3
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.1.2...v0.1.3)
+
+### 💅 Refactors
+
+- Add industry classification fields to Supplier interface in documents.d.ts, update invoice generation logic in document.ts, and enhance related tests for improved type safety and clarity ([648858a](https://github.com/Ripwords/MyInvoisClient/commit/648858a))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.1.2
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.1.1...v0.1.2)
