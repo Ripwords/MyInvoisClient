@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.1.4
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.1.3...v0.1.4)
+
+### 💅 Refactors
+
+- Extend RegistrationType to include 'ARMY' and update related interfaces in documents.d.ts and index.ts for improved type safety ([955ccee](https://github.com/Ripwords/MyInvoisClient/commit/955ccee))
+
+### 🏡 Chore
+
+- Update release scripts to remove npm publish command and ensure git push follows changelog generation ([ba56b4a](https://github.com/Ripwords/MyInvoisClient/commit/ba56b4a))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.1.3
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.1.2...v0.1.3)
