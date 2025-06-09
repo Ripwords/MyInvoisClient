@@ -17,6 +17,9 @@
   "module": "src/index.ts",
   "type": "module",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "exports": {
     "import": "./dist/index.js",
     "require": "./dist/index.cjs"
