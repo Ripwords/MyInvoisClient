@@ -1,4 +1,4 @@
-export type * from './documents/index.d.ts'
+export type * from './documents.d.ts'
 export type * from './country-code.d.ts'
 export type * from './classification-codes.d.ts'
 export type * from './payment-modes.d.ts'
