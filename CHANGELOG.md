@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.6
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.1.5...v0.1.6)
+
+### 🏡 Chore
+
+- Update release scripts to ensure consistency by removing 'bun' from publish commands for public access ([4bd352f](https://github.com/Ripwords/MyInvoisClient/commit/4bd352f))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.1.5
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.1.4...v0.1.5)
