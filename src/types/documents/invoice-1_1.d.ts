@@ -81,6 +81,19 @@ export interface Supplier {
    * @example 46510
    */
   industryClassificationCode?: MSICCode['code']
+  /** Industry classification description. Max 300 chars.
+   * @example Wholesale of computer hardware, software and peripherals
+   */
+  industryClassificationDescription?: string
+  /** Certified exporter authorization number. Max 300 chars.
+   * @example CPT-CCN-W-211111-KL-000002
+   */
+  certifiedExporterAuthNumber?: string
+  /** Additional account ID for certificate reference. Max 50 chars.
+   * Used for CertEx scheme agency references.
+   * @example CERT123456
+   */
+  additionalAccountId?: string
 }
 
 /**
@@ -96,6 +109,11 @@ export interface Buyer {
    * @example C00000000000
    */
   tin: string
+  /**
+   * Buyer's Registration Type. NRIC, BRN, PASSPORT, ARMY
+   * @example BRN
+   */
+  registrationType?: 'BRN' | 'NRIC' | 'PASSPORT' | 'ARMY'
   /**
    * Buyer's Registration / Identification Number / Passport Number.
    * Format depends on schemeID: NRIC (12), BRN (20), PASSPORT (12), ARMY (12).
@@ -214,6 +232,11 @@ export interface InvoiceLineItem {
    * @example MYS
    */
   countryOfOrigin?: CountryCode
+  /**
+   * Product tariff code. Max 50 chars.
+   * @example 01012000
+   */
+  productTariffCode?: string
 }
 
 /** Represents monetary totals for the invoice. Based on UBL cac:LegalMonetaryTotal. */
@@ -276,6 +299,22 @@ export interface PaymentMeans {
   payeeFinancialAccountID?: string
   /** Payment terms description. Max 100 chars. */
   paymentTerms?: string
+  /** Payment instruction ID. Max 50 chars. */
+  paymentInstructionId?: string
+  /** Payment channel code. Max 10 chars. */
+  paymentChannelCode?: string
+}
+
+/** Currency exchange rate information for international transactions */
+export interface CurrencyExchangeRate {
+  /** Source currency code (invoice currency). Max 3 chars. */
+  sourceCurrencyCode: CurrencyCode
+  /** Target currency code (typically MYR). Max 3 chars. */
+  targetCurrencyCode: CurrencyCode
+  /** Exchange rate value. Max 15 decimal places. */
+  calculationRate: number
+  /** Date of exchange rate (YYYY-MM-DD). Max 10 chars. */
+  exchangeRateDate?: string
 }
 
 /** Represents allowances or charges at the document level. Based on UBL cac:AllowanceCharge. */
@@ -300,13 +339,65 @@ export interface AllowanceCharge {
 export interface Delivery {
   /** Actual delivery date (YYYY-MM-DD). Max 10 chars. */
   actualDeliveryDate?: string
+  /** Latest delivery date (YYYY-MM-DD). Max 10 chars. */
+  latestDeliveryDate?: string
   /** Delivery location address. */
   deliveryLocation?: Address // Reusing Address type
   /** Party responsible for delivery (optional, structure similar to Buyer/Supplier but minimal). */
   deliveryParty?: {
     /** Name of the delivery party. Max 300 chars. */
     name?: string
+    /** Delivery party address. */
+    address?: Address
+    /** Delivery party TIN. Max 14 chars. */
+    tin?: string
+    /** Delivery party registration number. Max 20 chars. */
+    registrationNumber?: string
+    /** Delivery party registration type. */
+    registrationType?: 'BRN' | 'NRIC' | 'PASSPORT' | 'ARMY'
+    /** Delivery party contact information */
+    contactNumber?: string
+    /** Delivery party email */
+    email?: string
   }
+  /** Shipment information for delivery charges. */
+  shipment?: {
+    /** Shipment ID. Max 50 chars. */
+    id?: string
+    /** Tracking number. Max 50 chars. */
+    trackingNumber?: string
+    /** Freight allowance charge information. */
+    freightAllowanceCharge?: {
+      /** Charge indicator: true for charge, false for allowance. */
+      chargeIndicator: boolean
+      /** Reason for the charge. Max 300 chars. */
+      reason: string
+      /** Amount of the charge. Max 18 digits, 2 decimal places. */
+      amount: number
+    }
+  }
+}
+
+/** Represents additional document references like customs forms, FTA info, etc. */
+export interface AdditionalDocumentReference {
+  /** Reference ID. Max 1000 chars. */
+  id: string
+  /** Document type (e.g., 'CustomsImportForm', 'FreeTradeAgreement', 'K2'). Max 50 chars. */
+  documentType: string
+  /** Optional document description. Max 300 chars. */
+  documentDescription?: string
+}
+
+/** Represents prepaid payment information. */
+export interface PrepaidPayment {
+  /** Reference number. Max 150 chars. */
+  referenceNumber: string
+  /** Prepaid amount. Max 18 digits, 2 decimal places. */
+  amount: number
+  /** Payment date (YYYY-MM-DD). Max 10 chars. */
+  date: string
+  /** Payment time (HH:mm:ssZ). Max 9 chars. */
+  time: string
 }
 
 /**
@@ -339,6 +430,8 @@ export interface InvoiceV1_1 {
    * Mandatory if InvoiceCurrencyCode is not MYR.
    */
   currencyExchangeRate?: number // e.g., 1.0 or 4.75
+  /** Enhanced currency exchange rate information for international transactions */
+  taxExchangeRate?: CurrencyExchangeRate
   /** Frequency of billing description. Max 50 chars. */
   frequencyOfBilling?: string // e.g., 'Monthly'
   /** Billing period start date (YYYY-MM-DD). Max 10 chars. */
@@ -356,6 +449,20 @@ export interface InvoiceV1_1 {
   allowanceCharges?: AllowanceCharge[]
   /** Delivery information. */
   delivery?: Delivery
+  /** Additional document references (customs forms, FTA info, etc.) */
+  additionalDocumentReferences?: AdditionalDocumentReference[]
+  /** Prepaid payment information. */
+  prepaidPayment?: PrepaidPayment
+  /** Payment terms description. Max 300 chars. */
+  paymentTerms?: string
+  /** Project reference number. Max 50 chars. */
+  projectReference?: string
+  /** Contract reference number. Max 50 chars. */
+  contractReference?: string
+  /** Purchase order reference number. Max 50 chars. */
+  purchaseOrderReference?: string
+  /** Billing reference number. Max 50 chars. */
+  billingReference?: string
 }
 
 export type SubmissionStatus =
@@ -436,4 +543,18 @@ export interface SigningCredentials {
   issuerName: string
   /** Certificate serial number as string */
   serialNumber: string
+}
+
+export interface FinalDocumentData {
+  signatureValue: string // Base64 encoded RSA signature (Sig from Step 4)
+  propsDigest: string // Base64 encoded hash of SignedProperties (PropsDigest from Step 7)
+  docDigest: string // Base64 encoded hash of Canonicalized Document (DocDigest from Step 3)
+  certificatePem: string // Signing certificate in PEM format
+}
+
+export interface SignedPropertiesData {
+  certDigest: string // Base64 encoded SHA-256 hash of certificate (Step 5)
+  signingTime: string // ISO 8601 UTC timestamp string (e.g., 2023-10-26T10:30:00Z)
+  issuerName: string // Certificate Issuer Name
+  serialNumber: string // Certificate Serial Number
 }

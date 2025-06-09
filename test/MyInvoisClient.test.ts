@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { MyInvoisClient } from '../src/utils/MyInvoisClient'
+import { MyInvoisClient } from '../src'
 
 // Mock global fetch
 const mockFetch = vi.fn()
@@ -16,6 +16,8 @@ describe('MyInvoisClient', () => {
       'test-id',
       'test-secret',
       'sandbox',
+      process.env.TEST_CERTIFICATE!,
+      process.env.TEST_PRIVATE_KEY!,
       undefined,
       true,
     )
@@ -27,6 +29,8 @@ describe('MyInvoisClient', () => {
         'test-id',
         'test-secret',
         'sandbox',
+        process.env.TEST_CERTIFICATE!,
+        process.env.TEST_PRIVATE_KEY!,
         undefined,
         true,
       )
@@ -40,6 +44,8 @@ describe('MyInvoisClient', () => {
         'test-id',
         'test-secret',
         'production',
+        process.env.TEST_CERTIFICATE!,
+        process.env.TEST_PRIVATE_KEY!,
         undefined,
         true,
       )

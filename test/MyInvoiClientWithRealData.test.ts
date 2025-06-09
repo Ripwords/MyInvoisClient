@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { MyInvoisClient } from '../src/utils/MyInvoisClient'
+import { MyInvoisClient } from '../src'
 
 describe('MyInvoisClientWithRealData', () => {
   it('should verify TIN with real data', async () => {
@@ -19,6 +19,8 @@ describe('MyInvoisClientWithRealData', () => {
       process.env.CLIENT_ID!,
       process.env.CLIENT_SECRET!,
       'sandbox',
+      process.env.CERTIFICATE!,
+      process.env.PRIVATE_KEY!,
     )
     // @ts-ignore - refreshToken is a private method
     await client.refreshToken()

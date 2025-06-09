@@ -8,9 +8,6 @@
     "resolveJsonModule": true,
     "moduleDetection": "force",
     "isolatedModules": true, // Often recommended for bundlers
-    "declaration": true,
-    "declarationMap": true,
-    "isolatedDeclarations": true,
     "composite": true,
     /* Strictness */
     "strict": true,
