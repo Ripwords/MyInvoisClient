@@ -1,12 +1,10 @@
-import type { EInvoiceTypeCode } from './e-invoice.d.ts'
-import type { CurrencyCode } from './currencies.d.ts'
-import type { IssuerDigitalSignature } from './signatures.d.ts'
-import type { TaxTypeCode } from './tax-types.d.ts'
-import type { CountryCode } from './country-code.d.ts'
 import type { ClassificationCode } from './classification-codes.d.ts'
-import type { UnitTypeCode } from './unit-types.d.ts'
-import type { PaymentModeCode } from './payment-modes.d.ts'
+import type { CurrencyCode } from './currencies.d.ts'
+import type { EInvoiceTypeCode } from './e-invoice.d.ts'
 import type { MSICCode } from './msic-codes.d.ts'
+import type { IssuerDigitalSignature } from './signatures.d.ts'
+import type { Suggested } from './utils.d.ts'
+import type { TaxTypeCode } from './tax-types.d.ts'
 
 export type RegistrationType = 'BRN' | 'NRIC' | 'PASSPORT'
 
@@ -59,6 +57,16 @@ export interface Supplier {
    * @example +60123456789
    */
   contactNumber: string
+  /**
+   * Supplier's industry classification code. Max 10 chars.
+   * @example 41001
+   */
+  industryClassificationCode: MSICCode['code']
+  /**
+   * Supplier's industry classification description. Max 300 chars.
+   * @example Other retail sale in non-specialised stores
+   */
+  industryClassificationDescription: Suggested<MSICCode['description']>
 }
 
 /**

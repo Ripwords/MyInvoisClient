@@ -44,6 +44,8 @@ describe('Signature Diagnostics', () => {
           state: '14',
           country: 'MYS',
         },
+        industryClassificationCode: '41001',
+        industryClassificationDescription: 'Test Industry',
       },
 
       buyer: {

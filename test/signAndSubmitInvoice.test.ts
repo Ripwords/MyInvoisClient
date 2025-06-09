@@ -44,6 +44,8 @@ const createMinimalTestInvoice = (): InvoiceV1_1 => {
         state: '14', // Wilayah Persekutuan Kuala Lumpur
         country: 'MYS',
       },
+      industryClassificationCode: '41001',
+      industryClassificationDescription: 'Test Industry',
     },
 
     // === BUYER (using consolidated buyer for testing) ===

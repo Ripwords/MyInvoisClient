@@ -81,8 +81,8 @@ export const generateCleanInvoiceObject = (
             // Industry Classification - required field
             IndustryClassificationCode: [
               {
-                _: '47900', // Default to trading/general commerce
-                name: 'Other retail sale in non-specialised stores',
+                _: invoice.supplier.industryClassificationCode,
+                name: invoice.supplier.industryClassificationDescription,
               },
             ],
 
