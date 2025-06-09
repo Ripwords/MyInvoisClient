@@ -7,9 +7,9 @@
     "prerelease": "bun run lint && bun run build",
     "postrelease": "git push --follow-tags",
     "changelog": "changelogen --release",
-    "release": "bun run prerelease && bun run changelog && git push --follow-tags && npm publish --access public",
-    "release:minor": "bun run prerelease && bun run changelog --minor && git push --follow-tags && npm publish --access public",
-    "release:major": "bun run prerelease && bun run changelog --major && git push --follow-tags && npm publish --access public",
+    "release": "bun run prerelease && bun run changelog && npm publish --access public",
+    "release:minor": "bun run prerelease && bun run changelog --minor && npm publish --access public",
+    "release:major": "bun run prerelease && bun run changelog --major && npm publish --access public",
     "lint": "oxlint",
     "test": "vitest"
   },
