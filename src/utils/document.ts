@@ -7,7 +7,7 @@ import {
   UBLDocument,
   CompleteInvoice,
   SignedInfoObject,
-} from 'src/types'
+} from '../types'
 
 /**
  * MyInvois v1.1 Document Generation and Signing Utilities

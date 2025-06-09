@@ -1,4 +1,4 @@
-import type { InvoiceV1_1 } from '../types/documents/invoice-1_1.d.ts'
+import type { InvoiceV1_1 } from '../types/documents/index.js'
 
 /**
  * MyInvois Invoice Validation Utilities

@@ -8,6 +8,8 @@ import type { UnitTypeCode } from '../unit-types.d.ts'
 import type { PaymentModeCode } from '../payment-modes.d.ts'
 import type { MSICCode } from '../msic-codes.d.ts'
 
+export type RegistrationType = 'BRN' | 'NRIC' | 'PASSPORT'
+
 // Based on https://sdk.myinvois.hasil.gov.my/documents/invoice-v1-1/
 
 /**
@@ -56,14 +58,14 @@ export interface Supplier {
    * Supplier's Registration Type. NRIC, BRN, PASSPORT
    * @example NRIC
    */
-  registrationType: 'BRN' | 'NRIC' | 'PASSPORT'
+  registrationType: RegistrationType
   /**
    * Supplier's Registration / Identification Number / Passport Number.
    * Format depends on schemeID: NRIC (12), BRN (20), PASSPORT (12), ARMY (12).
    * @example BRN: 202001234567
    */
   registrationNumber: string
-  /** Supplier's SST registration number. Max 35 chars. "NA" if not applicable/available.
+  /** Supplier's SST registration number. Max 35 chars.
    * @example W10-1808-32000059
    */
   sstRegistrationNumber?: string
@@ -113,7 +115,7 @@ export interface Buyer {
    * Buyer's Registration Type. NRIC, BRN, PASSPORT, ARMY
    * @example BRN
    */
-  registrationType?: 'BRN' | 'NRIC' | 'PASSPORT' | 'ARMY'
+  registrationType: RegistrationType
   /**
    * Buyer's Registration / Identification Number / Passport Number.
    * Format depends on schemeID: NRIC (12), BRN (20), PASSPORT (12), ARMY (12).
@@ -122,7 +124,7 @@ export interface Buyer {
   registrationNumber: string
   /**
    * Buyer's SST registration number. Max 35 chars.
-   * Mandatory for SST-registrants. Can be "NA" if not available.
+   * Mandatory for SST-registrants.
    * Allows up to two numbers separated by ';'.
    * @example W10-1909-32000060
    */
@@ -133,7 +135,7 @@ export interface Buyer {
   email?: string
   /** Buyer's address. */
   address: Address
-  /** Buyer's contact number (E.164 standard). Max 20 chars. "NA" allowed for consolidated e-invoice.
+  /** Buyer's contact number (E.164 standard). Max 20 chars.
    * @example +60123456789
    */
   contactNumber: string
@@ -354,7 +356,7 @@ export interface Delivery {
     /** Delivery party registration number. Max 20 chars. */
     registrationNumber?: string
     /** Delivery party registration type. */
-    registrationType?: 'BRN' | 'NRIC' | 'PASSPORT' | 'ARMY'
+    registrationType?: RegistrationType
     /** Delivery party contact information */
     contactNumber?: string
     /** Delivery party email */

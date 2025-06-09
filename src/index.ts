@@ -1,10 +1,10 @@
-import { EInvoiceTypeCode } from 'src/types'
+import { EInvoiceTypeCode } from './types'
 import { platformLogin } from './api/platform/platformLogin'
 import type {
   DocumentStatus,
   InvoiceV1_1,
   SigningCredentials,
-} from './types/documents/invoice-1_1.d.ts'
+} from './types/documents'
 import { getBaseUrl } from './utils/getBaseUrl'
 import { extractCertificateInfo, validateKeyPair } from './utils/certificate'
 
@@ -15,7 +15,7 @@ import type {
   GetSubmissionResponse,
   SubmissionResponse,
   SubmissionStatus,
-} from './types/documents/invoice-1_1.d.ts'
+} from './types/documents'
 import { generateCompleteDocument } from './utils/document'
 
 export class MyInvoisClient {

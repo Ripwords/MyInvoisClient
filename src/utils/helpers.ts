@@ -5,7 +5,7 @@ import type {
   CurrencyExchangeRate,
   Delivery,
   AdditionalDocumentReference,
-} from '../types/documents/invoice-1_1.d.ts'
+} from '../types/documents/index.js'
 
 /**
  * MyInvois Invoice Helper Functions

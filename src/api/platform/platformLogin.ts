@@ -1,4 +1,4 @@
-import type { ClientCredentials, TokenResponse } from 'src/types'
+import type { ClientCredentials, TokenResponse } from '../../types'
 
 export const platformLogin = async (
   client: ClientCredentials,
