@@ -415,7 +415,13 @@ export const IndustryHelpers = {
   /**
    * Creates custom industry classification
    */
-  custom(code: string, description: string) {
+  custom(
+    code: string,
+    description: string,
+  ): {
+    industryClassificationCode: string
+    industryClassificationDescription: string
+  } {
     return {
       industryClassificationCode: code,
       industryClassificationDescription: description,

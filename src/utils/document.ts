@@ -1,5 +1,13 @@
 import crypto, { X509Certificate } from 'crypto'
-import { InvoiceV1_1, SigningCredentials } from 'src/types'
+import {
+  InvoiceSubmission,
+  InvoiceV1_1,
+  SigningCredentials,
+  SignedPropertiesObject,
+  UBLDocument,
+  CompleteInvoice,
+  SignedInfoObject,
+} from 'src/types'
 
 /**
  * MyInvois v1.1 Document Generation and Signing Utilities
@@ -49,7 +57,9 @@ export const canonicalizeJSON = (obj: unknown): string => {
  * - Specific field ordering and structure
  * - Correct listID values (e.g., "3166-1" not "ISO3166-1")
  */
-export const generateCleanInvoiceObject = (invoice: InvoiceV1_1) => {
+export const generateCleanInvoiceObject = (
+  invoice: InvoiceV1_1,
+): InvoiceSubmission => {
   return {
     // === MANDATORY CORE FIELDS ===
     ID: [{ _: invoice.eInvoiceCodeOrNumber }],
@@ -790,7 +800,9 @@ export const generateCleanInvoiceObject = (invoice: InvoiceV1_1) => {
 /**
  * Generates the complete UBL document structure with namespace declarations
  */
-export const generateCleanUBLDocument = (invoices: InvoiceV1_1[]) => {
+export const generateCleanUBLDocument = (
+  invoices: InvoiceV1_1[],
+): UBLDocument => {
   return {
     _D: 'urn:oasis:names:specification:ubl:schema:xsd:Invoice-2',
     _A: 'urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2',
@@ -915,7 +927,7 @@ export const createSignedProperties = (
   signingTime: string,
   issuerName: string,
   serialNumber: string,
-) => {
+): SignedPropertiesObject => {
   return {
     SignedProperties: [
       {
@@ -961,7 +973,7 @@ export const createSignedProperties = (
  * Based on working implementation pattern
  */
 export const calculateSignedPropertiesDigest = (
-  signedProperties: Record<string, unknown>,
+  signedProperties: SignedPropertiesObject,
 ): string => {
   // CRITICAL FIX: Wrap with Target as per working implementation
   const signedPropertiesWithTarget = {
@@ -988,7 +1000,7 @@ export const createSignedInfoAndSign = (
   docDigest: string,
   propsDigest: string,
   privateKeyPem: string,
-): { signedInfo: Record<string, unknown>; signatureValue: string } => {
+): { signedInfo: SignedInfoObject; signatureValue: string } => {
   // Create SignedInfo structure following specification exactly
   const signedInfo = {
     CanonicalizationMethod: [
@@ -1057,7 +1069,7 @@ export const createSignedInfoAndSign = (
 export const generateCompleteDocument = (
   invoices: InvoiceV1_1[],
   signingCredentials: SigningCredentials,
-) => {
+): CompleteInvoice => {
   try {
     // Step 1: Generate clean document (done in calculateDocumentDigest)
     // Step 2: Calculate document digest
@@ -1139,7 +1151,8 @@ export const generateCompleteDocument = (
                                     QualifyingProperties: [
                                       {
                                         Target: 'signature',
-                                        ...signedProperties,
+                                        SignedProperties:
+                                          signedProperties.SignedProperties,
                                       },
                                     ],
                                   },

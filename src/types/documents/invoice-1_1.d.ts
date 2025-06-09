@@ -558,3 +558,744 @@ export interface SignedPropertiesData {
   issuerName: string // Certificate Issuer Name
   serialNumber: string // Certificate Serial Number
 }
+
+export interface InvoiceSubmission {
+  /** Invoice ID */
+  ID: {
+    _: string
+  }[]
+
+  /** Issue date in YYYY-MM-DD format */
+  IssueDate: {
+    _: string
+  }[]
+
+  /** Issue time in HH:mm:ssZ format */
+  IssueTime: {
+    _: string
+  }[]
+
+  /** Invoice type code with version */
+  InvoiceTypeCode: {
+    _: string
+    listVersionID: string
+  }[]
+
+  /** Document currency code */
+  DocumentCurrencyCode: {
+    _: string
+  }[]
+
+  /** Invoice period information */
+  InvoicePeriod: {
+    StartDate: {
+      _: string
+    }[]
+    EndDate: {
+      _: string
+    }[]
+    Description: {
+      _: string
+    }[]
+  }[]
+
+  /** Billing reference */
+  BillingReference: {
+    AdditionalDocumentReference: {
+      ID: {
+        _: string
+      }[]
+    }[]
+  }[]
+
+  /** Additional document references */
+  AdditionalDocumentReference: {
+    ID: {
+      _: string
+    }[]
+    DocumentType: {
+      _: string
+    }[]
+  }[]
+
+  /** Supplier party information */
+  AccountingSupplierParty: {
+    AdditionalAccountID: {
+      _: string
+      schemeAgencyName: string
+    }[]
+    Party: {
+      IndustryClassificationCode: {
+        _: string
+        name: string
+      }[]
+      PartyIdentification: {
+        ID: {
+          _: string
+          schemeID: string
+        }[]
+      }[]
+      PostalAddress: {
+        CityName: {
+          _: string
+        }[]
+        PostalZone: {
+          _: string
+        }[]
+        CountrySubentityCode: {
+          _: string
+        }[]
+        AddressLine: {
+          Line: {
+            _: string
+          }[]
+        }[]
+        Country: {
+          IdentificationCode: {
+            _: string
+            listID: string
+            listAgencyID: string
+          }[]
+        }[]
+      }[]
+      PartyLegalEntity: {
+        RegistrationName: {
+          _: string
+        }[]
+      }[]
+      Contact: {
+        Telephone: {
+          _: string
+        }[]
+        ElectronicMail: {
+          _: string
+        }[]
+      }[]
+    }[]
+  }[]
+
+  /** Customer party information */
+  AccountingCustomerParty: {
+    Party: {
+      PartyIdentification: {
+        ID: {
+          _: string
+          schemeID: string
+        }[]
+      }[]
+      PostalAddress: {
+        CityName: {
+          _: string
+        }[]
+        PostalZone: {
+          _: string
+        }[]
+        CountrySubentityCode: {
+          _: string
+        }[]
+        AddressLine: {
+          Line: {
+            _: string
+          }[]
+        }[]
+        Country: {
+          IdentificationCode: {
+            _: string
+            listID: string
+            listAgencyID: string
+          }[]
+        }[]
+      }[]
+      PartyLegalEntity: {
+        RegistrationName: {
+          _: string
+        }[]
+      }[]
+      Contact: {
+        Telephone: {
+          _: string
+        }[]
+        ElectronicMail: {
+          _: string
+        }[]
+      }[]
+    }[]
+  }[]
+
+  /** Delivery information */
+  Delivery: {
+    DeliveryParty: {
+      PartyLegalEntity: {
+        RegistrationName: {
+          _: string
+        }[]
+      }[]
+      PostalAddress: {
+        CityName: {
+          _: string
+        }[]
+        PostalZone: {
+          _: string
+        }[]
+        CountrySubentityCode: {
+          _: string
+        }[]
+        AddressLine: {
+          Line: {
+            _: string
+          }[]
+        }[]
+        Country: {
+          IdentificationCode: {
+            _: string
+            listID: string
+            listAgencyID: string
+          }[]
+        }[]
+      }[]
+      PartyIdentification: {
+        ID: {
+          _: string
+          schemeID: string
+        }[]
+      }[]
+    }[]
+    Shipment: {
+      ID: {
+        _: string
+      }[]
+      FreightAllowanceCharge: {
+        ChargeIndicator: {
+          _: boolean
+        }[]
+        AllowanceChargeReason: {
+          _: string
+        }[]
+        Amount: {
+          _: number
+          currencyID: string
+        }[]
+      }[]
+    }[]
+  }[]
+
+  /** Payment means */
+  PaymentMeans: {
+    PaymentMeansCode: {
+      _: string
+    }[]
+    PayeeFinancialAccount: {
+      ID: {
+        _: string
+      }[]
+    }[]
+  }[]
+
+  /** Payment terms */
+  PaymentTerms: {
+    Note: {
+      _: string
+    }[]
+  }[]
+
+  /** Prepaid payment */
+  PrepaidPayment: {
+    ID: {
+      _: string
+    }[]
+    PaidAmount: {
+      _: number
+      currencyID: string
+    }[]
+    PaidDate: {
+      _: string
+    }[]
+    PaidTime: {
+      _: string
+    }[]
+  }[]
+
+  /** Allowance charges */
+  AllowanceCharge: {
+    ChargeIndicator: {
+      _: boolean
+    }[]
+    AllowanceChargeReason: {
+      _: string
+    }[]
+    Amount: {
+      _: number
+      currencyID: string
+    }[]
+    MultiplierFactorNumeric?: {
+      _: number
+    }[]
+  }[]
+
+  /** Tax total */
+  TaxTotal: {
+    TaxAmount: {
+      _: number
+      currencyID: string
+    }[]
+    TaxSubtotal: {
+      TaxableAmount: {
+        _: number
+        currencyID: string
+      }[]
+      TaxAmount: {
+        _: number
+        currencyID: string
+      }[]
+      TaxCategory: {
+        ID: {
+          _: string
+        }[]
+        TaxScheme: {
+          ID: {
+            _: string
+            schemeAgencyID: string
+            schemeID: string
+          }[]
+        }[]
+      }[]
+    }[]
+  }[]
+
+  /** Legal monetary total */
+  LegalMonetaryTotal: {
+    LineExtensionAmount: {
+      _: number
+      currencyID: string
+    }[]
+    TaxExclusiveAmount: {
+      _: number
+      currencyID: string
+    }[]
+    TaxInclusiveAmount: {
+      _: number
+      currencyID: string
+    }[]
+    AllowanceTotalAmount: {
+      _: number
+      currencyID: string
+    }[]
+    ChargeTotalAmount: {
+      _: number
+      currencyID: string
+    }[]
+    PayableAmount: {
+      _: number
+      currencyID: string
+    }[]
+    PayableRoundingAmount: {
+      _: number
+      currencyID: string
+    }[]
+  }[]
+
+  /** Invoice line items */
+  InvoiceLine: {
+    AllowanceCharge: {
+      Amount: {
+        _: number
+        currencyID: string
+      }[]
+      ChargeIndicator: {
+        _: boolean
+      }[]
+      MultiplierFactorNumeric: {
+        _: number
+      }[]
+      AllowanceChargeReason: {
+        _: string
+      }[]
+    }[]
+    ID: {
+      _: string
+    }[]
+    InvoicedQuantity?: {
+      _: number
+      unitCode: string
+    }[]
+    Item: {
+      CommodityClassification: {
+        ItemClassificationCode: {
+          _: string
+          listID: string
+        }[]
+      }[]
+      Description: {
+        _: string
+      }[]
+      OriginCountry: {
+        IdentificationCode: {
+          _: string
+        }[]
+      }[]
+    }[]
+    ItemPriceExtension: {
+      Amount: {
+        _: number
+        currencyID: string
+      }[]
+    }[]
+    LineExtensionAmount: {
+      _: number
+      currencyID: string
+    }[]
+    Price: {
+      PriceAmount: {
+        _: number
+        currencyID: string
+      }[]
+    }[]
+    TaxTotal: {
+      TaxAmount: {
+        _: number
+        currencyID: string
+      }[]
+      TaxSubtotal: {
+        TaxableAmount: {
+          _: number
+          currencyID: string
+        }[]
+        TaxAmount: {
+          _: number
+          currencyID: string
+        }[]
+        PerUnitAmount: {
+          _: number
+          currencyID: string
+        }[]
+        BaseUnitMeasure: {
+          _: number
+          unitCode: string
+        }[]
+        TaxCategory: {
+          ID: {
+            _: string
+          }[]
+          TaxScheme: {
+            ID: {
+              _: string
+              schemeAgencyID: string
+              schemeID: string
+            }[]
+          }[]
+        }[]
+      }[]
+    }[]
+  }[]
+
+  /** Tax exchange rate */
+  TaxExchangeRate: {
+    SourceCurrencyCode: {
+      _: string
+    }[]
+    TargetCurrencyCode: {
+      _: string
+    }[]
+    CalculationRate: {
+      _: number
+    }[]
+    ExchangeRateDate?: {
+      _: string
+    }[]
+  }[]
+
+  /** UBL Extensions for signatures (optional - only present in signed documents) */
+  UBLExtensions?: {
+    UBLExtension: {
+      ExtensionURI: {
+        _: string
+      }[]
+      ExtensionContent: {
+        UBLDocumentSignatures: {
+          SignatureInformation: {
+            ID: {
+              _: string
+            }[]
+            ReferencedSignatureID: {
+              _: string
+            }[]
+            Signature: {
+              Id: string
+              Object: {
+                QualifyingProperties: {
+                  Target: string
+                  SignedProperties: {
+                    Id: string
+                    SignedSignatureProperties: {
+                      SigningTime: {
+                        _: string
+                      }[]
+                      SigningCertificate: {
+                        Cert: {
+                          CertDigest: {
+                            DigestMethod: {
+                              Algorithm: string
+                            }[]
+                            DigestValue: {
+                              _: string
+                            }[]
+                          }[]
+                          IssuerSerial: {
+                            X509IssuerName: {
+                              _: string
+                            }[]
+                            X509SerialNumber: {
+                              _: string
+                            }[]
+                          }[]
+                        }[]
+                      }[]
+                    }[]
+                  }[]
+                }[]
+              }[]
+              KeyInfo: {
+                X509Data: {
+                  X509Certificate: {
+                    _: string
+                  }[]
+                  X509SubjectName: {
+                    _: string
+                  }[]
+                  X509IssuerSerial: {
+                    X509IssuerName: {
+                      _: string
+                    }[]
+                    X509SerialNumber: {
+                      _: string
+                    }[]
+                  }[]
+                }[]
+              }[]
+              SignatureValue: {
+                _: string
+              }[]
+              SignedInfo: {
+                CanonicalizationMethod: {
+                  _: string
+                  Algorithm: string
+                }[]
+                SignatureMethod: {
+                  _: string
+                  Algorithm: string
+                }[]
+                Reference: {
+                  Id: string
+                  Type: string
+                  URI: string
+                  DigestMethod: {
+                    _: string
+                    Algorithm: string
+                  }[]
+                  DigestValue: {
+                    _: string
+                  }[]
+                }[]
+              }[]
+            }[]
+          }[]
+        }[]
+      }[]
+    }[]
+  }[]
+
+  /** Signature reference (optional - only present in signed documents) */
+  Signature?: {
+    ID: {
+      _: string
+    }[]
+    SignatureMethod: {
+      _: string
+    }[]
+  }[]
+}
+
+/** Represents the complete UBL document structure with namespace declarations */
+export interface UBLDocument {
+  /** UBL Invoice namespace */
+  _D: string
+  /** UBL CommonAggregateComponents namespace */
+  _A: string
+  /** UBL CommonBasicComponents namespace */
+  _B: string
+  /** Array of invoice submissions */
+  Invoice: InvoiceSubmission[]
+}
+
+/** Represents the signed properties structure for digital signatures */
+export interface SignedPropertiesObject {
+  SignedProperties: {
+    /** Unique identifier for the signed properties */
+    Id: string
+    /** Signed signature properties containing signing details */
+    SignedSignatureProperties: {
+      /** Signing timestamp */
+      SigningTime: {
+        _: string
+      }[]
+      /** Signing certificate information */
+      SigningCertificate: {
+        /** Certificate details */
+        Cert: {
+          /** Certificate digest information */
+          CertDigest: {
+            /** Digest method algorithm */
+            DigestMethod: {
+              Algorithm: string
+            }[]
+            /** Base64 encoded digest value */
+            DigestValue: {
+              _: string
+            }[]
+          }[]
+          /** Certificate issuer and serial information */
+          IssuerSerial: {
+            /** X.509 issuer distinguished name */
+            X509IssuerName: {
+              _: string
+            }[]
+            /** X.509 certificate serial number */
+            X509SerialNumber: {
+              _: string
+            }[]
+          }[]
+        }[]
+      }[]
+    }[]
+  }[]
+}
+
+/** Represents the signed info structure for digital signatures */
+export interface SignedInfoObject {
+  /** Canonicalization method */
+  CanonicalizationMethod: {
+    _: string
+    Algorithm: string
+  }[]
+  /** Signature method */
+  SignatureMethod: {
+    _: string
+    Algorithm: string
+  }[]
+  /** References being signed */
+  Reference: {
+    Id: string
+    Type: string
+    URI: string
+    DigestMethod: {
+      _: string
+      Algorithm: string
+    }[]
+    DigestValue: {
+      _: string
+    }[]
+  }[]
+}
+
+/** Represents a complete signed invoice with all signature elements */
+export interface SignedInvoiceSubmission extends InvoiceSubmission {
+  /** UBL Extensions for signatures - required for signed documents */
+  UBLExtensions: {
+    UBLExtension: {
+      ExtensionURI: {
+        _: string
+      }[]
+      ExtensionContent: {
+        UBLDocumentSignatures: {
+          SignatureInformation: {
+            ID: {
+              _: string
+            }[]
+            ReferencedSignatureID: {
+              _: string
+            }[]
+            Signature: {
+              Id: string
+              Object: {
+                QualifyingProperties: {
+                  Target: string
+                  SignedProperties: {
+                    Id: string
+                    SignedSignatureProperties: {
+                      SigningTime: {
+                        _: string
+                      }[]
+                      SigningCertificate: {
+                        Cert: {
+                          CertDigest: {
+                            DigestMethod: {
+                              Algorithm: string
+                            }[]
+                            DigestValue: {
+                              _: string
+                            }[]
+                          }[]
+                          IssuerSerial: {
+                            X509IssuerName: {
+                              _: string
+                            }[]
+                            X509SerialNumber: {
+                              _: string
+                            }[]
+                          }[]
+                        }[]
+                      }[]
+                    }[]
+                  }[]
+                }[]
+              }[]
+              KeyInfo: {
+                X509Data: {
+                  X509Certificate: {
+                    _: string
+                  }[]
+                  X509SubjectName: {
+                    _: string
+                  }[]
+                  X509IssuerSerial: {
+                    X509IssuerName: {
+                      _: string
+                    }[]
+                    X509SerialNumber: {
+                      _: string
+                    }[]
+                  }[]
+                }[]
+              }[]
+              SignatureValue: {
+                _: string
+              }[]
+              SignedInfo: SignedInfoObject[]
+            }[]
+          }[]
+        }[]
+      }[]
+    }[]
+  }[]
+
+  /** Signature reference - required for signed documents */
+  Signature: {
+    ID: {
+      _: string
+    }[]
+    SignatureMethod: {
+      _: string
+    }[]
+  }[]
+}
+
+export interface CompleteInvoice {
+  /** UBL Invoice namespace */
+  _D: string
+  /** UBL CommonAggregateComponents namespace */
+  _A: string
+  /** UBL CommonBasicComponents namespace */
+  _B: string
+  /** Array of signed invoice submissions */
+  Invoice: SignedInvoiceSubmission[]
+}
