@@ -89,69 +89,6 @@ const createMinimalTestInvoice = (): InvoiceV1_1 => {
     taxTotal: {
       taxAmount: 6.0,
     },
-
-    // === DIGITAL SIGNATURE (placeholder - will be populated by signing process) ===
-    issuerDigitalSignature: {
-      Id: 'signature',
-      'ds:SignedInfo': {
-        'ds:CanonicalizationMethod': {
-          Algorithm: 'http://www.w3.org/2006/12/xml-c14n11',
-        },
-        'ds:SignatureMethod': {
-          Algorithm: 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256',
-        },
-        'ds:Reference': [
-          {
-            Id: 'id-doc-signed-data',
-            URI: '',
-            'ds:DigestMethod': {
-              Algorithm: 'http://www.w3.org/2001/04/xmlenc#sha256',
-            },
-            'ds:DigestValue': '',
-          },
-          {
-            Id: 'id-xades-signed-props',
-            URI: '#id-xades-signed-props',
-            'ds:DigestMethod': {
-              Algorithm: 'http://www.w3.org/2001/04/xmlenc#sha256',
-            },
-            'ds:DigestValue': '',
-          },
-        ],
-      },
-      'ds:SignatureValue': '',
-      'ds:KeyInfo': {
-        'ds:X509Data': {
-          'ds:X509Certificate': '',
-        },
-      },
-      'ds:Object': {
-        'xades:QualifyingProperties': {
-          Target: 'signature',
-          'xades:SignedProperties': {
-            Target: 'signature',
-            Id: 'id-xades-signed-props',
-            'xades:SignedSignatureProperties': {
-              'xades:SigningTime': '',
-              'xades:SigningCertificate': {
-                'xades:Cert': {
-                  'xades:CertDigest': {
-                    'ds:DigestMethod': {
-                      Algorithm: 'http://www.w3.org/2001/04/xmlenc#sha256',
-                    },
-                    'ds:DigestValue': '',
-                  },
-                  'xades:IssuerSerial': {
-                    'ds:X509IssuerName': '',
-                    'ds:X509SerialNumber': '',
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
   }
 }
 

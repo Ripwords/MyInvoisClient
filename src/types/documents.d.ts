@@ -4,6 +4,8 @@ import type { EInvoiceTypeCode } from './e-invoice.d.ts'
 import type { MSICCode } from './msic-codes.d.ts'
 import type { IssuerDigitalSignature } from './signatures.d.ts'
 import type { TaxTypeCode } from './tax-types.d.ts'
+import type { StateCode } from './state-codes.d.ts'
+import type { CountryCode } from './country-code.d.ts'
 
 export type RegistrationType = 'BRN' | 'NRIC' | 'PASSPORT' | 'ARMY'
 
@@ -21,9 +23,9 @@ export interface Address {
   /** City name. Max 50 chars. */
   cityName: string
   /** State code. Refer to /codes/state-codes/. Max 50 chars. */
-  state: string
+  state: StateCode
   /** Country code (ISO 3166-1). Refer to /codes/countries/. Max 3 chars. */
-  country: string // MYS
+  country: CountryCode // MYS
 }
 
 /**
@@ -220,8 +222,6 @@ export interface InvoiceV1_1 {
   eInvoiceDate: string // e.g., '2017-11-26'
   /** Time of issuance (HH:mm:ssZ) in UTC. Max 9 chars. */
   eInvoiceTime: string // e.g., '15:30:00Z'
-  /** Issuer's digital signature. Refer to /signature/ documentation. */
-  issuerDigitalSignature: IssuerDigitalSignature
   /** Invoice currency code. Refer to /codes/currencies/. Max 3 chars. */
   invoiceCurrencyCode: CurrencyCode // e.g., 'MYR'
   /** Invoice line items. */
