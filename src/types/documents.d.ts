@@ -867,3 +867,44 @@ export interface CompleteInvoice {
   /** Array of signed invoice submissions */
   Invoice: SignedInvoiceSubmission[]
 }
+
+export interface DocumentTypeVersion {
+  id: number
+  name: string
+  description: string
+  activeFrom: string
+  activeTo: string
+  versionNumber: number
+  status: 'draft' | 'published' | 'deactivated'
+}
+
+export interface WorkflowParameter {
+  id: number
+  parameter: string
+  value: number
+  activeFrom: string
+  activeTo: string
+}
+
+export interface DocumentTypeResponse {
+  id: number
+  invoiceTypeCode: EInvoiceTypeCode
+  description: string
+  activeFrom: string
+  activeTo: string
+  documentTypeVersions: DocumentTypeVersion[]
+  workflowParameters: WorkflowParameter[]
+}
+export interface DocumentTypesResponse {
+  result: Omit<DocumentTypeResponse, 'workflowParameters'>[]
+}
+
+export interface DocumentTypeVersionResponse {
+  invoiceTypeCode: EInvoiceTypeCode
+  name: string
+  description: string
+  versionNumber: number
+  status: 'published' | 'deactivated'
+  activeFrom: string
+  activeTo: string
+}

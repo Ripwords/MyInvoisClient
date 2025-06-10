@@ -1,24 +1,29 @@
-import { EInvoiceTypeCode } from './types'
-import { platformLogin } from './api/platform/platformLogin'
-import type {
+import {
   DocumentStatus,
-  InvoiceV1_1,
-  RegistrationType,
-  SigningCredentials,
-} from './types/documents'
-import { getBaseUrl } from './utils/getBaseUrl'
-import { extractCertificateInfo, validateKeyPair } from './utils/certificate'
-
-import type {
   DocumentSummary,
+  DocumentTypeResponse,
+  DocumentTypesResponse,
+  DocumentTypeVersionResponse,
   DocumentValidationResult,
   DocumentValidationStepResult,
+  EInvoiceTypeCode,
   GetSubmissionResponse,
+  InvoiceV1_1,
+  NotificationResponse,
+  NotificationSearchParams,
+  RegistrationType,
+  SigningCredentials,
+  StandardError,
   SubmissionResponse,
   SubmissionStatus,
-} from './types/documents'
-import { generateCompleteDocument } from './utils/document'
+} from './types'
 
+import { platformLogin } from './api/platform/platformLogin'
+import { extractCertificateInfo, validateKeyPair } from './utils/certificate'
+import { generateCompleteDocument } from './utils/document'
+import { getBaseUrl } from './utils/getBaseUrl'
+
+export type * from './types/index.d.ts'
 export class MyInvoisClient {
   private readonly baseUrl: string
   private readonly clientId: string
@@ -108,10 +113,30 @@ export class MyInvoisClient {
   /**
    * Validates a TIN against a NRIC/ARMY/PASSPORT/BRN (Business Registration Number)
    *
+   * This method verifies if a given Tax Identification Number (TIN) is valid by checking it against
+   * the provided identification type and value through the MyInvois platform's validation service.
+   *
    * @param tin - The TIN to validate
-   * @param idType - The type of ID to validate against
+   * @param idType - The type of ID to validate against ('NRIC', 'ARMY', 'PASSPORT', or 'BRN')
    * @param idValue - The value of the ID to validate against
-   * @returns true if the TIN is valid, false otherwise
+   * @returns Promise resolving to true if the TIN is valid, false otherwise
+   *
+   * @example
+   * ```typescript
+   * // Validate TIN against NRIC
+   * const isValid = await client.verifyTin('C12345678901234', 'NRIC', '123456789012');
+   * if (isValid) {
+   *   console.log('TIN is valid');
+   * }
+   *
+   * // Validate TIN against Business Registration Number
+   * const isValidBusiness = await client.verifyTin('C98765432109876', 'BRN', '123456-K');
+   * ```
+   *
+   * @remarks
+   * - Returns false if validation fails due to network errors or invalid credentials
+   * - Debug mode provides error logging for troubleshooting validation failures
+   * - This is a non-blocking validation that won't throw exceptions on failure
    */
   async verifyTin(
     tin: string,
@@ -288,6 +313,41 @@ export class MyInvoisClient {
     }
   }
 
+  /**
+   * Polls the MyInvois platform to get the current status of a document submission.
+   *
+   * This method continuously checks the submission status until it receives a final result
+   * (Valid or Invalid) or reaches the maximum retry limit. It's designed to handle the
+   * asynchronous nature of document processing on the MyInvois platform.
+   *
+   * @param submissionUid - The unique identifier of the submission to check
+   * @param pollInterval - Time in milliseconds between status checks (default: 1000ms)
+   * @param maxRetries - Maximum number of retry attempts (default: 10)
+   * @returns Promise resolving to submission status object with document summary and any errors
+   *
+   * @example
+   * ```typescript
+   * // Check submission status with default polling
+   * const result = await client.getSubmissionStatus('submission-uid-123');
+   * if (result.status === 'Valid') {
+   *   console.log('All documents processed successfully');
+   *   console.log('Document summaries:', result.documentSummary);
+   * }
+   *
+   * // Custom polling interval and retry count
+   * const result = await client.getSubmissionStatus(
+   *   'submission-uid-123',
+   *   2000, // Poll every 2 seconds
+   *   20    // Try up to 20 times
+   * );
+   * ```
+   *
+   * @remarks
+   * - Automatically retries on network errors until maxRetries is reached
+   * - Returns 'Invalid' status with timeout error if submission processing takes too long
+   * - Debug mode provides detailed logging of polling attempts and responses
+   * - Use reasonable poll intervals to avoid overwhelming the API
+   */
   async getSubmissionStatus(
     submissionUid: string,
     pollInterval: number = 1000,
@@ -525,6 +585,182 @@ export class MyInvoisClient {
 
     return data
   }
-}
 
-export type * from './types/index.d.ts'
+  /**
+   * Retrieves notifications from the MyInvois platform based on specified search criteria.
+   *
+   * This method allows you to search for system notifications, alerts, and messages
+   * sent by the MyInvois platform regarding document processing, system updates,
+   * or account-related information.
+   *
+   * @param params - Search parameters object for filtering notifications
+   * @param params.dateFrom - Optional start date for notification date range (ISO date string)
+   * @param params.dateTo - Optional end date for notification date range (ISO date string)
+   * @param params.type - Optional notification type filter
+   * @param params.language - Optional language preference for notifications
+   * @param params.status - Optional notification status filter
+   * @param params.pageNo - Optional page number for pagination (0-based)
+   * @param params.pageSize - Optional number of results per page
+   * @returns Promise resolving to notification response object or standard error
+   *
+   * @example
+   * ```typescript
+   * // Get all notifications from the last 7 days
+   * const notifications = await client.getNotifications({
+   *   dateFrom: '2024-01-01',
+   *   dateTo: '2024-01-07',
+   *   pageSize: 20
+   * });
+   *
+   * // Get unread notifications only
+   * const unreadNotifications = await client.getNotifications({
+   *   status: 0, // Assuming 0 = unread
+   *   language: 'en'
+   * });
+   *
+   * // Paginated notification retrieval
+   * const firstPage = await client.getNotifications({
+   *   dateFrom: '2024-01-01',
+   *   pageNo: 0,
+   *   pageSize: 10
+   * });
+   * ```
+   *
+   * @remarks
+   * - All parameters are optional, allowing flexible filtering
+   * - Returns paginated results when pageNo and pageSize are specified
+   * - Date parameters should be in ISO format (YYYY-MM-DD)
+   * - May return StandardError object if the request fails
+   */
+  async getNotifications({
+    dateFrom,
+    dateTo,
+    type,
+    language,
+    status,
+    pageNo,
+    pageSize,
+  }: NotificationSearchParams): Promise<NotificationResponse | StandardError> {
+    const queryParams = new URLSearchParams()
+    if (dateFrom) queryParams.set('dateFrom', dateFrom)
+    if (dateTo) queryParams.set('dateTo', dateTo)
+    if (type) queryParams.set('type', type.toString())
+    if (language) queryParams.set('language', language)
+    if (status) queryParams.set('status', status.toString())
+    if (pageNo) queryParams.set('pageNo', pageNo.toString())
+    if (pageSize) queryParams.set('pageSize', pageSize.toString())
+
+    const response = await this.fetch(
+      `/api/v1.0/notifications/taxpayer?${queryParams.toString()}`,
+    )
+
+    const data = (await response.json()) as NotificationResponse
+
+    return data
+  }
+
+  async getDocumentTypes() {
+    const response = await this.fetch('/api/v1.0/documenttypes')
+
+    const data = (await response.json()) as DocumentTypesResponse
+
+    return data
+  }
+
+  /**
+   * Retrieves detailed information about a specific document type from the MyInvois platform.
+   *
+   * This method fetches metadata and configuration details for a specific document type,
+   * including supported versions, validation rules, and structural requirements.
+   * Useful for understanding document format requirements before submission.
+   *
+   * @param id - The unique identifier of the document type to retrieve
+   * @returns Promise resolving to document type response object or standard error
+   *
+   * @example
+   * ```typescript
+   * // Get details for e-invoice document type
+   * const invoiceType = await client.getDocumentType(1);
+   * if ('id' in invoiceType) {
+   *   console.log('Document type name:', invoiceType.name);
+   *   console.log('Available versions:', invoiceType.versionNumber);
+   *   console.log('Description:', invoiceType.description);
+   * }
+   *
+   * // Handle potential errors
+   * const documentType = await client.getDocumentType(999);
+   * if ('error' in documentType) {
+   *   console.error('Failed to retrieve document type:', documentType.error.message);
+   * }
+   * ```
+   *
+   * @remarks
+   * - Returns StandardError object if the document type ID doesn't exist
+   * - Document type information includes validation schemas and business rules
+   * - Use this method to discover supported document formats and versions
+   * - Essential for understanding submission requirements for different document types
+   */
+  async getDocumentType(
+    id: number,
+  ): Promise<DocumentTypeResponse | StandardError> {
+    const response = await this.fetch(`/api/v1.0/documenttypes/${id}`)
+
+    const data = (await response.json()) as DocumentTypeResponse
+
+    return data
+  }
+
+  /**
+   * Retrieves detailed information about a specific version of a document type.
+   *
+   * This method fetches version-specific metadata, schema definitions, and validation rules
+   * for a particular document type version. Essential for understanding the exact format
+   * and requirements for document submission in a specific version.
+   *
+   * @param id - The unique identifier of the document type
+   * @param versionId - The unique identifier of the specific version to retrieve
+   * @returns Promise resolving to document type version response object or standard error
+   *
+   * @example
+   * ```typescript
+   * // Get specific version details for e-invoice
+   * const invoiceV1_1 = await client.getDocumentTypeVersion(1, 1);
+   * if ('id' in invoiceV1_1) {
+   *   console.log('Version number:', invoiceV1_1.versionNumber);
+   *   console.log('Schema:', invoiceV1_1.jsonSchema);
+   *   console.log('Status:', invoiceV1_1.status);
+   * }
+   *
+   * // Compare different versions
+   * const [v1_0, v1_1] = await Promise.all([
+   *   client.getDocumentTypeVersion(1, 0),
+   *   client.getDocumentTypeVersion(1, 1)
+   * ]);
+   *
+   * // Handle version not found
+   * const result = await client.getDocumentTypeVersion(1, 999);
+   * if ('error' in result) {
+   *   console.error('Version not found:', result.error.message);
+   * }
+   * ```
+   *
+   * @remarks
+   * - Returns StandardError object if document type ID or version ID doesn't exist
+   * - Version information includes JSON schema for validation
+   * - Different versions may have different validation rules and field requirements
+   * - Use this to ensure your documents conform to the specific version requirements
+   * - Version status indicates if the version is active, deprecated, or under development
+   */
+  async getDocumentTypeVersion(
+    id: number,
+    versionId: number,
+  ): Promise<DocumentTypeVersionResponse | StandardError> {
+    const response = await this.fetch(
+      `/api/v1.0/documenttypes/${id}/versions/${versionId}`,
+    )
+
+    const data = (await response.json()) as DocumentTypeVersionResponse
+
+    return data
+  }
+}
