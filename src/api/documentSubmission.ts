@@ -5,6 +5,7 @@ import type {
   SubmissionStatus,
   DocumentSummary,
   Fetch,
+  StandardError,
 } from '../types'
 import { generateCompleteDocument } from '../utils/document'
 
@@ -231,4 +232,33 @@ export async function getSubmissionStatus(
       },
     }
   }
+}
+
+export async function performDocumentAction(
+  documentUid: string,
+  status: 'rejected' | 'cancelled',
+  reason: string,
+): Promise<{
+  uuid: string
+  status: string
+  error: StandardError
+}> {
+  const response = await fetch(
+    `/api/v1.0/documents/state/${documentUid}/state`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        status,
+        reason,
+      }),
+    },
+  )
+
+  const data = (await response.json()) as {
+    uuid: string
+    status: string
+    error: StandardError
+  }
+
+  return data
 }
