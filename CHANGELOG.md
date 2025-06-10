@@ -1,6 +1,23 @@
 # Changelog
 
 
+## v0.2.0
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.1.7...v0.2.0)
+
+### 🚀 Enhancements
+
+- Add TIN search and QR code retrieval functionalities to taxpayer validation API ([b423bc3](https://github.com/Ripwords/MyInvoisClient/commit/b423bc3))
+
+### 💅 Refactors
+
+- Enhance MyInvoisClient with new document type methods and improve TIN validation documentation ([14ac780](https://github.com/Ripwords/MyInvoisClient/commit/14ac780))
+- Modularize MyInvoisClient by integrating document management APIs ([9f37f6d](https://github.com/Ripwords/MyInvoisClient/commit/9f37f6d))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.1.7
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.1.6...v0.1.7)
