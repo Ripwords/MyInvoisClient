@@ -2,6 +2,7 @@ import {
   DocumentStatus,
   DocumentSummary,
   DocumentTypeResponse,
+  DocumentTypesResponse,
   DocumentTypeVersionResponse,
   DocumentValidationResult,
   DocumentValidationStepResult,
@@ -460,7 +461,7 @@ export class MyInvoisClient {
     )
   }
 
-  async getDocumentTypes() {
+  async getDocumentTypes(): Promise<DocumentTypesResponse | StandardError> {
     return DocumentTypeManagementAPI.getDocumentTypes({
       fetch: this.fetch.bind(this),
     })
