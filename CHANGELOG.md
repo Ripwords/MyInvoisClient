@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.1
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.0...v0.2.1)
+
+### 🚀 Enhancements
+
+- Update getDocumentTypes method to return DocumentTypesResponse type ([f3a2884](https://github.com/Ripwords/MyInvoisClient/commit/f3a2884))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.0
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.1.7...v0.2.0)
