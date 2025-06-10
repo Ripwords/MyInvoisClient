@@ -10,6 +10,7 @@ export type * from './state-codes.d.ts'
 export type * from './e-invoice.d.ts'
 export type * from './msic-codes.d.ts'
 export type * from './notifications.d.ts'
+export type * from './utils.d.ts'
 
 export interface TokenResponse {
   access_token: string

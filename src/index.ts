@@ -2,12 +2,10 @@ import {
   DocumentStatus,
   DocumentSummary,
   DocumentTypeResponse,
-  DocumentTypesResponse,
   DocumentTypeVersionResponse,
   DocumentValidationResult,
   DocumentValidationStepResult,
   EInvoiceTypeCode,
-  GetSubmissionResponse,
   InvoiceV1_1,
   NotificationResponse,
   NotificationSearchParams,
@@ -18,9 +16,13 @@ import {
   SubmissionStatus,
 } from './types'
 
-import { platformLogin } from './api/platform/platformLogin'
+import * as DocumentManagementAPI from './api/documentManagement'
+import * as DocumentSubmissionAPI from './api/documentSubmission'
+import * as DocumentTypeManagementAPI from './api/documentTypeManagement'
+import * as NotificationManagementAPI from './api/notificationManagement'
+import { platformLogin } from './api/platformLogin'
+import * as TaxpayerValidationAPI from './api/taxpayerValidation'
 import { extractCertificateInfo, validateKeyPair } from './utils/certificate'
-import { generateCompleteDocument } from './utils/document'
 import { getBaseUrl } from './utils/getBaseUrl'
 
 export type * from './types/index.d.ts'
@@ -143,25 +145,12 @@ export class MyInvoisClient {
     idType: RegistrationType,
     idValue: string,
   ): Promise<boolean> {
-    try {
-      const response = await this.fetch(
-        `/api/v1.0/taxpayer/validate/${tin}?idType=${idType}&idValue=${idValue}`,
-        {
-          method: 'GET',
-        },
-      )
-
-      if (response.status === 200) {
-        return true
-      }
-
-      return false
-    } catch (error) {
-      if (this.debug) {
-        console.error(error)
-      }
-      return false
-    }
+    return TaxpayerValidationAPI.verifyTin(
+      { fetch: this.fetch.bind(this), debug: this.debug },
+      tin,
+      idType,
+      idValue,
+    )
   }
 
   /**
@@ -201,116 +190,14 @@ export class MyInvoisClient {
     data: SubmissionResponse
     status: number
   }> {
-    if (this.debug) {
-      console.log(`📦 Preparing to submit ${documents.length} document(s)...`)
-    }
-
-    // Generate the complete signed document structure first
-    const completeDocument = generateCompleteDocument(
-      documents,
-      this.signingCredentials,
-    )
-
-    if (this.debug) {
-      console.log('✅ Documents signed successfully')
-      console.log('📄 Document structure keys:', Object.keys(completeDocument))
-      console.log('📊 Number of invoices:', completeDocument.Invoice.length)
-    }
-
-    // Convert the complete document to JSON string
-    const documentJson = JSON.stringify(completeDocument)
-
-    if (this.debug) {
-      console.log(`📏 Document JSON size: ${documentJson.length} bytes`)
-    }
-
-    // Generate SHA256 hash of the JSON document
-    const crypto = await import('crypto')
-    const documentHash = crypto
-      .createHash('sha256')
-      .update(documentJson, 'utf8')
-      .digest('hex')
-
-    // Base64 encode the JSON document
-    const documentBase64 = Buffer.from(documentJson, 'utf8').toString('base64')
-
-    if (this.debug) {
-      console.log(`🔒 Document hash: ${documentHash.substring(0, 16)}...`)
-      console.log(`📦 Base64 size: ${documentBase64.length} bytes`)
-    }
-
-    // Build the submission payload according to MyInvois API format
-    const submissionPayload = {
-      documents: documents.map(doc => ({
-        format: 'JSON', // We're submitting JSON format
-        document: documentBase64, // Base64 encoded complete document
-        documentHash: documentHash, // SHA256 hash of the JSON
-        codeNumber: doc.eInvoiceCodeOrNumber, // Document reference number
-      })),
-    }
-
-    if (this.debug) {
-      console.log('🚀 Submission payload structure:')
-      console.log('- Format: JSON')
-      console.log('- Documents count:', submissionPayload.documents.length)
-      console.log(
-        '- Total payload size:',
-        JSON.stringify(submissionPayload).length,
-        'bytes',
-      )
-
-      // Validate submission constraints
-      const payloadSize = JSON.stringify(submissionPayload).length
-      if (payloadSize > 5 * 1024 * 1024) {
-        // 5MB
-        console.warn('⚠️  WARNING: Payload size exceeds 5MB limit')
-      }
-
-      if (documents.length > 100) {
-        console.warn('⚠️  WARNING: Document count exceeds 100 document limit')
-      }
-
-      if (documentJson.length > 300 * 1024) {
-        // 300KB per document
-        console.warn('⚠️  WARNING: Document size exceeds 300KB limit')
-      }
-    }
-
-    // Submit to MyInvois API with proper headers
-    const response = await this.fetch('/api/v1.0/documentsubmissions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    return DocumentSubmissionAPI.submitDocument(
+      {
+        fetch: this.fetch.bind(this),
+        debug: this.debug,
+        signingCredentials: this.signingCredentials,
       },
-      body: JSON.stringify(submissionPayload),
-    })
-
-    if (this.debug) {
-      console.log(`📡 API Response status: ${response.status}`)
-    }
-
-    const data = (await response.json()) as SubmissionResponse
-
-    if (this.debug) {
-      if (response.status !== 202) {
-        console.error('❌ Submission failed with status:', response.status)
-        console.error('❌ Response data:', data)
-      } else {
-        console.log('✅ Submission successful!')
-        console.log(`📋 Submission UID: ${data.submissionUid}`)
-        console.log(
-          `✅ Accepted documents: ${data.acceptedDocuments?.length || 0}`,
-        )
-        console.log(
-          `❌ Rejected documents: ${data.rejectedDocuments?.length || 0}`,
-        )
-      }
-    }
-
-    return {
-      data,
-      status: response.status,
-    }
+      documents,
+    )
   }
 
   /**
@@ -366,79 +253,12 @@ export class MyInvoisClient {
       }[]
     }
   }> {
-    try {
-      const response = await this.fetch(
-        `/api/v1.0/documentsubmissions/${submissionUid}`,
-      )
-
-      const data = (await response.json()) as GetSubmissionResponse
-
-      if (this.debug) {
-        console.log('Submission:', data)
-        if (data.error) {
-          console.log('Submission error details:', data.error.details)
-        }
-      }
-
-      // If we have a successful response and status is completed, return success
-      if (data.overallStatus === 'Valid') {
-        return {
-          status: data.overallStatus,
-          documentSummary: data.documentSummary,
-        }
-      }
-      if (data.overallStatus === 'Invalid') {
-        return {
-          status: 'Invalid',
-          documentSummary: data.documentSummary,
-        }
-      }
-
-      // If we have retries left, continue polling for any non-completed status or errors
-      if (maxRetries > 0) {
-        await new Promise(resolve => setTimeout(resolve, pollInterval))
-        return await this.getSubmissionStatus(
-          submissionUid,
-          pollInterval,
-          maxRetries - 1,
-        )
-      }
-
-      // No retries left - return timeout
-      return {
-        status: 'Invalid',
-        error: {
-          code: 'Timeout',
-          message: 'Submission timed out',
-          target: 'submission',
-          details: [],
-        },
-      }
-    } catch (error) {
-      // Handle any request errors by retrying if we have retries left
-      if (maxRetries > 0) {
-        if (this.debug) {
-          console.log('Request error, retrying...', error)
-        }
-        await new Promise(resolve => setTimeout(resolve, pollInterval))
-        return await this.getSubmissionStatus(
-          submissionUid,
-          pollInterval,
-          maxRetries - 1,
-        )
-      }
-
-      // No retries left - return timeout
-      return {
-        status: 'Invalid',
-        error: {
-          code: 'Timeout',
-          message: 'Submission timed out after request errors',
-          target: 'submission',
-          details: [],
-        },
-      }
-    }
+    return DocumentSubmissionAPI.getSubmissionStatus(
+      { fetch: this.fetch.bind(this), debug: this.debug },
+      submissionUid,
+      pollInterval,
+      maxRetries,
+    )
   }
 
   /**
@@ -458,11 +278,10 @@ export class MyInvoisClient {
   async getDocument(
     documentUid: string,
   ): Promise<DocumentSummary & { document: string }> {
-    const response = await this.fetch(`/api/v1.0/documents/${documentUid}/raw`)
-
-    const data = await response.json()
-
-    return data as DocumentSummary & { document: string }
+    return DocumentManagementAPI.getDocument(
+      { fetch: this.fetch.bind(this) },
+      documentUid,
+    )
   }
 
   /**
@@ -487,18 +306,10 @@ export class MyInvoisClient {
       }
     }
   > {
-    const response = await this.fetch(
-      `/api/v1.0/documents/${documentUid}/details`,
+    return DocumentManagementAPI.getDocumentDetails(
+      { fetch: this.fetch.bind(this) },
+      documentUid,
     )
-
-    const data = (await response.json()) as DocumentSummary & {
-      validationResults: {
-        status: DocumentValidationResult
-        validationSteps: DocumentValidationStepResult[]
-      }
-    }
-
-    return data
   }
 
   /**
@@ -562,28 +373,22 @@ export class MyInvoisClient {
     documentType?: EInvoiceTypeCode
     searchQuery?: string // Search by uuid, buyerTIN, supplierTIN, buyerName, supplierName, internalID, total
   }): Promise<DocumentSummary[]> {
-    const queryParams = new URLSearchParams()
-
-    if (uuid) queryParams.set('uuid', uuid)
-    if (submissionDateFrom)
-      queryParams.set('submissionDateFrom', submissionDateFrom)
-    if (submissionDateTo) queryParams.set('submissionDateTo', submissionDateTo)
-    if (pageSize) queryParams.set('pageSize', pageSize.toString())
-    if (pageNo) queryParams.set('pageNo', pageNo.toString())
-    if (issueDateFrom) queryParams.set('issueDateFrom', issueDateFrom)
-    if (issueDateTo) queryParams.set('issueDateTo', issueDateTo)
-    if (invoiceDirection) queryParams.set('invoiceDirection', invoiceDirection)
-    if (status) queryParams.set('status', status)
-    if (documentType) queryParams.set('documentType', documentType)
-    if (searchQuery) queryParams.set('searchQuery', searchQuery)
-
-    const response = await this.fetch(
-      `/api/v1.0/documents/search?${queryParams.toString()}`,
+    return DocumentManagementAPI.searchDocuments(
+      { fetch: this.fetch.bind(this) },
+      {
+        uuid,
+        submissionDateFrom,
+        submissionDateTo,
+        pageSize,
+        pageNo,
+        issueDateFrom,
+        issueDateTo,
+        invoiceDirection,
+        status,
+        documentType,
+        searchQuery,
+      },
     )
-
-    const data = (await response.json()) as DocumentSummary[]
-
-    return data
   }
 
   /**
@@ -641,30 +446,24 @@ export class MyInvoisClient {
     pageNo,
     pageSize,
   }: NotificationSearchParams): Promise<NotificationResponse | StandardError> {
-    const queryParams = new URLSearchParams()
-    if (dateFrom) queryParams.set('dateFrom', dateFrom)
-    if (dateTo) queryParams.set('dateTo', dateTo)
-    if (type) queryParams.set('type', type.toString())
-    if (language) queryParams.set('language', language)
-    if (status) queryParams.set('status', status.toString())
-    if (pageNo) queryParams.set('pageNo', pageNo.toString())
-    if (pageSize) queryParams.set('pageSize', pageSize.toString())
-
-    const response = await this.fetch(
-      `/api/v1.0/notifications/taxpayer?${queryParams.toString()}`,
+    return NotificationManagementAPI.getNotifications(
+      { fetch: this.fetch.bind(this) },
+      {
+        dateFrom,
+        dateTo,
+        type,
+        language,
+        status,
+        pageNo,
+        pageSize,
+      },
     )
-
-    const data = (await response.json()) as NotificationResponse
-
-    return data
   }
 
   async getDocumentTypes() {
-    const response = await this.fetch('/api/v1.0/documenttypes')
-
-    const data = (await response.json()) as DocumentTypesResponse
-
-    return data
+    return DocumentTypeManagementAPI.getDocumentTypes({
+      fetch: this.fetch.bind(this),
+    })
   }
 
   /**
@@ -703,11 +502,10 @@ export class MyInvoisClient {
   async getDocumentType(
     id: number,
   ): Promise<DocumentTypeResponse | StandardError> {
-    const response = await this.fetch(`/api/v1.0/documenttypes/${id}`)
-
-    const data = (await response.json()) as DocumentTypeResponse
-
-    return data
+    return DocumentTypeManagementAPI.getDocumentType(
+      { fetch: this.fetch.bind(this) },
+      id,
+    )
   }
 
   /**
@@ -755,12 +553,10 @@ export class MyInvoisClient {
     id: number,
     versionId: number,
   ): Promise<DocumentTypeVersionResponse | StandardError> {
-    const response = await this.fetch(
-      `/api/v1.0/documenttypes/${id}/versions/${versionId}`,
+    return DocumentTypeManagementAPI.getDocumentTypeVersion(
+      { fetch: this.fetch.bind(this) },
+      id,
+      versionId,
     )
-
-    const data = (await response.json()) as DocumentTypeVersionResponse
-
-    return data
   }
 }
