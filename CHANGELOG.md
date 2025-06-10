@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.2
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.1...v0.2.2)
+
+### 🚀 Enhancements
+
+- Implement TIN search and QR code retrieval methods in MyInvoisClient ([052b727](https://github.com/Ripwords/MyInvoisClient/commit/052b727))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.1
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.0...v0.2.1)
