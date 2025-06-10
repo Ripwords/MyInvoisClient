@@ -15,6 +15,9 @@ import {
   StandardError,
   SubmissionResponse,
   SubmissionStatus,
+  TaxpayerQRCodeResponse,
+  TinSearchParams,
+  TinSearchResponse,
 } from './types'
 
 import * as DocumentManagementAPI from './api/documentManagement'
@@ -151,6 +154,134 @@ export class MyInvoisClient {
       tin,
       idType,
       idValue,
+    )
+  }
+
+  /**
+   * Searches for a Tax Identification Number (TIN) using taxpayer information.
+   *
+   * This method allows searching for a TIN using either a taxpayer name or a combination
+   * of identification type and value. The search is flexible and supports multiple
+   * identification types including NRIC, ARMY, PASSPORT, and BRN.
+   *
+   * @param params - Search parameters object
+   * @param params.taxpayerName - Optional name of the taxpayer to search for
+   * @param params.idType - Optional type of ID to search with (NRIC, ARMY, PASSPORT, BRN)
+   * @param params.idValue - Optional value of the ID to search with
+   * @returns Promise resolving to TIN search response or standard error
+   *
+   * @example
+   * ```typescript
+   * // Search by taxpayer name
+   * const result = await client.searchTin({ taxpayerName: 'John Doe' });
+   * if ('tin' in result) {
+   *   console.log('Found TIN:', result.tin);
+   * }
+   *
+   * // Search by ID type and value
+   * const result = await client.searchTin({
+   *   idType: 'NRIC',
+   *   idValue: '123456789012'
+   * });
+   * ```
+   *
+   * @remarks
+   * - Either taxpayerName or both idType and idValue must be provided
+   * - Returns StandardError object if search criteria are invalid or inconclusive
+   * - Debug mode provides detailed error logging for troubleshooting
+   * - Search results are not guaranteed to be unique
+   */
+  async searchTin(
+    params: TinSearchParams,
+  ): Promise<TinSearchResponse | StandardError> {
+    return TaxpayerValidationAPI.tinSearch(
+      { fetch: this.fetch.bind(this), debug: this.debug },
+      params,
+    )
+  }
+
+  /**
+   * Retrieves taxpayer information from a QR code.
+   * 
+   * This method decodes a QR code containing taxpayer information and returns
+   * detailed taxpayer data including TIN, name, contact details, and business information.
+   * 
+   * @param qrCodeText - The QR code text to decode
+   * @returns Promise resolving to taxpayer QR code response or standard error
+   * 
+   * @example
+   * ```typescript
+   * // Get taxpayer info from QR code
+   * const taxpayerInfo = await client.getTaxpayerQRCode('QR_CODE_TEXT');
+   * if ('tin' in taxpayerInfo) {
+   *   console.log('Taxpayer TIN:', taxpayerInfo.tin);
+   *   console.log('Business Name:', taxpayerInfo.name);
+   *   console.log('Address:', taxpayerInfo.addressLine1);
+   * }
+   * ```
+   * 
+   * @remarks
+   * - QR code must be in the correct format specified by MyInvois
+   * - Returns StandardError if QR code is invalid or cannot be decoded
+   * - Debug mode provides detailed error logging
+   */
+  async getTaxpayerQRCode(
+    qrCodeText: string,
+  ): Promise<TaxpayerQRCodeResponse | StandardError> {
+    return TaxpayerValidationAPI.taxpayerQRCode(
+      { fetch: this.fetch.bind(this), debug: this.debug },
+      qrCodeText,
+    )
+  }
+
+  /**
+   * Performs an action on a document such as rejection or cancellation.
+   * 
+   * This method allows updating the status of a document to either rejected or cancelled,
+   * along with providing a reason for the action. Useful for managing document workflow
+   * and maintaining audit trails.
+   * 
+   * @param documentUid - The unique identifier of the document
+   * @param status - The new status to set ('rejected' or 'cancelled')
+   * @param reason - The reason for the status change
+   * @returns Promise resolving to document action response containing UUID, status, and any errors
+   * 
+   * @example
+   * ```typescript
+   * // Reject a document with reason
+   * const result = await client.performDocumentAction(
+   *   'doc-123',
+   *   'rejected',
+   *   'Invalid tax calculation'
+   * );
+   * 
+   * // Cancel a document
+   * const result = await client.performDocumentAction(
+   *   'doc-456',
+   *   'cancelled',
+   *   'Duplicate submission'
+   * );
+   * ```
+   * 
+   * @remarks
+   * - Only valid for documents in appropriate states
+   * - Reason is required and should be descriptive
+   * - Action is irreversible once completed
+   * - Returns error if document cannot be found or action is invalid
+   */
+  async performDocumentAction(
+    documentUid: string,
+    status: 'rejected' | 'cancelled',
+    reason: string,
+  ): Promise<{
+    uuid: string
+    status: string
+    error: StandardError
+  }> {
+    return DocumentSubmissionAPI.performDocumentAction(
+      documentUid,
+      status,
+      reason,
     )
   }
 

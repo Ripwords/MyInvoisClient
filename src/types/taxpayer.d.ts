@@ -21,3 +21,13 @@ export interface TaxpayerQRCodeResponse {
   country: string
   generatedTimestamp: string
 }
+
+export interface TinSearchParams {
+  taxpayerName?: string
+  idType?: RegistrationType
+  idValue?: string
+}
+
+export interface TinSearchResponse {
+  tin: string
+}

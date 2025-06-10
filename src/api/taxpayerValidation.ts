@@ -3,21 +3,13 @@ import type {
   RegistrationType,
   StandardError,
   TaxpayerQRCodeResponse,
+  TinSearchParams,
+  TinSearchResponse,
 } from '../types'
 
 interface TaxpayerContext {
   fetch: Fetch
   debug: boolean
-}
-
-interface TinSearchParams {
-  taxpayerName?: string
-  idType?: RegistrationType
-  idValue?: string
-}
-
-interface TinSearchResponse {
-  tin: string
 }
 
 export async function tinSearch(
