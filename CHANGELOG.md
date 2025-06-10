@@ -1,6 +1,26 @@
 # Changelog
 
 
+## v0.2.3
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.2...v0.2.3)
+
+### 💅 Refactors
+
+- Update documents type definitions to use StateCode and CountryCode, and remove unused digital signature placeholder ([9eef708](https://github.com/Ripwords/MyInvoisClient/commit/9eef708))
+
+### 📖 Documentation
+
+- Improve documentation formatting in MyInvoisClient methods ([6e17b4d](https://github.com/Ripwords/MyInvoisClient/commit/6e17b4d))
+
+### ✅ Tests
+
+- Add TIN search test with environment variable checks in MyInvoisClient ([e001d60](https://github.com/Ripwords/MyInvoisClient/commit/e001d60))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.2
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.1...v0.2.2)
