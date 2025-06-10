@@ -202,13 +202,13 @@ export class MyInvoisClient {
 
   /**
    * Retrieves taxpayer information from a QR code.
-   * 
+   *
    * This method decodes a QR code containing taxpayer information and returns
    * detailed taxpayer data including TIN, name, contact details, and business information.
-   * 
+   *
    * @param qrCodeText - The QR code text to decode
    * @returns Promise resolving to taxpayer QR code response or standard error
-   * 
+   *
    * @example
    * ```typescript
    * // Get taxpayer info from QR code
@@ -219,7 +219,7 @@ export class MyInvoisClient {
    *   console.log('Address:', taxpayerInfo.addressLine1);
    * }
    * ```
-   * 
+   *
    * @remarks
    * - QR code must be in the correct format specified by MyInvois
    * - Returns StandardError if QR code is invalid or cannot be decoded
@@ -236,16 +236,16 @@ export class MyInvoisClient {
 
   /**
    * Performs an action on a document such as rejection or cancellation.
-   * 
+   *
    * This method allows updating the status of a document to either rejected or cancelled,
    * along with providing a reason for the action. Useful for managing document workflow
    * and maintaining audit trails.
-   * 
+   *
    * @param documentUid - The unique identifier of the document
    * @param status - The new status to set ('rejected' or 'cancelled')
    * @param reason - The reason for the status change
    * @returns Promise resolving to document action response containing UUID, status, and any errors
-   * 
+   *
    * @example
    * ```typescript
    * // Reject a document with reason
@@ -254,7 +254,7 @@ export class MyInvoisClient {
    *   'rejected',
    *   'Invalid tax calculation'
    * );
-   * 
+   *
    * // Cancel a document
    * const result = await client.performDocumentAction(
    *   'doc-456',
@@ -262,7 +262,7 @@ export class MyInvoisClient {
    *   'Duplicate submission'
    * );
    * ```
-   * 
+   *
    * @remarks
    * - Only valid for documents in appropriate states
    * - Reason is required and should be descriptive
