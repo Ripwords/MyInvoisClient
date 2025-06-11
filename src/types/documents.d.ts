@@ -2,10 +2,10 @@ import type { ClassificationCode } from './classification-codes.d.ts'
 import type { CurrencyCode } from './currencies.d.ts'
 import type { EInvoiceTypeCode } from './e-invoice.d.ts'
 import type { MSICCode } from './msic-codes.d.ts'
-import type { IssuerDigitalSignature } from './signatures.d.ts'
 import type { TaxTypeCode } from './tax-types.d.ts'
 import type { StateCode } from './state-codes.d.ts'
 import type { CountryCode } from './country-code.d.ts'
+import type { UnitTypeCode } from './unit-types.d.ts'
 
 export type RegistrationType = 'BRN' | 'NRIC' | 'PASSPORT' | 'ARMY'
 
@@ -158,7 +158,7 @@ export interface InvoiceLineItem {
    * Required when using fixed rate taxation.
    * @example 'C62'
    */
-  baseUnitMeasureCode?: string
+  baseUnitMeasureCode?: UnitTypeCode
   /**
    * Tax amount. Max 18 digits, 2 decimal places.
    * For percentage tax: calculated as taxableAmount * taxRate / 100
