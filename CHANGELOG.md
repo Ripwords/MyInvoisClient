@@ -1,6 +1,19 @@
 # Changelog
 
 
+## v0.2.5
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.4...v0.2.5)
+
+### 🚀 Enhancements
+
+- Enhance tax calculation features in invoice processing ([ce16438](https://github.com/Ripwords/MyInvoisClient/commit/ce16438))
+- Enhance invoice total calculation with detailed return types ([804f7ff](https://github.com/Ripwords/MyInvoisClient/commit/804f7ff))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.4
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.3...v0.2.4)
