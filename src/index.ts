@@ -191,9 +191,7 @@ export class MyInvoisClient {
    * - Debug mode provides detailed error logging for troubleshooting
    * - Search results are not guaranteed to be unique
    */
-  async searchTin(
-    params: TinSearchParams,
-  ): Promise<TinSearchResponse | StandardError> {
+  async searchTin(params: TinSearchParams): Promise<TinSearchResponse> {
     return TaxpayerValidationAPI.tinSearch(
       { fetch: this.fetch.bind(this), debug: this.debug },
       params,
@@ -225,9 +223,7 @@ export class MyInvoisClient {
    * - Returns StandardError if QR code is invalid or cannot be decoded
    * - Debug mode provides detailed error logging
    */
-  async getTaxpayerQRCode(
-    qrCodeText: string,
-  ): Promise<TaxpayerQRCodeResponse | StandardError> {
+  async getTaxpayerQRCode(qrCodeText: string): Promise<TaxpayerQRCodeResponse> {
     return TaxpayerValidationAPI.taxpayerQRCode(
       { fetch: this.fetch.bind(this), debug: this.debug },
       qrCodeText,
@@ -577,7 +573,7 @@ export class MyInvoisClient {
     status,
     pageNo,
     pageSize,
-  }: NotificationSearchParams): Promise<NotificationResponse | StandardError> {
+  }: NotificationSearchParams): Promise<NotificationResponse> {
     return NotificationManagementAPI.getNotifications(
       { fetch: this.fetch.bind(this) },
       {
@@ -592,7 +588,7 @@ export class MyInvoisClient {
     )
   }
 
-  async getDocumentTypes(): Promise<DocumentTypesResponse | StandardError> {
+  async getDocumentTypes(): Promise<DocumentTypesResponse> {
     return DocumentTypeManagementAPI.getDocumentTypes({
       fetch: this.fetch.bind(this),
     })
@@ -631,9 +627,7 @@ export class MyInvoisClient {
    * - Use this method to discover supported document formats and versions
    * - Essential for understanding submission requirements for different document types
    */
-  async getDocumentType(
-    id: number,
-  ): Promise<DocumentTypeResponse | StandardError> {
+  async getDocumentType(id: number): Promise<DocumentTypeResponse> {
     return DocumentTypeManagementAPI.getDocumentType(
       { fetch: this.fetch.bind(this) },
       id,
@@ -684,7 +678,7 @@ export class MyInvoisClient {
   async getDocumentTypeVersion(
     id: number,
     versionId: number,
-  ): Promise<DocumentTypeVersionResponse | StandardError> {
+  ): Promise<DocumentTypeVersionResponse> {
     return DocumentTypeManagementAPI.getDocumentTypeVersion(
       { fetch: this.fetch.bind(this) },
       id,

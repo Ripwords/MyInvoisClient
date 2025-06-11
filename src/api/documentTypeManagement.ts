@@ -1,8 +1,7 @@
 import type {
-  DocumentTypesResponse,
   DocumentTypeResponse,
+  DocumentTypesResponse,
   DocumentTypeVersionResponse,
-  StandardError,
   Fetch,
 } from '../types'
 
@@ -24,7 +23,7 @@ export async function getDocumentTypes(
 export async function getDocumentType(
   context: DocumentTypeContext,
   id: number,
-): Promise<DocumentTypeResponse | StandardError> {
+): Promise<DocumentTypeResponse> {
   const { fetch } = context
 
   const response = await fetch(`/api/v1.0/documenttypes/${id}`)
@@ -37,7 +36,7 @@ export async function getDocumentTypeVersion(
   context: DocumentTypeContext,
   id: number,
   versionId: number,
-): Promise<DocumentTypeVersionResponse | StandardError> {
+): Promise<DocumentTypeVersionResponse> {
   const { fetch } = context
 
   const response = await fetch(

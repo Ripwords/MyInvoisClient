@@ -1,8 +1,7 @@
 import type {
+  Fetch,
   NotificationResponse,
   NotificationSearchParams,
-  StandardError,
-  Fetch,
 } from '../types'
 
 interface NotificationContext {
@@ -12,7 +11,7 @@ interface NotificationContext {
 export async function getNotifications(
   context: NotificationContext,
   params: NotificationSearchParams,
-): Promise<NotificationResponse | StandardError> {
+): Promise<NotificationResponse> {
   const { fetch } = context
   const { dateFrom, dateTo, type, language, status, pageNo, pageSize } = params
 
