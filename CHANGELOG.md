@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.6
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.5...v0.2.6)
+
+### 🚀 Enhancements
+
+- Update InvoiceLineItem type definitions to use UnitTypeCode ([015c340](https://github.com/Ripwords/MyInvoisClient/commit/015c340))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.5
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.4...v0.2.5)
