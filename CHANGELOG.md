@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.2.4
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.3...v0.2.4)
+
+### 💅 Refactors
+
+- Simplify return types in MyInvoisClient methods by removing StandardError from Promise types ([f87dd9a](https://github.com/Ripwords/MyInvoisClient/commit/f87dd9a))
+
+### 🏡 Chore
+
+- **release:** V0.2.3 ([f4d5149](https://github.com/Ripwords/MyInvoisClient/commit/f4d5149))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.3
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.2...v0.2.3)
