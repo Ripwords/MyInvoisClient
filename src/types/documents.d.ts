@@ -136,12 +136,33 @@ export interface InvoiceLineItem {
    */
   taxType: TaxTypeCode
   /**
-   * Tax rate. Max 18 digits, 2 decimal places.
+   * Tax rate percentage. Max 18 digits, 2 decimal places.
+   * Used for percentage-based taxation.
    * @example 6.00
    */
-  taxRate: number
+  taxRate?: number
+  /**
+   * Tax amount per unit for fixed rate taxation. Max 18 digits, 2 decimal places.
+   * Used when tax is calculated as a fixed amount per unit.
+   * @example 10.00
+   */
+  taxPerUnitAmount?: number
+  /**
+   * Number of units for fixed rate taxation.
+   * Used when tax is calculated as a fixed amount per unit.
+   * @example 5
+   */
+  baseUnitMeasure?: number
+  /**
+   * Unit code for BaseUnitMeasure (e.g., 'C62' for units, 'DAY' for days).
+   * Required when using fixed rate taxation.
+   * @example 'C62'
+   */
+  baseUnitMeasureCode?: string
   /**
    * Tax amount. Max 18 digits, 2 decimal places.
+   * For percentage tax: calculated as taxableAmount * taxRate / 100
+   * For fixed rate: calculated as taxPerUnitAmount * baseUnitMeasure
    * @example 90.00
    */
   taxAmount: number
@@ -542,6 +563,20 @@ export interface InvoiceSubmission {
         TaxAmount: {
           _: number
           currencyID: string
+        }[]
+        /** For percentage-based taxation */
+        Percent?: {
+          _: number
+        }[]
+        /** For fixed rate taxation - Total Amount per Unit */
+        PerUnitAmount?: {
+          _: number
+          currencyID: string
+        }[]
+        /** For fixed rate taxation - Number of Units */
+        BaseUnitMeasure?: {
+          _: number
+          unitCode: string
         }[]
         TaxCategory: {
           ID: {

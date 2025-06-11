@@ -64,11 +64,12 @@ const createMinimalTestInvoice = (): InvoiceV1_1 => {
       },
     },
 
-    // === SINGLE LINE ITEM (minimal) ===
+    // === LINE ITEMS (both percentage and fixed rate examples) ===
     invoiceLineItems: [
+      // Percentage-based taxation
       {
         itemClassificationCode: '001', // General goods
-        itemDescription: 'Test Product',
+        itemDescription: 'Test Product (Percentage Tax)',
         unitPrice: 100.0,
         taxType: '01', // SST
         taxRate: 6.0, // 6% SST
@@ -76,18 +77,31 @@ const createMinimalTestInvoice = (): InvoiceV1_1 => {
         totalTaxableAmountPerLine: 100.0,
         totalAmountPerLine: 106.0, // 100 + 6
       },
+      // Fixed rate taxation
+      {
+        itemClassificationCode: '003', // Tourism Tax example
+        itemDescription: 'Hotel Stay (Fixed Rate Tax)',
+        unitPrice: 200.0,
+        taxType: '03', // Tourism Tax
+        taxPerUnitAmount: 10.0, // RM 10 per night
+        baseUnitMeasure: 2, // 2 nights
+        baseUnitMeasureCode: 'DAY', // Unit code for days
+        taxAmount: 20.0, // 10 * 2 = 20
+        totalTaxableAmountPerLine: 200.0,
+        totalAmountPerLine: 220.0, // 200 + 20
+      },
     ],
 
     // === MONETARY TOTALS ===
     legalMonetaryTotal: {
-      taxExclusiveAmount: 100.0,
-      taxInclusiveAmount: 106.0,
-      payableAmount: 106.0,
+      taxExclusiveAmount: 300.0, // 100 + 200
+      taxInclusiveAmount: 326.0, // 300 + 26 (6 + 20)
+      payableAmount: 326.0,
     },
 
     // === TAX TOTAL ===
     taxTotal: {
-      taxAmount: 6.0,
+      taxAmount: 26.0, // 6 + 20 (percentage + fixed rate)
     },
   }
 }
@@ -386,4 +400,58 @@ describe('MyInvois Document Generation and Submission', () => {
       throw error
     }
   }, 60000) // Extended timeout for API calls
+
+  it('should generate correct UBL structure for fixed rate taxation', () => {
+    console.log('🔍 Testing fixed rate tax UBL structure...')
+
+    const invoice = createMinimalTestInvoice()
+    invoice.supplier.tin = process.env.VALID_SUPPLIER_TIN || 'IG50752733100'
+
+    const certInfo = extractCertificateInfo(CERTIFICATE)
+
+    const document = generateCompleteDocument([invoice], {
+      privateKeyPem: PRIVATE_KEY,
+      certificatePem: CERTIFICATE,
+      issuerName: certInfo.issuerName,
+      serialNumber: certInfo.serialNumber,
+    })
+
+    const invoiceData = document.Invoice[0]
+    const invoiceLines = invoiceData.InvoiceLine
+
+    console.log('Invoice lines count:', invoiceLines.length)
+
+    // Test percentage-based line item (first line)
+    const percentageLine = invoiceLines[0]
+    const percentageTaxSubtotal = percentageLine.TaxTotal[0].TaxSubtotal[0]
+    console.log(
+      'Percentage line TaxSubtotal keys:',
+      Object.keys(percentageTaxSubtotal),
+    )
+
+    expect(percentageTaxSubtotal.Percent).toBeDefined()
+    expect(percentageTaxSubtotal.Percent![0]._).toBe(6.0)
+    expect(percentageTaxSubtotal.PerUnitAmount).toBeUndefined()
+    expect(percentageTaxSubtotal.BaseUnitMeasure).toBeUndefined()
+
+    // Test fixed-rate line item (second line)
+    const fixedRateLine = invoiceLines[1]
+    const fixedRateTaxSubtotal = fixedRateLine.TaxTotal[0].TaxSubtotal[0]
+    console.log(
+      'Fixed rate line TaxSubtotal keys:',
+      Object.keys(fixedRateTaxSubtotal),
+    )
+
+    expect(fixedRateTaxSubtotal.PerUnitAmount).toBeDefined()
+    expect(fixedRateTaxSubtotal.PerUnitAmount![0]._).toBe(10.0)
+    expect(fixedRateTaxSubtotal.PerUnitAmount![0].currencyID).toBe('MYR')
+
+    expect(fixedRateTaxSubtotal.BaseUnitMeasure).toBeDefined()
+    expect(fixedRateTaxSubtotal.BaseUnitMeasure![0]._).toBe(2)
+    expect(fixedRateTaxSubtotal.BaseUnitMeasure![0].unitCode).toBe('DAY')
+
+    expect(fixedRateTaxSubtotal.Percent).toBeUndefined()
+
+    console.log('✅ Fixed rate tax UBL structure is correct!')
+  })
 })

@@ -1,4 +1,4 @@
-import type { InvoiceV1_1 } from '../types/documents/index.js'
+import type { InvoiceV1_1, InvoiceLineItem } from '../types'
 
 /**
  * MyInvois Invoice Validation Utilities
@@ -156,12 +156,90 @@ export const validateMonetaryAmount = (
 }
 
 /**
+ * Validates line item tax calculation consistency for both fixed rate and percentage taxation
+ */
+export const validateLineItemTax = (
+  item: InvoiceLineItem,
+  index: number,
+): ValidationError[] => {
+  const errors: ValidationError[] = []
+  const tolerance = 0.01
+
+  // Check if tax calculation method is specified
+  const hasFixedRate =
+    item.taxPerUnitAmount !== undefined && item.baseUnitMeasure !== undefined
+  const hasPercentageRate = item.taxRate !== undefined
+
+  if (!hasFixedRate && !hasPercentageRate) {
+    errors.push({
+      field: `lineItem[${index}]`,
+      code: 'TAX_METHOD_MISSING',
+      message: `Line item ${index + 1} must specify either taxRate (for percentage) or taxPerUnitAmount + baseUnitMeasure (for fixed rate)`,
+      severity: 'error',
+    })
+    return errors
+  }
+
+  if (hasFixedRate && hasPercentageRate) {
+    errors.push({
+      field: `lineItem[${index}]`,
+      code: 'TAX_METHOD_CONFLICT',
+      message: `Line item ${index + 1} cannot have both percentage and fixed rate tax methods`,
+      severity: 'error',
+    })
+  }
+
+  // Validate fixed rate tax calculation
+  if (hasFixedRate) {
+    if (item.baseUnitMeasureCode === undefined) {
+      errors.push({
+        field: `lineItem[${index}].baseUnitMeasureCode`,
+        code: 'UNIT_CODE_MISSING',
+        message: `Line item ${index + 1} with fixed rate tax must specify baseUnitMeasureCode`,
+        severity: 'error',
+      })
+    }
+
+    const expectedTaxAmount = item.taxPerUnitAmount! * item.baseUnitMeasure!
+    if (Math.abs(item.taxAmount - expectedTaxAmount) > tolerance) {
+      errors.push({
+        field: `lineItem[${index}].taxAmount`,
+        code: 'FIXED_TAX_CALCULATION_MISMATCH',
+        message: `Line item ${index + 1} tax amount (${item.taxAmount}) doesn't match fixed rate calculation (${item.taxPerUnitAmount} × ${item.baseUnitMeasure} = ${expectedTaxAmount})`,
+        severity: 'error',
+      })
+    }
+  }
+
+  // Validate percentage tax calculation
+  if (hasPercentageRate && !hasFixedRate) {
+    const expectedTaxAmount =
+      (item.totalTaxableAmountPerLine * item.taxRate!) / 100
+    if (Math.abs(item.taxAmount - expectedTaxAmount) > tolerance) {
+      errors.push({
+        field: `lineItem[${index}].taxAmount`,
+        code: 'PERCENTAGE_TAX_CALCULATION_MISMATCH',
+        message: `Line item ${index + 1} tax amount (${item.taxAmount}) doesn't match percentage calculation (${item.totalTaxableAmountPerLine} × ${item.taxRate}% = ${expectedTaxAmount})`,
+        severity: 'error',
+      })
+    }
+  }
+
+  return errors
+}
+
+/**
  * Validates tax calculation consistency
  */
 export const validateTaxCalculations = (
   invoice: InvoiceV1_1,
 ): ValidationError[] => {
   const errors: ValidationError[] = []
+
+  // Validate individual line item tax calculations
+  invoice.invoiceLineItems.forEach((item, index) => {
+    errors.push(...validateLineItemTax(item, index))
+  })
 
   // Calculate expected totals from line items
   const expectedTaxExclusive = invoice.invoiceLineItems.reduce(

@@ -16,6 +16,40 @@ import {
  */
 
 /**
+ * Determines if a line item uses fixed rate taxation
+ */
+export const isFixedRateTax = (
+  item: InvoiceV1_1['invoiceLineItems'][0],
+): boolean => {
+  return (
+    item.taxPerUnitAmount !== undefined && item.baseUnitMeasure !== undefined
+  )
+}
+
+/**
+ * Determines if a line item uses percentage taxation
+ */
+export const isPercentageTax = (
+  item: InvoiceV1_1['invoiceLineItems'][0],
+): boolean => {
+  return item.taxRate !== undefined && !isFixedRateTax(item)
+}
+
+/**
+ * Calculates expected tax amount for a line item based on its tax type
+ */
+export const calculateExpectedTaxAmount = (
+  item: InvoiceV1_1['invoiceLineItems'][0],
+): number => {
+  if (isFixedRateTax(item)) {
+    return item.taxPerUnitAmount! * item.baseUnitMeasure!
+  } else if (isPercentageTax(item)) {
+    return (item.totalTaxableAmountPerLine * item.taxRate!) / 100
+  }
+  return 0
+}
+
+/**
  * Helper function to recursively sort object keys for JSON canonicalization
  */
 export function sortObjectKeys(obj: unknown): unknown {
@@ -372,6 +406,30 @@ export const generateCleanInvoiceObject = (
                   currencyID: invoice.invoiceCurrencyCode,
                 },
               ],
+              // Conditional tax fields based on taxation type
+              ...(item.taxPerUnitAmount !== undefined &&
+              item.baseUnitMeasure !== undefined
+                ? {
+                    // Fixed Rate Taxation
+                    PerUnitAmount: [
+                      {
+                        _: item.taxPerUnitAmount,
+                        currencyID: invoice.invoiceCurrencyCode,
+                      },
+                    ],
+                    BaseUnitMeasure: [
+                      {
+                        _: item.baseUnitMeasure,
+                        unitCode: item.baseUnitMeasureCode || 'C62',
+                      },
+                    ],
+                  }
+                : item.taxRate !== undefined
+                  ? {
+                      // Percentage Taxation
+                      Percent: [{ _: item.taxRate }],
+                    }
+                  : {}),
               TaxCategory: [
                 {
                   ID: [{ _: item.taxType }],
@@ -848,5 +906,95 @@ export const generateCompleteDocument = (
     throw new Error(
       `Document generation failed: ${error instanceof Error ? error.message : String(error)}`,
     )
+  }
+}
+
+/**
+ * Creates a line item with percentage-based taxation (e.g., SST, GST)
+ */
+export const createPercentageTaxLineItem = (params: {
+  itemClassificationCode: string
+  itemDescription: string
+  unitPrice: number
+  quantity?: number
+  taxType: string
+  taxRate: number
+  totalTaxableAmountPerLine?: number
+}): InvoiceV1_1['invoiceLineItems'][0] => {
+  const quantity = params.quantity || 1
+  const totalTaxableAmount =
+    params.totalTaxableAmountPerLine || params.unitPrice * quantity
+  const taxAmount = (totalTaxableAmount * params.taxRate) / 100
+
+  return {
+    itemClassificationCode: params.itemClassificationCode as any,
+    itemDescription: params.itemDescription,
+    unitPrice: params.unitPrice,
+    taxType: params.taxType as any,
+    taxRate: params.taxRate,
+    taxAmount: Math.round(taxAmount * 100) / 100, // Round to 2 decimal places
+    totalTaxableAmountPerLine: totalTaxableAmount,
+    totalAmountPerLine: totalTaxableAmount + taxAmount,
+  }
+}
+
+/**
+ * Creates a line item with fixed rate taxation (e.g., Tourism Tax)
+ */
+export const createFixedRateTaxLineItem = (params: {
+  itemClassificationCode: string
+  itemDescription: string
+  unitPrice: number
+  quantity?: number
+  taxType: string
+  taxPerUnitAmount: number
+  baseUnitMeasure: number
+  baseUnitMeasureCode: string
+  totalTaxableAmountPerLine?: number
+}): InvoiceV1_1['invoiceLineItems'][0] => {
+  const quantity = params.quantity || 1
+  const totalTaxableAmount =
+    params.totalTaxableAmountPerLine || params.unitPrice * quantity
+  const taxAmount = params.taxPerUnitAmount * params.baseUnitMeasure
+
+  return {
+    itemClassificationCode: params.itemClassificationCode as any,
+    itemDescription: params.itemDescription,
+    unitPrice: params.unitPrice,
+    taxType: params.taxType as any,
+    taxPerUnitAmount: params.taxPerUnitAmount,
+    baseUnitMeasure: params.baseUnitMeasure,
+    baseUnitMeasureCode: params.baseUnitMeasureCode,
+    taxAmount: Math.round(taxAmount * 100) / 100, // Round to 2 decimal places
+    totalTaxableAmountPerLine: totalTaxableAmount,
+    totalAmountPerLine: totalTaxableAmount + taxAmount,
+  }
+}
+
+/**
+ * Calculates invoice totals from line items
+ */
+export const calculateInvoiceTotals = (
+  lineItems: InvoiceV1_1['invoiceLineItems'],
+) => {
+  const taxExclusiveAmount = lineItems.reduce(
+    (sum, item) => sum + item.totalTaxableAmountPerLine,
+    0,
+  )
+  const totalTaxAmount = lineItems.reduce(
+    (sum, item) => sum + item.taxAmount,
+    0,
+  )
+  const taxInclusiveAmount = taxExclusiveAmount + totalTaxAmount
+
+  return {
+    legalMonetaryTotal: {
+      taxExclusiveAmount: Math.round(taxExclusiveAmount * 100) / 100,
+      taxInclusiveAmount: Math.round(taxInclusiveAmount * 100) / 100,
+      payableAmount: Math.round(taxInclusiveAmount * 100) / 100,
+    },
+    taxTotal: {
+      taxAmount: Math.round(totalTaxAmount * 100) / 100,
+    },
   }
 }
