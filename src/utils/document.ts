@@ -976,7 +976,16 @@ export const createFixedRateTaxLineItem = (params: {
  */
 export const calculateInvoiceTotals = (
   lineItems: InvoiceV1_1['invoiceLineItems'],
-) => {
+): {
+  legalMonetaryTotal: {
+    taxExclusiveAmount: number
+    taxInclusiveAmount: number
+    payableAmount: number
+  }
+  taxTotal: {
+    taxAmount: number
+  }
+} => {
   const taxExclusiveAmount = lineItems.reduce(
     (sum, item) => sum + item.totalTaxableAmountPerLine,
     0,
