@@ -1,5 +1,5 @@
 import type {
-  InvoiceV1_1,
+  AllDocumentsV1_1,
   SubmissionResponse,
   SigningCredentials,
   SubmissionStatus,
@@ -17,7 +17,7 @@ interface SubmissionContext {
 
 export async function submitDocument(
   context: SubmissionContext,
-  documents: InvoiceV1_1[],
+  documents: AllDocumentsV1_1[],
 ): Promise<{
   data: SubmissionResponse
   status: number

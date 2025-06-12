@@ -18,6 +18,7 @@ import {
   TaxpayerQRCodeResponse,
   TinSearchParams,
   TinSearchResponse,
+  AllDocumentsV1_1,
 } from './types'
 
 import * as DocumentManagementAPI from './api/documentManagement'
@@ -314,7 +315,7 @@ export class MyInvoisClient {
    * - Debug mode provides detailed logging of payload sizes and validation warnings
    * - Returns HTTP 202 for successful submissions that require processing
    */
-  async submitDocument(documents: InvoiceV1_1[]): Promise<{
+  async submitDocument(documents: AllDocumentsV1_1[]): Promise<{
     data: SubmissionResponse
     status: number
   }> {

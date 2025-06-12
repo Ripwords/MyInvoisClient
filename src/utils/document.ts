@@ -1,13 +1,17 @@
 import crypto, { X509Certificate } from 'crypto'
 import {
   InvoiceSubmission,
-  InvoiceV1_1,
+  AllDocumentsV1_1,
   SigningCredentials,
   SignedPropertiesObject,
   UBLDocument,
   CompleteInvoice,
   SignedInfoObject,
+  UnitTypeCode,
+  InvoiceLineItem,
 } from '../types'
+import type { ClassificationCode } from '../types'
+import type { TaxTypeCode } from '../types'
 
 /**
  * MyInvois v1.1 Document Generation and Signing Utilities
@@ -18,9 +22,7 @@ import {
 /**
  * Determines if a line item uses fixed rate taxation
  */
-export const isFixedRateTax = (
-  item: InvoiceV1_1['invoiceLineItems'][0],
-): boolean => {
+export const isFixedRateTax = (item: InvoiceLineItem): boolean => {
   return (
     item.taxPerUnitAmount !== undefined && item.baseUnitMeasure !== undefined
   )
@@ -29,24 +31,36 @@ export const isFixedRateTax = (
 /**
  * Determines if a line item uses percentage taxation
  */
-export const isPercentageTax = (
-  item: InvoiceV1_1['invoiceLineItems'][0],
-): boolean => {
+export const isPercentageTax = (item: InvoiceLineItem): boolean => {
   return item.taxRate !== undefined && !isFixedRateTax(item)
 }
 
 /**
  * Calculates expected tax amount for a line item based on its tax type
  */
-export const calculateExpectedTaxAmount = (
-  item: InvoiceV1_1['invoiceLineItems'][0],
-): number => {
+export const calculateExpectedTaxAmount = (item: InvoiceLineItem): number => {
   if (isFixedRateTax(item)) {
     return item.taxPerUnitAmount! * item.baseUnitMeasure!
   } else if (isPercentageTax(item)) {
     return (item.totalTaxableAmountPerLine * item.taxRate!) / 100
   }
   return 0
+}
+
+/**
+ * Extracts the line-item array from any document variant
+ */
+const getLineItems = (doc: AllDocumentsV1_1): InvoiceLineItem[] => {
+  if ('invoiceLineItems' in doc) return doc.invoiceLineItems
+  if ('creditNoteLineItems' in doc) return doc.creditNoteLineItems
+  if ('debitNoteLineItems' in doc) return doc.debitNoteLineItems
+  if ('refundNoteLineItems' in doc) return doc.refundNoteLineItems
+  if ('selfBilledCreditNoteLineItems' in doc)
+    return doc.selfBilledCreditNoteLineItems
+  if ('selfBilledRefundNoteLineItems' in doc)
+    return doc.selfBilledRefundNoteLineItems
+  // Fallback (should never happen with exhaustive types)
+  return []
 }
 
 /**
@@ -92,8 +106,9 @@ export const canonicalizeJSON = (obj: unknown): string => {
  * - Correct listID values (e.g., "3166-1" not "ISO3166-1")
  */
 export const generateCleanInvoiceObject = (
-  invoice: InvoiceV1_1,
+  invoice: AllDocumentsV1_1,
 ): InvoiceSubmission => {
+  const lineItems = getLineItems(invoice)
   return {
     // === MANDATORY CORE FIELDS ===
     ID: [{ _: invoice.eInvoiceCodeOrNumber }],
@@ -106,6 +121,31 @@ export const generateCleanInvoiceObject = (
       },
     ],
     DocumentCurrencyCode: [{ _: invoice.invoiceCurrencyCode }],
+
+    // === BILLING REFERENCE (only for credit/debit/refund notes) ===
+    ...('originalEInvoiceReferenceNumber' in invoice &&
+    invoice.originalEInvoiceReferenceNumber
+      ? {
+          BillingReference: [
+            {
+              InvoiceDocumentReference: [
+                {
+                  UUID: [
+                    {
+                      _: invoice.originalEInvoiceReferenceNumber,
+                    },
+                  ],
+                  ID: [
+                    {
+                      _: invoice.eInvoiceCodeOrNumber,
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        }
+      : {}),
 
     // === SUPPLIER PARTY (AccountingSupplierParty) ===
     AccountingSupplierParty: [
@@ -283,7 +323,7 @@ export const generateCleanInvoiceObject = (
             ],
             TaxCategory: [
               {
-                ID: [{ _: invoice.invoiceLineItems[0]?.taxType || '01' }],
+                ID: [{ _: lineItems[0]?.taxType || '01' }],
                 TaxScheme: [
                   {
                     ID: [
@@ -333,7 +373,7 @@ export const generateCleanInvoiceObject = (
     ],
 
     // === INVOICE LINES ===
-    InvoiceLine: invoice.invoiceLineItems.map((item, index) => ({
+    InvoiceLine: lineItems.map((item, index) => ({
       ID: [{ _: (index + 1).toString() }],
 
       // Item Information
@@ -481,7 +521,7 @@ export const generateCleanInvoiceObject = (
  * Generates the complete UBL document structure with namespace declarations
  */
 export const generateCleanUBLDocument = (
-  invoices: InvoiceV1_1[],
+  invoices: AllDocumentsV1_1[],
 ): UBLDocument => {
   return {
     _D: 'urn:oasis:names:specification:ubl:schema:xsd:Invoice-2',
@@ -496,7 +536,9 @@ export const generateCleanUBLDocument = (
  * FIXED: Remove UBLExtensions and Signature before hashing (DS322)
  * Based on working implementation pattern
  */
-export const calculateDocumentDigest = (invoices: InvoiceV1_1[]): string => {
+export const calculateDocumentDigest = (
+  invoices: AllDocumentsV1_1[],
+): string => {
   // Generate clean UBL document structure
   const cleanDocument = generateCleanUBLDocument(invoices)
 
@@ -747,7 +789,7 @@ export const createSignedInfoAndSign = (
  * Follows the complete MyInvois JSON signature creation process (Steps 1-7)
  */
 export const generateCompleteDocument = (
-  invoices: InvoiceV1_1[],
+  invoices: AllDocumentsV1_1[],
   signingCredentials: SigningCredentials,
 ): CompleteInvoice => {
   try {
@@ -913,24 +955,24 @@ export const generateCompleteDocument = (
  * Creates a line item with percentage-based taxation (e.g., SST, GST)
  */
 export const createPercentageTaxLineItem = (params: {
-  itemClassificationCode: string
+  itemClassificationCode: ClassificationCode
   itemDescription: string
   unitPrice: number
   quantity?: number
-  taxType: string
+  taxType: TaxTypeCode
   taxRate: number
   totalTaxableAmountPerLine?: number
-}): InvoiceV1_1['invoiceLineItems'][0] => {
+}): InvoiceLineItem => {
   const quantity = params.quantity || 1
   const totalTaxableAmount =
     params.totalTaxableAmountPerLine || params.unitPrice * quantity
   const taxAmount = (totalTaxableAmount * params.taxRate) / 100
 
   return {
-    itemClassificationCode: params.itemClassificationCode as any,
+    itemClassificationCode: params.itemClassificationCode,
     itemDescription: params.itemDescription,
     unitPrice: params.unitPrice,
-    taxType: params.taxType as any,
+    taxType: params.taxType,
     taxRate: params.taxRate,
     taxAmount: Math.round(taxAmount * 100) / 100, // Round to 2 decimal places
     totalTaxableAmountPerLine: totalTaxableAmount,
@@ -942,26 +984,26 @@ export const createPercentageTaxLineItem = (params: {
  * Creates a line item with fixed rate taxation (e.g., Tourism Tax)
  */
 export const createFixedRateTaxLineItem = (params: {
-  itemClassificationCode: string
+  itemClassificationCode: ClassificationCode
   itemDescription: string
   unitPrice: number
   quantity?: number
-  taxType: string
+  taxType: TaxTypeCode
   taxPerUnitAmount: number
   baseUnitMeasure: number
-  baseUnitMeasureCode: string
+  baseUnitMeasureCode: UnitTypeCode
   totalTaxableAmountPerLine?: number
-}): InvoiceV1_1['invoiceLineItems'][0] => {
+}): InvoiceLineItem => {
   const quantity = params.quantity || 1
   const totalTaxableAmount =
     params.totalTaxableAmountPerLine || params.unitPrice * quantity
   const taxAmount = params.taxPerUnitAmount * params.baseUnitMeasure
 
   return {
-    itemClassificationCode: params.itemClassificationCode as any,
+    itemClassificationCode: params.itemClassificationCode,
     itemDescription: params.itemDescription,
     unitPrice: params.unitPrice,
-    taxType: params.taxType as any,
+    taxType: params.taxType,
     taxPerUnitAmount: params.taxPerUnitAmount,
     baseUnitMeasure: params.baseUnitMeasure,
     baseUnitMeasureCode: params.baseUnitMeasureCode,
@@ -975,7 +1017,7 @@ export const createFixedRateTaxLineItem = (params: {
  * Calculates invoice totals from line items
  */
 export const calculateInvoiceTotals = (
-  lineItems: InvoiceV1_1['invoiceLineItems'],
+  lineItems: InvoiceLineItem[],
 ): {
   legalMonetaryTotal: {
     taxExclusiveAmount: number

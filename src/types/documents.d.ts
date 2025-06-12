@@ -259,6 +259,224 @@ export interface InvoiceV1_1 {
   taxTotal: TaxTotal
 }
 
+export interface CreditNoteV1_1 {
+  /** Supplier information (AccountingSupplierParty). */
+  supplier: Supplier
+  /** Buyer information (AccountingCustomerParty). */
+  buyer: Buyer
+
+  /** e-Invoice version. Fixed value '1.1'. */
+  eInvoiceVersion: '1.1'
+  /** e-Invoice type code for Credit Note. Fixed value '02'. */
+  eInvoiceTypeCode: EInvoiceTypeCode
+  /** Document reference number used by Supplier for internal tracking purpose. Max 50 chars. */
+  eInvoiceCodeOrNumber: string
+  /** LHDNM Unique Identifier Number of the original invoice / document that is being adjusted. 26 chars. */
+  originalEInvoiceReferenceNumber: string
+  /** Date of issuance (YYYY-MM-DD) in UTC. Must be the current date. */
+  eInvoiceDate: string
+  /** Time of issuance (HH:mm:ssZ) in UTC. Must be the current time. */
+  eInvoiceTime: string
+
+  /** Specific currency that is used to represent the monetary value stated in the e-Invoice. */
+  invoiceCurrencyCode: CurrencyCode
+  /** Rate at which non-Malaysian currency will be converted into Malaysian Ringgit.
+   * Mandatory when invoiceCurrencyCode is not 'MYR'.
+   */
+  currencyExchangeRate?: number
+
+  /** Credit note line items. */
+  creditNoteLineItems: InvoiceLineItem[]
+
+  /** Overall monetary totals for the credit note. */
+  legalMonetaryTotal: LegalMonetaryTotal
+  /** Total tax amounts and subtotals. */
+  taxTotal: TaxTotal
+}
+
+export interface DebitNoteV1_1 {
+  /** Supplier information (AccountingSupplierParty). */
+  supplier: Supplier
+  /** Buyer information (AccountingCustomerParty). */
+  buyer: Buyer
+
+  /** e-Invoice version. Fixed value '1.1'. */
+  eInvoiceVersion: '1.1'
+  /** e-Invoice type code for Debit Note. Fixed value '03'. */
+  eInvoiceTypeCode: EInvoiceTypeCode
+  /** Document reference number used by Supplier for internal tracking purpose. Max 50 chars. */
+  eInvoiceCodeOrNumber: string
+  /** LHDNM Unique Identifier Number of the original invoice / document that is being adjusted. Mandatory where applicable (Debit/Credit/Refund notes). */
+  originalEInvoiceReferenceNumber: string
+  /** Date of issuance (YYYY-MM-DD) in UTC. Must be the current date. */
+  eInvoiceDate: string
+  /** Time of issuance (HH:mm:ssZ) in UTC. Must be the current time. */
+  eInvoiceTime: string
+
+  /** Specific currency that is used to represent the monetary value stated in the e-Invoice. */
+  invoiceCurrencyCode: CurrencyCode
+  /** Rate at which non-Malaysian currency will be converted into Malaysian Ringgit.
+   * Mandatory when invoiceCurrencyCode is not 'MYR'.
+   */
+  currencyExchangeRate?: number
+
+  /** Debit note line items (InvoiceLine section with required fields). */
+  debitNoteLineItems: InvoiceLineItem[]
+
+  /** Overall monetary totals for the debit note. */
+  legalMonetaryTotal: LegalMonetaryTotal
+  /** Total tax amounts and subtotals. */
+  taxTotal: TaxTotal
+}
+
+export interface RefundNoteV1_1 {
+  /** Supplier information (AccountingSupplierParty). */
+  supplier: Supplier
+  /** Buyer information (AccountingCustomerParty). */
+  buyer: Buyer
+
+  /** e-Invoice version. Fixed value '1.1'. */
+  eInvoiceVersion: '1.1'
+  /** e-Invoice type code for Refund Note. Fixed value '04'. */
+  eInvoiceTypeCode: EInvoiceTypeCode
+  /** Document reference number used by Supplier for internal tracking purpose. Max 50 chars. */
+  eInvoiceCodeOrNumber: string
+  /** LHDNM Unique Identifier Number of the original invoice / document that is being adjusted. Mandatory where applicable (Debit/Credit/Refund notes). */
+  originalEInvoiceReferenceNumber: string
+  /** Date of issuance (YYYY-MM-DD) in UTC. Must be the current date. */
+  eInvoiceDate: string
+  /** Time of issuance (HH:mm:ssZ) in UTC. Must be the current time. */
+  eInvoiceTime: string
+
+  /** Specific currency that is used to represent the monetary value stated in the e-Invoice. */
+  invoiceCurrencyCode: CurrencyCode
+  /** Rate at which non-Malaysian currency will be converted into Malaysian Ringgit.
+   * Mandatory when invoiceCurrencyCode is not 'MYR'.
+   */
+  currencyExchangeRate?: number
+
+  /** Refund note line items. */
+  refundNoteLineItems: InvoiceLineItem[]
+
+  /** Overall monetary totals for the refund note. */
+  legalMonetaryTotal: LegalMonetaryTotal
+  /** Total tax amounts and subtotals. */
+  taxTotal: TaxTotal
+}
+
+export interface SelfBilledInvoiceV1_1 {
+  /** Supplier information (AccountingSupplierParty). */
+  supplier: Supplier
+  /** Buyer information (AccountingCustomerParty). */
+  buyer: Buyer
+
+  /** e-Invoice version. Fixed value '1.1'. */
+  eInvoiceVersion: '1.1'
+  /** e-Invoice type code for Self-Billed Invoice. Fixed value '11'. */
+  eInvoiceTypeCode: EInvoiceTypeCode
+  /** Document reference number used by Buyer (acting as issuer) for internal tracking purpose. Max 50 chars. */
+  eInvoiceCodeOrNumber: string
+  /** Date of issuance (YYYY-MM-DD) in UTC. Must be the current date. */
+  eInvoiceDate: string
+  /** Time of issuance (HH:mm:ssZ) in UTC. Must be the current time. */
+  eInvoiceTime: string
+
+  /** Specific currency used to represent the monetary values stated in the e-Invoice. */
+  invoiceCurrencyCode: CurrencyCode
+  /** Currency exchange rate to MYR when invoiceCurrencyCode is not 'MYR'. Mandatory where applicable. */
+  currencyExchangeRate?: number
+
+  /** Frequency of billing (e.g., Daily, Monthly). Optional. */
+  frequencyOfBilling?: string
+  /** Billing period start date (YYYY-MM-DD). Optional but allowed; include to match spec for optional elements. */
+  billingPeriodStartDate?: string
+  /** Billing period end date (YYYY-MM-DD). Optional. */
+  billingPeriodEndDate?: string
+
+  /** Invoice line items. */
+  invoiceLineItems: InvoiceLineItem[]
+
+  /** Overall monetary totals for the invoice. */
+  legalMonetaryTotal: LegalMonetaryTotal
+  /** Total tax amounts and subtotals. */
+  taxTotal: TaxTotal
+}
+
+export interface SelfBilledCreditNoteV1_1 {
+  /** Supplier information. */
+  supplier: Supplier
+  /** Buyer information. */
+  buyer: Buyer
+
+  /** Fixed e-Invoice version '1.1'. */
+  eInvoiceVersion: '1.1'
+  /** e-Invoice type code for Self-Billed Credit Note (code '12'). */
+  eInvoiceTypeCode: EInvoiceTypeCode
+  /** Internal document reference number issued by Buyer. Max 50 chars. */
+  eInvoiceCodeOrNumber: string
+  /** LHDNM unique identifier of the original self-billed invoice being adjusted. */
+  originalEInvoiceReferenceNumber: string
+  /** Date of issuance (YYYY-MM-DD, UTC). */
+  eInvoiceDate: string
+  /** Time of issuance (HH:mm:ssZ, UTC). */
+  eInvoiceTime: string
+
+  /** Currency code for monetary values. */
+  invoiceCurrencyCode: CurrencyCode
+  /** Exchange rate to MYR – required when invoiceCurrencyCode ≠ 'MYR'. */
+  currencyExchangeRate?: number
+
+  /** Line items for the credit note. */
+  selfBilledCreditNoteLineItems: InvoiceLineItem[]
+
+  /** Monetary totals. */
+  legalMonetaryTotal: LegalMonetaryTotal
+  /** Tax totals. */
+  taxTotal: TaxTotal
+}
+
+export interface SelfBilledRefundNoteV1_1 {
+  /** Supplier information issued in the self-billed refund note. */
+  supplier: Supplier
+  /** Buyer information (issuer of the self-billed document). */
+  buyer: Buyer
+
+  /** Fixed e-Invoice version. */
+  eInvoiceVersion: '1.1'
+  /** e-Invoice type code for Self-Billed Refund Note (code '14'). */
+  eInvoiceTypeCode: EInvoiceTypeCode
+  /** Internal tracking reference number. Max 50 chars. */
+  eInvoiceCodeOrNumber: string
+  /** Original self-billed invoice UUID being adjusted (mandatory for refund/credit/debit). */
+  originalEInvoiceReferenceNumber: string
+  /** Issue date (YYYY-MM-DD, UTC). */
+  eInvoiceDate: string
+  /** Issue time (HH:mm:ssZ, UTC). */
+  eInvoiceTime: string
+
+  /** Document currency code. */
+  invoiceCurrencyCode: CurrencyCode
+  /** Exchange rate to MYR when currency ≠ 'MYR'. */
+  currencyExchangeRate?: number
+
+  /** Line items contained in the refund note. */
+  selfBilledRefundNoteLineItems: InvoiceLineItem[]
+
+  /** Monetary totals for the document. */
+  legalMonetaryTotal: LegalMonetaryTotal
+  /** Tax totals for the document. */
+  taxTotal: TaxTotal
+}
+
+export type AllDocumentsV1_1 =
+  | InvoiceV1_1
+  | CreditNoteV1_1
+  | DebitNoteV1_1
+  | RefundNoteV1_1
+  | SelfBilledInvoiceV1_1
+  | SelfBilledCreditNoteV1_1
+  | SelfBilledRefundNoteV1_1
+
 export type SubmissionStatus =
   | 'InProgress'
   | 'Valid'
@@ -678,28 +896,7 @@ export interface InvoiceSubmission {
               SignatureValue: {
                 _: string
               }[]
-              SignedInfo: {
-                CanonicalizationMethod: {
-                  _: string
-                  Algorithm: string
-                }[]
-                SignatureMethod: {
-                  _: string
-                  Algorithm: string
-                }[]
-                Reference: {
-                  Id: string
-                  Type: string
-                  URI: string
-                  DigestMethod: {
-                    _: string
-                    Algorithm: string
-                  }[]
-                  DigestValue: {
-                    _: string
-                  }[]
-                }[]
-              }[]
+              SignedInfo: SignedInfoObject[]
             }[]
           }[]
         }[]
@@ -714,6 +911,16 @@ export interface InvoiceSubmission {
     }[]
     SignatureMethod: {
       _: string
+    }[]
+  }[]
+
+  /** Billing reference linking to original invoice (used for credit/debit/refund). Optional. */
+  BillingReference?: {
+    InvoiceDocumentReference: {
+      /** LHDNM Unique Identifier Number */
+      UUID: { _: string }[]
+      /** Internal ID (e-Invoice Code/Number) */
+      ID: { _: string }[]
     }[]
   }[]
 }

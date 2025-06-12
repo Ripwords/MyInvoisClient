@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { MyInvoisClient } from '../src/index'
-import type { InvoiceV1_1 } from '../src/types'
+import type {
+  InvoiceV1_1,
+  CreditNoteV1_1,
+  DebitNoteV1_1,
+  RefundNoteV1_1,
+  SelfBilledInvoiceV1_1,
+  SelfBilledCreditNoteV1_1,
+  SelfBilledRefundNoteV1_1,
+  ClassificationCode,
+  TaxTypeCode,
+} from '../src/types'
 import {
   generateCompleteDocument,
   extractCertificateInfo,
@@ -103,6 +113,93 @@ const createMinimalTestInvoice = (): InvoiceV1_1 => {
     taxTotal: {
       taxAmount: 26.0, // 6 + 20 (percentage + fixed rate)
     },
+  }
+}
+
+/**
+ * Shared line items used by all document variants in tests
+ */
+const sampleLineItems = [
+  {
+    itemClassificationCode: '001' as ClassificationCode,
+    itemDescription: 'Sample % tax item',
+    unitPrice: 50,
+    taxType: '01' as TaxTypeCode,
+    taxRate: 6,
+    taxAmount: 3,
+    totalTaxableAmountPerLine: 50,
+    totalAmountPerLine: 53,
+  },
+]
+
+const createMinimalCreditNote = (): CreditNoteV1_1 => {
+  const now = new Date()
+  const currentDate = now.toISOString().split('T')[0]
+  const currentTime = now.toISOString().split('T')[1].split('.')[0] + 'Z'
+
+  return {
+    eInvoiceVersion: '1.1',
+    eInvoiceTypeCode: '02',
+    eInvoiceCodeOrNumber: `TEST-CN-${Date.now()}`,
+    originalEInvoiceReferenceNumber: '12345678901234567890123456',
+    eInvoiceDate: currentDate,
+    eInvoiceTime: currentTime,
+    invoiceCurrencyCode: 'MYR',
+    supplier: createMinimalTestInvoice().supplier,
+    buyer: createMinimalTestInvoice().buyer,
+    creditNoteLineItems: sampleLineItems,
+    legalMonetaryTotal: {
+      taxExclusiveAmount: 50,
+      taxInclusiveAmount: 53,
+      payableAmount: 53,
+    },
+    taxTotal: { taxAmount: 3 },
+  }
+}
+
+const createMinimalDebitNote = (): DebitNoteV1_1 => {
+  const base = createMinimalCreditNote()
+  return {
+    ...base,
+    eInvoiceTypeCode: '03',
+    eInvoiceCodeOrNumber: `TEST-DN-${Date.now()}`,
+    debitNoteLineItems: sampleLineItems,
+  }
+}
+
+const createMinimalRefundNote = (): RefundNoteV1_1 => {
+  const base = createMinimalCreditNote()
+  return {
+    ...base,
+    eInvoiceTypeCode: '04',
+    eInvoiceCodeOrNumber: `TEST-RN-${Date.now()}`,
+    refundNoteLineItems: sampleLineItems,
+  }
+}
+
+const createMinimalSelfBilledInvoice = (): SelfBilledInvoiceV1_1 => {
+  const base = createMinimalTestInvoice()
+  return {
+    ...base,
+    eInvoiceTypeCode: '11',
+  }
+}
+
+const createMinimalSelfBilledCreditNote = (): SelfBilledCreditNoteV1_1 => {
+  const credit = createMinimalCreditNote()
+  return {
+    ...credit,
+    eInvoiceTypeCode: '12',
+    selfBilledCreditNoteLineItems: sampleLineItems,
+  }
+}
+
+const createMinimalSelfBilledRefundNote = (): SelfBilledRefundNoteV1_1 => {
+  const refund = createMinimalRefundNote()
+  return {
+    ...refund,
+    eInvoiceTypeCode: '14',
+    selfBilledRefundNoteLineItems: sampleLineItems,
   }
 }
 
@@ -453,5 +550,80 @@ describe('MyInvois Document Generation and Submission', () => {
     expect(fixedRateTaxSubtotal.Percent).toBeUndefined()
 
     console.log('✅ Fixed rate tax UBL structure is correct!')
+  })
+
+  // ---------- Generalised submission tests for other document types ----------
+  const docVariants: [string, () => any][] = [
+    ['Credit Note', createMinimalCreditNote],
+    ['Debit Note', createMinimalDebitNote],
+    ['Refund Note', createMinimalRefundNote],
+    ['Self-Billed Invoice', createMinimalSelfBilledInvoice],
+    ['Self-Billed Credit Note', createMinimalSelfBilledCreditNote],
+    ['Self-Billed Refund Note', createMinimalSelfBilledRefundNote],
+  ]
+
+  describe.each(docVariants)('Submission (%s)', (name, builder) => {
+    it.skipIf(!process.env.RUN_VARIANT_SUBMISSIONS)(
+      `should submit ${name} to MyInvois`,
+      async () => {
+        const documentData = builder()
+
+        // Ensure supplier TIN matches certificate for realistic test
+        if ('supplier' in documentData) {
+          documentData.supplier.tin =
+            process.env.VALID_SUPPLIER_TIN || process.env.TIN_VALUE || ''
+        }
+
+        const client = new MyInvoisClient(
+          CLIENT_ID,
+          CLIENT_SECRET,
+          'sandbox',
+          CERTIFICATE,
+          PRIVATE_KEY,
+          undefined,
+          true,
+        )
+
+        const { status } = await client.submitDocument([documentData])
+        expect(status).toBe(202)
+      },
+      60000,
+    )
+  })
+})
+
+// ================= Additional document generation tests =================
+
+describe.each([
+  ['Credit Note', createMinimalCreditNote, '02', true],
+  ['Debit Note', createMinimalDebitNote, '03', true],
+  ['Refund Note', createMinimalRefundNote, '04', true],
+  ['Self-Billed Invoice', createMinimalSelfBilledInvoice, '11', false],
+  ['Self-Billed Credit Note', createMinimalSelfBilledCreditNote, '12', true],
+  ['Self-Billed Refund Note', createMinimalSelfBilledRefundNote, '14', true],
+])('Document Generation (%s)', (name, builder, expectedTypeCode, hasRef) => {
+  it(`should generate valid UBL structure for ${name}`, () => {
+    const doc = builder()
+
+    const certInfo = extractCertificateInfo(process.env.TEST_CERTIFICATE || '')
+
+    const complete = generateCompleteDocument([doc], {
+      privateKeyPem: process.env.TEST_PRIVATE_KEY || '',
+      certificatePem: process.env.TEST_CERTIFICATE || '',
+      issuerName: certInfo.issuerName || 'CN=TEST',
+      serialNumber: certInfo.serialNumber || '1',
+    })
+
+    const invoiceData = complete.Invoice[0]
+
+    expect(invoiceData.InvoiceTypeCode[0]._).toBe(expectedTypeCode)
+
+    if (hasRef) {
+      expect(invoiceData.BillingReference).toBeDefined()
+    }
+
+    // Basic signature presence
+    expect(invoiceData.UBLExtensions).toBeDefined()
+    expect(invoiceData.Signature).toBeDefined()
   })
 })
