@@ -7,7 +7,6 @@ import {
   DocumentValidationResult,
   DocumentValidationStepResult,
   EInvoiceTypeCode,
-  InvoiceV1_1,
   NotificationResponse,
   NotificationSearchParams,
   RegistrationType,
