@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.2.7
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.6...v0.2.7)
+
+### 🚀 Enhancements
+
+- Introduce AllDocumentsV1_1 type and refactor document submission ([592da23](https://github.com/Ripwords/MyInvoisClient/commit/592da23))
+
+### 🏡 Chore
+
+- **release:** V0.2.6 ([f1bb607](https://github.com/Ripwords/MyInvoisClient/commit/f1bb607))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.6
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.5...v0.2.6)
