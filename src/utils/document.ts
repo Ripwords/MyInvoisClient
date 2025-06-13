@@ -12,6 +12,7 @@ import {
 } from '../types'
 import type { ClassificationCode } from '../types'
 import type { TaxTypeCode } from '../types'
+import { formatIdValue } from './formatIdValue'
 
 /**
  * MyInvois v1.1 Document Generation and Signing Utilities
@@ -173,7 +174,7 @@ export const generateCleanInvoiceObject = (
               {
                 ID: [
                   {
-                    _: invoice.supplier.registrationNumber,
+                    _: formatIdValue(invoice.supplier.registrationNumber),
                     schemeID: invoice.supplier.registrationType || 'NRIC',
                   },
                 ],
@@ -240,7 +241,7 @@ export const generateCleanInvoiceObject = (
               {
                 ID: [
                   {
-                    _: invoice.buyer.registrationNumber,
+                    _: formatIdValue(invoice.buyer.registrationNumber),
                     schemeID: invoice.buyer.registrationType || 'NRIC',
                   },
                 ],
