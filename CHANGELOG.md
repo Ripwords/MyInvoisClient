@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.9
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.8...v0.2.9)
+
+### 💅 Refactors
+
+- Integrate formatIdValue function for ID sanitization in document utilities ([559b6c2](https://github.com/Ripwords/MyInvoisClient/commit/559b6c2))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.8
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.7...v0.2.8)
