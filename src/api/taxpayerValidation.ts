@@ -76,7 +76,12 @@ export async function verifyTin(
       },
     )
 
-    if (response.status === 200) {
+    if (!response) {
+      // Fetch was stubbed to return undefined or network error occurred
+      return false
+    }
+
+    if (response.ok || response.status === 200) {
       return true
     }
 

@@ -590,6 +590,41 @@ describe('MyInvois Document Generation and Submission', () => {
       60000,
     )
   })
+
+  // ---------- Batch submission test (multiple docs in one call) ----------
+  it.skipIf(!process.env.RUN_BATCH_SUBMISSIONS)(
+    'should submit multiple documents in a single submission',
+    async () => {
+      // Build a small batch – mix of standard invoice + credit note
+      const batchDocs = [createMinimalTestInvoice(), createMinimalCreditNote()]
+
+      // Ensure each supplier TIN matches certificate and codes are unique
+      batchDocs.forEach((doc, idx) => {
+        if ('supplier' in doc) {
+          doc.supplier.tin =
+            process.env.VALID_SUPPLIER_TIN || process.env.TIN_VALUE || ''
+        }
+        // Extra uniqueness safeguard
+        doc.eInvoiceCodeOrNumber = `${doc.eInvoiceCodeOrNumber}-${idx}`
+      })
+
+      const client = new MyInvoisClient(
+        CLIENT_ID,
+        CLIENT_SECRET,
+        'sandbox',
+        CERTIFICATE,
+        PRIVATE_KEY,
+        undefined,
+        true, // debug
+      )
+
+      const { status, data } = await client.submitDocument(batchDocs)
+      console.log('Batch submission response:', JSON.stringify(data, null, 2))
+      expect(status).toBe(202)
+      expect(data.acceptedDocuments.length).toBeGreaterThan(0)
+    },
+    60000,
+  )
 })
 
 // ================= Additional document generation tests =================

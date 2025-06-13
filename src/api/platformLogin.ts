@@ -22,7 +22,31 @@ export const platformLogin = async (
       }),
     })
 
+    // If authentication fails, surface the error details immediately
+    if (!response.ok) {
+      let errorBody: unknown
+      try {
+        errorBody = await response.json()
+      } catch {
+        /* ignored */
+      }
+
+      const errorMessage =
+        typeof errorBody === 'object' &&
+        errorBody !== null &&
+        'error_description' in errorBody
+          ? (errorBody as { error_description: string }).error_description
+          : `Platform login failed with status ${response.status}`
+
+      throw new Error(errorMessage)
+    }
+
     const tokenResponse: TokenResponse = await response.json()
+
+    if (!tokenResponse.access_token) {
+      throw new Error('Platform login response did not include an access_token')
+    }
+
     return {
       token: tokenResponse.access_token,
       tokenExpiration: new Date(Date.now() + tokenResponse.expires_in * 1000),

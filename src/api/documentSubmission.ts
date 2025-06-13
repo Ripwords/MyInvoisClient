@@ -28,48 +28,46 @@ export async function submitDocument(
     console.log(`📦 Preparing to submit ${documents.length} document(s)...`)
   }
 
-  // Generate the complete signed document structure first
-  const completeDocument = generateCompleteDocument(
-    documents,
-    signingCredentials,
-  )
-
-  if (debug) {
-    console.log('✅ Documents signed successfully')
-    console.log('📄 Document structure keys:', Object.keys(completeDocument))
-    console.log('📊 Number of invoices:', completeDocument.Invoice.length)
-  }
-
-  // Convert the complete document to JSON string
-  const documentJson = JSON.stringify(completeDocument)
-
-  if (debug) {
-    console.log(`📏 Document JSON size: ${documentJson.length} bytes`)
-  }
-
-  // Generate SHA256 hash of the JSON document
-  const crypto = await import('crypto')
-  const documentHash = crypto
-    .createHash('sha256')
-    .update(documentJson, 'utf8')
-    .digest('hex')
-
-  // Base64 encode the JSON document
-  const documentBase64 = Buffer.from(documentJson, 'utf8').toString('base64')
-
-  if (debug) {
-    console.log(`🔒 Document hash: ${documentHash.substring(0, 16)}...`)
-    console.log(`📦 Base64 size: ${documentBase64.length} bytes`)
-  }
-
+  // For batch submission, each document must be signed and encoded separately
   // Build the submission payload according to MyInvois API format
+  const crypto = await import('crypto')
+
   const submissionPayload = {
-    documents: documents.map(doc => ({
-      format: 'JSON', // We're submitting JSON format
-      document: documentBase64, // Base64 encoded complete document
-      documentHash: documentHash, // SHA256 hash of the JSON
-      codeNumber: doc.eInvoiceCodeOrNumber, // Document reference number
-    })),
+    documents: await Promise.all(
+      documents.map(async doc => {
+        // 1️⃣ Sign the single document (generateCompleteDocument expects an array)
+        const signedDocument = generateCompleteDocument(
+          [doc],
+          signingCredentials,
+        )
+
+        // 2️⃣ Serialize
+        const docJson = JSON.stringify(signedDocument)
+
+        // 3️⃣ Hash
+        const docHash = crypto
+          .createHash('sha256')
+          .update(docJson, 'utf8')
+          .digest('hex')
+
+        // 4️⃣ Base64 encode
+        const docBase64 = Buffer.from(docJson, 'utf8').toString('base64')
+
+        if (debug) {
+          console.log('—'.repeat(60))
+          console.log(`📄 Prepared document: ${doc.eInvoiceCodeOrNumber}`)
+          console.log(`   • JSON size : ${docJson.length} bytes`)
+          console.log(`   • Base64 size: ${docBase64.length} bytes`)
+        }
+
+        return {
+          format: 'JSON',
+          document: docBase64,
+          documentHash: docHash,
+          codeNumber: doc.eInvoiceCodeOrNumber,
+        }
+      }),
+    ),
   }
 
   if (debug) {
@@ -82,7 +80,6 @@ export async function submitDocument(
       'bytes',
     )
 
-    // Validate submission constraints
     const payloadSize = JSON.stringify(submissionPayload).length
     if (payloadSize > 5 * 1024 * 1024) {
       // 5MB
@@ -93,10 +90,15 @@ export async function submitDocument(
       console.warn('⚠️  WARNING: Document count exceeds 100 document limit')
     }
 
-    if (documentJson.length > 300 * 1024) {
-      // 300KB per document
-      console.warn('⚠️  WARNING: Document size exceeds 300KB limit')
-    }
+    // Check each document's individual size (300 KB limit)
+    submissionPayload.documents.forEach(d => {
+      const size = Buffer.from(d.document, 'base64').length
+      if (size > 300 * 1024) {
+        console.warn(
+          `⚠️  WARNING: Document ${d.codeNumber} size (${size} bytes) exceeds 300KB limit`,
+        )
+      }
+    })
   }
 
   // Submit to MyInvois API with proper headers
