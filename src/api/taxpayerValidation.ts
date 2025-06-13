@@ -11,6 +11,12 @@ interface TaxpayerContext {
   debug: boolean
 }
 
+export function formatIdValue(idValue: string) {
+  return String(idValue)
+    .trim()
+    .replace(/[^a-zA-Z0-9]/g, '')
+}
+
 export async function tinSearch(
   context: TaxpayerContext,
   params: TinSearchParams,
@@ -38,7 +44,7 @@ export async function tinSearch(
 
   if (idType && idValue) {
     queryParams.append('idType', idType)
-    queryParams.append('idValue', idValue)
+    queryParams.append('idValue', formatIdValue(idValue))
   }
 
   const queryString = queryParams.toString()
@@ -69,7 +75,7 @@ export async function verifyTin(
 
   try {
     const response = await fetch(
-      `/api/v1.0/taxpayer/validate/${tin}?idType=${idType}&idValue=${idValue}`,
+      `/api/v1.0/taxpayer/validate/${tin}?idType=${idType}&idValue=${formatIdValue(idValue)}`,
       {
         method: 'GET',
       },
