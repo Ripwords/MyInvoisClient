@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.10
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.9...v0.2.10)
+
+### 🚀 Enhancements
+
+- Enhance document submission process with batch handling and error reporting ([d924233](https://github.com/Ripwords/MyInvoisClient/commit/d924233))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.9
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.8...v0.2.9)
