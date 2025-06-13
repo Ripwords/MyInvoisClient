@@ -1,6 +1,26 @@
 # Changelog
 
 
+## v0.2.8
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.7...v0.2.8)
+
+### 🚀 Enhancements
+
+- Add formatIdValue function for ID value sanitization ([361088c](https://github.com/Ripwords/MyInvoisClient/commit/361088c))
+
+### 🩹 Fixes
+
+- Add return type to formatIdValue function for improved type safety ([fec5b57](https://github.com/Ripwords/MyInvoisClient/commit/fec5b57))
+
+### 💅 Refactors
+
+- Remove unused InvoiceV1_1 import from index.ts ([9fa6429](https://github.com/Ripwords/MyInvoisClient/commit/9fa6429))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.7
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.6...v0.2.7)
