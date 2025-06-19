@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.2.11
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.10...v0.2.11)
+
+### 🚀 Enhancements
+
+- Enhance debug logging for document submission errors ([a78603a](https://github.com/Ripwords/MyInvoisClient/commit/a78603a))
+
+### 🏡 Chore
+
+- **release:** V0.2.10 ([f7695df](https://github.com/Ripwords/MyInvoisClient/commit/f7695df))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.10
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.9...v0.2.10)
