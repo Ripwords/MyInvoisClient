@@ -110,11 +110,27 @@ export async function submitDocument(
     body: JSON.stringify(submissionPayload),
   })
 
+  const responseData = (await response.json()) as SubmissionResponse
+
   if (debug) {
     console.log(`📡 API Response status: ${response.status}`)
+
+    if (responseData.rejectedDocuments?.length > 0) {
+      responseData.rejectedDocuments.forEach((doc, index) => {
+        console.log(`  Document ${index + 1}:`, doc.invoiceCodeNumber)
+        if (doc.error) {
+          console.log(`    Error:`, doc.error.message)
+          if (doc.error.details) {
+            doc.error.details.forEach((detail, detailIndex) => {
+              console.log(`      Detail ${detailIndex + 1}:`, detail.message)
+            })
+          }
+        }
+      })
+    }
   }
 
-  const data = (await response.json()) as SubmissionResponse
+  const data = responseData as SubmissionResponse
 
   if (debug) {
     if (response.status !== 202) {
