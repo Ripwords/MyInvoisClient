@@ -24,6 +24,13 @@ export async function submitDocument(
 }> {
   const { fetch, debug, signingCredentials } = context
 
+  // 🔒 Hard enforcement of platform submission limits
+  if (documents.length > 100) {
+    throw new Error(
+      'Submission rejected: Cannot submit more than 100 documents at once',
+    )
+  }
+
   if (debug) {
     console.log(`📦 Preparing to submit ${documents.length} document(s)...`)
   }
@@ -53,6 +60,14 @@ export async function submitDocument(
         // 4️⃣ Base64 encode
         const docBase64 = Buffer.from(docJson, 'utf8').toString('base64')
 
+        // 🚨 Enforce 300 KB per-document limit
+        const rawSize = Buffer.byteLength(docBase64, 'base64')
+        if (rawSize > 300 * 1024) {
+          throw new Error(
+            `Submission rejected: Document ${doc.eInvoiceCodeOrNumber} is ${rawSize} bytes – exceeds 300KB limit`,
+          )
+        }
+
         if (debug) {
           console.log('—'.repeat(60))
           console.log(`📄 Prepared document: ${doc.eInvoiceCodeOrNumber}`)
@@ -70,35 +85,19 @@ export async function submitDocument(
     ),
   }
 
+  const payloadSize = Buffer.byteLength(JSON.stringify(submissionPayload))
+
+  if (payloadSize > 5 * 1024 * 1024) {
+    throw new Error(
+      `Submission rejected: Payload is ${payloadSize} bytes – exceeds 5MB limit`,
+    )
+  }
+
   if (debug) {
     console.log('🚀 Submission payload structure:')
     console.log('- Format: JSON')
     console.log('- Documents count:', submissionPayload.documents.length)
-    console.log(
-      '- Total payload size:',
-      JSON.stringify(submissionPayload).length,
-      'bytes',
-    )
-
-    const payloadSize = JSON.stringify(submissionPayload).length
-    if (payloadSize > 5 * 1024 * 1024) {
-      // 5MB
-      console.warn('⚠️  WARNING: Payload size exceeds 5MB limit')
-    }
-
-    if (documents.length > 100) {
-      console.warn('⚠️  WARNING: Document count exceeds 100 document limit')
-    }
-
-    // Check each document's individual size (300 KB limit)
-    submissionPayload.documents.forEach(d => {
-      const size = Buffer.from(d.document, 'base64').length
-      if (size > 300 * 1024) {
-        console.warn(
-          `⚠️  WARNING: Document ${d.codeNumber} size (${size} bytes) exceeds 300KB limit`,
-        )
-      }
-    })
+    console.log('- Total payload size:', payloadSize, 'bytes')
   }
 
   // Submit to MyInvois API with proper headers
