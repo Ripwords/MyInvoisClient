@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.12
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.11...v0.2.12)
+
+### 🚀 Enhancements
+
+- Implement request queuing and categorization for rate-limiting ([bf0db03](https://github.com/Ripwords/MyInvoisClient/commit/bf0db03))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.11
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.10...v0.2.11)
