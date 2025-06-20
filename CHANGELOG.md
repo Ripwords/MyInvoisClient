@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.13
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.12...v0.2.13)
+
+### 🚀 Enhancements
+
+- Enforce submission limits in document submission process ([c8808b2](https://github.com/Ripwords/MyInvoisClient/commit/c8808b2))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.12
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.11...v0.2.12)
