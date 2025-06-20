@@ -28,6 +28,7 @@ import { platformLogin } from './api/platformLogin'
 import * as TaxpayerValidationAPI from './api/taxpayerValidation'
 import { extractCertificateInfo, validateKeyPair } from './utils/certificate'
 import { getBaseUrl } from './utils/getBaseUrl'
+import { queueRequest, categorizeRequest } from './utils/apiQueue'
 
 export type * from './types/index.d.ts'
 export class MyInvoisClient {
@@ -110,10 +111,24 @@ export class MyInvoisClient {
   private async fetch(path: string, options: Parameters<typeof fetch>[1] = {}) {
     const token = await this.getToken()
 
-    return fetch(`${this.baseUrl}${path}`, {
-      ...options,
-      headers: { ...options.headers, Authorization: `Bearer ${token}` },
-    })
+    // Dynamically categorise the request and enqueue it so we never exceed the
+    // vendor-specified rate-limits. If the path isn't recognised it will fall
+    // back to the `default` category which has a very high allowance.
+
+    const category = categorizeRequest(
+      path,
+      options?.method as string | undefined,
+    )
+
+    return queueRequest(
+      category,
+      () =>
+        fetch(`${this.baseUrl}${path}`, {
+          ...options,
+          headers: { ...options.headers, Authorization: `Bearer ${token}` },
+        }),
+      this.debug,
+    )
   }
 
   /**
