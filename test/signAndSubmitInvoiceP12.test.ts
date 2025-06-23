@@ -7,7 +7,6 @@ import type {
   CreditNoteV1_1,
   DebitNoteV1_1,
   RefundNoteV1_1,
-  SelfBilledInvoiceV1_1,
   ClassificationCode,
   TaxTypeCode,
 } from '../src/types'
@@ -165,22 +164,14 @@ const createMinimalRefundNote = (): RefundNoteV1_1 => {
   }
 }
 
-const createMinimalSelfBilledInvoice = (): SelfBilledInvoiceV1_1 => {
-  const base = createMinimalTestInvoice()
-  return {
-    ...base,
-    eInvoiceTypeCode: '11',
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Test suite
 // ---------------------------------------------------------------------------
 
 describe('MyInvois Document Generation & Submission (PKCS#12)', () => {
   const requiredEnvVars = [
-    'CLIENT_ID',
-    'CLIENT_SECRET',
+    'TEST_CLIENT_ID',
+    'TEST_CLIENT_SECRET',
     'TEST_P12_PATH',
     'TEST_P12_PASSPHRASE',
     'TEST_COMPANY_NAME',
@@ -196,8 +187,8 @@ describe('MyInvois Document Generation & Submission (PKCS#12)', () => {
     return
   }
 
-  const CLIENT_ID = process.env.CLIENT_ID!
-  const CLIENT_SECRET = process.env.CLIENT_SECRET!
+  const CLIENT_ID = process.env.TEST_CLIENT_ID!
+  const CLIENT_SECRET = process.env.TEST_CLIENT_SECRET!
   const P12_PATH = process.env.TEST_P12_PATH!
   const P12_PASSPHRASE = process.env.TEST_P12_PASSPHRASE!
 
@@ -227,7 +218,7 @@ describe('MyInvois Document Generation & Submission (PKCS#12)', () => {
 
   it('should generate valid document structure', () => {
     const invoice = createMinimalTestInvoice()
-    invoice.supplier.tin = process.env.TEST_TIN_VALUE || 'C00000000000'
+    invoice.supplier.tin = process.env.TEST_TIN_VALUE!
 
     const certInfo = extractCertificateInfo(CERTIFICATE)
     const document = generateCompleteDocument([invoice], {
@@ -263,7 +254,7 @@ describe('MyInvois Document Generation & Submission (PKCS#12)', () => {
   // Additional structural test for fixed-rate taxation
   it('should create correct UBL for fixed-rate tax', () => {
     const invoice = createMinimalTestInvoice()
-    invoice.supplier.tin = process.env.VALID_SUPPLIER_TIN || 'IG50752733100'
+    invoice.supplier.tin = process.env.TEST_TIN_VALUE!
 
     const certInfo = extractCertificateInfo(CERTIFICATE)
     const document = generateCompleteDocument([invoice], {
@@ -280,34 +271,33 @@ describe('MyInvois Document Generation & Submission (PKCS#12)', () => {
   })
 
   // Document variant submission tests (optional – gate by env to save quota)
-  // const variants: [string, () => any][] = [
-  //   ['Credit Note', createMinimalCreditNote],
-  //   ['Debit Note', createMinimalDebitNote],
-  //   ['Refund Note', createMinimalRefundNote],
-  //   ['Self-Billed Invoice', createMinimalSelfBilledInvoice],
-  // ]
+  const variants: [string, () => any][] = [
+    ['Credit Note', createMinimalCreditNote],
+    ['Debit Note', createMinimalDebitNote],
+    ['Refund Note', createMinimalRefundNote],
+  ]
 
-  // describe.each(variants)('Submission (variant: %s)', (name, builder) => {
-  //   it.skipIf(!process.env.RUN_VARIANT_SUBMISSIONS)(
-  //     `submits ${name}` as any,
-  //     async () => {
-  //       const doc = builder()
-  //       if ('supplier' in doc) {
-  //         doc.supplier.tin = process.env.VALID_SUPPLIER_TIN || ''
-  //       }
-  //       const client = MyInvoisClient.fromP12(
-  //         CLIENT_ID,
-  //         CLIENT_SECRET,
-  //         'sandbox',
-  //         p12Buffer,
-  //         P12_PASSPHRASE,
-  //         undefined,
-  //         true,
-  //       )
-  //       const { status } = await client.submitDocument([doc])
-  //       expect(status).toBe(202)
-  //     },
-  //     60000,
-  //   )
-  // })
+  describe.each(variants)('Submission (variant: %s)', (name, builder) => {
+    it.skipIf(!process.env.RUN_VARIANT_SUBMISSIONS)(
+      `submits ${name}` as any,
+      async () => {
+        const doc = builder()
+        if ('supplier' in doc) {
+          doc.supplier.tin = process.env.TEST_TIN_VALUE!
+        }
+        const client = MyInvoisClient.fromP12(
+          CLIENT_ID,
+          CLIENT_SECRET,
+          'sandbox',
+          p12Buffer,
+          P12_PASSPHRASE,
+          undefined,
+          true,
+        )
+        const { status } = await client.submitDocument([doc])
+        expect(status).toBe(202)
+      },
+      60000,
+    )
+  })
 })
