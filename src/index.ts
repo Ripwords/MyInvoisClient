@@ -26,7 +26,11 @@ import * as DocumentTypeManagementAPI from './api/documentTypeManagement'
 import * as NotificationManagementAPI from './api/notificationManagement'
 import { platformLogin } from './api/platformLogin'
 import * as TaxpayerValidationAPI from './api/taxpayerValidation'
-import { extractCertificateInfo, validateKeyPair } from './utils/certificate'
+import {
+  extractCertificateInfo,
+  validateKeyPair,
+  getPemFromP12,
+} from './utils/certificate'
 import { getBaseUrl } from './utils/getBaseUrl'
 import { queueRequest, categorizeRequest } from './utils/apiQueue'
 
@@ -698,6 +702,32 @@ export class MyInvoisClient {
       { fetch: this.fetch.bind(this) },
       id,
       versionId,
+    )
+  }
+
+  // Static helper: create a client directly from a PKCS#12 (.p12) bundle
+  static fromP12(
+    clientId: string,
+    clientSecret: string,
+    environment: 'sandbox' | 'production',
+    p12Input: Buffer | string,
+    passphrase: string,
+    onBehalfOf?: string,
+    debug?: boolean,
+  ): MyInvoisClient {
+    const { certificatePem, privateKeyPem } = getPemFromP12(
+      p12Input,
+      passphrase,
+    )
+
+    return new MyInvoisClient(
+      clientId,
+      clientSecret,
+      environment,
+      certificatePem,
+      privateKeyPem,
+      onBehalfOf,
+      debug,
     )
   }
 }

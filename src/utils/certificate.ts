@@ -1,4 +1,6 @@
 import crypto from 'crypto'
+import * as forge from 'node-forge'
+import fs from 'fs'
 
 /**
  * Extracts certificate information from PEM certificate
@@ -56,5 +58,47 @@ export const validateKeyPair = (
   } catch (error) {
     console.error('Key pair validation failed:', error)
     return false
+  }
+}
+
+export const getPemFromP12 = (
+  p12Input: Buffer | string,
+  passphrase: string,
+): {
+  certificatePem: string
+  privateKeyPem: string
+} => {
+  try {
+    // Load binary DER contents of the p12 file
+    const p12Buffer: Buffer = Buffer.isBuffer(p12Input)
+      ? p12Input
+      : fs.readFileSync(p12Input)
+
+    // Convert DER -> ASN.1
+    const p12Der = forge.util.createBuffer(p12Buffer.toString('binary'))
+    const p12Asn1 = forge.asn1.fromDer(p12Der.getBytes())
+
+    // Parse the PKCS#12 using the provided passphrase
+    const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, passphrase)
+
+    // Extract the first certificate (assumes it is the signing cert)
+    const certBags = p12.getBags({ bagType: forge.pki.oids.certBag })[
+      forge.pki.oids.certBag
+    ]
+    if (!certBags || certBags.length === 0)
+      throw new Error('No certificate found in PKCS#12 bundle')
+    const certificatePem = forge.pki.certificateToPem(certBags[0].cert)
+
+    // Extract the first private key
+    const keyBags = p12.getBags({
+      bagType: forge.pki.oids.pkcs8ShroudedKeyBag,
+    })[forge.pki.oids.pkcs8ShroudedKeyBag]
+    if (!keyBags || keyBags.length === 0)
+      throw new Error('No private key found in PKCS#12 bundle')
+    const privateKeyPem = forge.pki.privateKeyToPem(keyBags[0].key)
+
+    return { certificatePem, privateKeyPem }
+  } catch (error) {
+    throw new Error(`Failed to extract PEM from PKCS#12 file: ${error}`)
   }
 }
