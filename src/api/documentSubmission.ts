@@ -134,7 +134,7 @@ export async function submitDocument(
   if (debug) {
     if (response.status !== 202) {
       console.error('❌ Submission failed with status:', response.status)
-      console.error('❌ Response data:', data)
+      console.error('❌ Response data:', JSON.stringify(data, null, 2))
     } else {
       console.log('✅ Submission successful!')
       console.log(`📋 Submission UID: ${data.submissionUid}`)

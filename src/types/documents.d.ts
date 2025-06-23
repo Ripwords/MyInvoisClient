@@ -100,7 +100,7 @@ export interface Buyer {
    * Allows up to two numbers separated by ';'.
    * @example W10-1909-32000060
    */
-  sstRegistrationNumber: string
+  sstRegistrationNumber?: string
   /** Buyer's address. */
   address: Address
   /** Buyer's contact number (E.164 standard). Max 20 chars.

@@ -1,0 +1,130 @@
+import { describe, expect, it } from 'vitest'
+import { MyInvoisClient } from '../src/index'
+import fs from 'fs'
+import path from 'path'
+import type { InvoiceV1_1, ClassificationCode, TaxTypeCode } from '../src/types'
+
+/**
+ * ⚠️ SECURITY NOTICE: This test relies on environment variables for sensitive data.
+ * Provide the following in a .env file (git-ignored):
+ *   CLIENT_ID
+ *   CLIENT_SECRET
+ *   TEST_P12_PATH          – absolute or relative path to .p12 file
+ *   TEST_P12_PASSPHRASE    – PIN / pass-phrase protecting the .p12
+ *   (optionally) TIN_VALUE, NRIC_VALUE, etc. – same as the PEM-based tests
+ */
+
+// ---------------------------------------------------------------------------
+// Helper: minimal invoice builder (matches mandatory MyInvois v1.1 fields)
+// ---------------------------------------------------------------------------
+const createMinimalTestInvoice = (): InvoiceV1_1 => {
+  const now = new Date()
+  const currentDate = now.toISOString().split('T')[0]
+  const currentTime = now.toISOString().split('T')[1].split('.')[0] + 'Z'
+
+  return {
+    eInvoiceVersion: '1.1',
+    eInvoiceTypeCode: '01',
+    eInvoiceCodeOrNumber: `TEST-INV-${Date.now()}`,
+    eInvoiceDate: currentDate,
+    eInvoiceTime: currentTime,
+    invoiceCurrencyCode: 'MYR',
+    supplier: {
+      name: process.env.TEST_COMPANY_NAME!,
+      tin: process.env.TEST_TIN_VALUE!,
+      registrationType: 'BRN',
+      registrationNumber: process.env.TEST_BRN_VALUE!,
+      contactNumber: '+60123456789',
+      address: {
+        addressLine0: '123 Test Street',
+        cityName: 'Kuala Lumpur',
+        state: '14',
+        country: 'MYS',
+      },
+      industryClassificationCode: '41001',
+      industryClassificationDescription: 'Test Industry',
+    },
+    buyer: {
+      name: 'General Public',
+      tin: 'EI00000000010',
+      registrationType: 'NRIC',
+      registrationNumber: 'NA',
+      contactNumber: 'NA',
+      address: {
+        addressLine0: 'NA',
+        cityName: 'KUALA LUMPUR',
+        state: '14',
+        country: 'MYS',
+      },
+    },
+    invoiceLineItems: [
+      {
+        itemClassificationCode: '004' as ClassificationCode,
+        itemDescription: 'Test Product (Percentage Tax)',
+        unitPrice: 100,
+        taxType: '01' as TaxTypeCode,
+        taxRate: 6,
+        taxAmount: 6,
+        totalTaxableAmountPerLine: 100,
+        totalAmountPerLine: 106,
+      },
+    ],
+    legalMonetaryTotal: {
+      taxExclusiveAmount: 100,
+      taxInclusiveAmount: 106,
+      payableAmount: 106,
+    },
+    taxTotal: {
+      taxAmount: 6,
+    },
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Test Suite – Only invoice submission is validated
+// ---------------------------------------------------------------------------
+
+describe('MyInvois Invoice Submission (PKCS#12)', () => {
+  const requiredEnvVars = [
+    'TEST_CLIENT_ID',
+    'TEST_CLIENT_SECRET',
+    'TEST_P12_PATH',
+    'TEST_P12_PASSPHRASE',
+    'TEST_COMPANY_NAME',
+    'TEST_TIN_VALUE',
+    'TEST_BRN_VALUE',
+  ]
+
+  const missingVars = requiredEnvVars.filter(v => !process.env[v])
+  if (missingVars.length > 0) {
+    it.skip(`Skipping tests – Missing env: ${missingVars.join(', ')}`, () => {
+      expect.soft(false).toBe(true)
+    })
+    return
+  }
+
+  const CLIENT_ID = process.env.TEST_CLIENT_ID!
+  const CLIENT_SECRET = process.env.TEST_CLIENT_SECRET!
+  const P12_PATH = process.env.TEST_P12_PATH!
+  const P12_PASSPHRASE = process.env.TEST_P12_PASSPHRASE!
+
+  // Read the PKCS#12 bundle once
+  const p12Buffer = fs.readFileSync(path.resolve(P12_PATH))
+
+  it('submits a minimal invoice successfully', async () => {
+    const invoice = createMinimalTestInvoice()
+
+    const client = MyInvoisClient.fromP12(
+      CLIENT_ID,
+      CLIENT_SECRET,
+      'sandbox',
+      p12Buffer,
+      P12_PASSPHRASE,
+      undefined,
+      true, // debug
+    )
+
+    const { status } = await client.submitDocument([invoice])
+    expect(status).toBe(202)
+  }, 60000)
+})
