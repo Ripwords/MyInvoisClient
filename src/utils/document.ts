@@ -698,15 +698,14 @@ export const createSignedProperties = (
 export const calculateSignedPropertiesDigest = (
   signedProperties: SignedPropertiesObject,
 ): string => {
-  // CRITICAL FIX: Wrap with Target as per working implementation
-  const signedPropertiesWithTarget = {
-    Target: 'signature',
-    SignedProperties: signedProperties.SignedProperties,
-  }
+  // According to XAdES, the digest applies ONLY to the <SignedProperties> element
+  // (the element whose Id equals 'id-xades-signed-props'). It must NOT include
+  // the surrounding <QualifyingProperties> wrapper and its Target attribute.
 
-  // Convert to canonicalized string for hashing (deterministic key ordering)
-  // Using canonicalizeJSON ensures consistent SHA-256 digest across environments
-  const signedPropertiesString = canonicalizeJSON(signedPropertiesWithTarget)
+  // Therefore, we hash the exact JSON representation that ends up inside
+  // QualifyingProperties – i.e. the SignedProperties array structure itself.
+
+  const signedPropertiesString = canonicalizeJSON(signedProperties)
 
   // Calculate SHA-256 hash
   const hash = crypto.createHash('sha256')
