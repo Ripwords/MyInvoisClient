@@ -124,7 +124,17 @@ class RateLimiter {
             `[apiQueue] ▶️  Executing request (${category}). Remaining queue: ${this.queue.length}`,
           )
         }
-        fn().then(resolve).catch(reject)
+        try {
+          const result = fn()
+          // Support both promise and synchronous return values
+          if (result && typeof (result as any).then === 'function') {
+            ;(result as Promise<T>).then(resolve).catch(reject)
+          } else {
+            resolve(result as T)
+          }
+        } catch (err) {
+          reject(err)
+        }
       }
 
       if (debug && category) {
@@ -192,6 +202,37 @@ export function categorizeRequest(
     // Distinguish between taxpayer & intermediary based on path hint if possible
     return 'loginTaxpayer'
   }
+
+  // -----------------------------
+  // New path matchers (v1.0 endpoints)
+  // -----------------------------
+
+  // Search Documents
+  if (cleanPath.includes('/documents/search')) {
+    return 'searchDocuments'
+  }
+
+  // Document raw content
+  if (/\/documents\/[^/]+\/raw$/.test(cleanPath)) {
+    return 'getDocument'
+  }
+
+  // Document details
+  if (/\/documents\/[^/]+\/details$/.test(cleanPath)) {
+    return 'getDocumentDetails'
+  }
+
+  // Document state actions (cancel/reject)
+  if (cleanPath.includes('/documents/state/')) {
+    return isPost ? 'cancelDocument' : 'getDocument'
+  }
+
+  // Taxpayer TIN search & validation share same limit bucket
+  if (cleanPath.includes('/taxpayer/search/tin')) return 'searchTin'
+  if (cleanPath.includes('/taxpayer/validate/')) return 'searchTin'
+
+  // Taxpayer QR code info
+  if (cleanPath.includes('/taxpayer/qrcode')) return 'taxpayerQr'
 
   return 'default'
 }

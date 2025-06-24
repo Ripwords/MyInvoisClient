@@ -704,8 +704,9 @@ export const calculateSignedPropertiesDigest = (
     SignedProperties: signedProperties.SignedProperties,
   }
 
-  // Convert to string for hashing (no canonicalization - use direct JSON.stringify)
-  const signedPropertiesString = JSON.stringify(signedPropertiesWithTarget)
+  // Convert to canonicalized string for hashing (deterministic key ordering)
+  // Using canonicalizeJSON ensures consistent SHA-256 digest across environments
+  const signedPropertiesString = canonicalizeJSON(signedPropertiesWithTarget)
 
   // Calculate SHA-256 hash
   const hash = crypto.createHash('sha256')
