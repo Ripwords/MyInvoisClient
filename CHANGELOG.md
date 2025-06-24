@@ -1,6 +1,30 @@
 # Changelog
 
 
+## v0.2.14
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.13...v0.2.14)
+
+### 🚀 Enhancements
+
+- Add PKCS#12 support and enhance logging ([#12](https://github.com/Ripwords/MyInvoisClient/issues/12))
+
+### 🩹 Fixes
+
+- Make sstRegistrationNumber optional and update test invoice data ([cca8b2a](https://github.com/Ripwords/MyInvoisClient/commit/cca8b2a))
+
+### 💅 Refactors
+
+- Update environment variable usage and clean up tests ([253b17c](https://github.com/Ripwords/MyInvoisClient/commit/253b17c))
+
+### 🏡 Chore
+
+- **release:** V0.2.13 ([05ac8e6](https://github.com/Ripwords/MyInvoisClient/commit/05ac8e6))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.13
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.12...v0.2.13)
