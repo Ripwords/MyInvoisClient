@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.15
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.14...v0.2.15)
+
+### 🩹 Fixes
+
+- Enhance error handling and add new document path matchers ([bb0ce29](https://github.com/Ripwords/MyInvoisClient/commit/bb0ce29))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.14
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.13...v0.2.14)
