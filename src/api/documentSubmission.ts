@@ -215,7 +215,7 @@ export async function getSubmissionStatus(
 
     // No retries left - return timeout
     return {
-      status: 'Invalid',
+      status: 'TimedOut',
       error: {
         code: 'Timeout',
         message: 'Submission timed out',
@@ -240,7 +240,7 @@ export async function getSubmissionStatus(
 
     // No retries left - return timeout
     return {
-      status: 'Invalid',
+      status: 'TimedOut',
       error: {
         code: 'Timeout',
         message: 'Submission timed out after request errors',
