@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.16
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.15...v0.2.16)
+
+### 🩹 Fixes
+
+- Refine calculateSignedPropertiesDigest to align with XAdES specifications ([4247246](https://github.com/Ripwords/MyInvoisClient/commit/4247246))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.15
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.14...v0.2.15)
