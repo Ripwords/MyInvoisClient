@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.18
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.17...v0.2.18)
+
+### 🩹 Fixes
+
+- Enhance rate-limiter implementation and testing ([344ab04](https://github.com/Ripwords/MyInvoisClient/commit/344ab04))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.17
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.16...v0.2.17)
