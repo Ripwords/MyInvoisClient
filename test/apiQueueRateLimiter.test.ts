@@ -1,5 +1,18 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterAll } from 'vitest'
 import { queueRequest } from '../src/utils/apiQueue'
+
+// Ensure the rate-limiter runs with real spacing (not the test shortcut)
+const previousFlag = process.env.APIQUEUE_REAL_INTERVAL
+process.env.APIQUEUE_REAL_INTERVAL = 'true'
+
+// Restore after tests
+afterAll(() => {
+  if (previousFlag === undefined) {
+    delete process.env.APIQUEUE_REAL_INTERVAL
+  } else {
+    process.env.APIQUEUE_REAL_INTERVAL = previousFlag
+  }
+})
 
 describe('apiQueue Rate Limiter', () => {
   it('enforces per-category limits within a 60 s window', async () => {
@@ -19,22 +32,29 @@ describe('apiQueue Rate Limiter', () => {
     // Immediately process any tasks possible in the current tick
     await vi.runAllTicks()
 
-    // First window: only 12 executions allowed
-    expect(executionTimestamps.length).toBe(12)
+    // With a token-bucket limiter, executions should be evenly spaced.
+    // Cancel Document → 12 calls / 60 000 ms ⇒ 5 000 ms between calls.
 
-    // Advance fake timers by 60s to open a new window
-    await vi.advanceTimersByTimeAsync(60_001)
+    // Initially, only the first call can run immediately.
+    expect(executionTimestamps.length).toBe(1)
+
+    // Advance timers by 60 000 ms – we should now have executed 13 calls:
+    // 12 within the first window (ending at 55s) plus the first call of the next window.
+    await vi.advanceTimersByTimeAsync(60_000)
     await vi.runAllTicks()
+    expect(executionTimestamps.length).toBe(13)
 
+    // Advance another 10 000 ms to allow the remaining 2 calls (total 15).
+    await vi.advanceTimersByTimeAsync(10_000)
+    await vi.runAllTicks()
     expect(executionTimestamps.length).toBe(15)
 
     await Promise.all(promises)
 
-    // Validate timing: the first 12 executions happened at ~0 ms, the rest >= 60 s
-    const firstWindowDurations = executionTimestamps.slice(0, 12)
-    const secondWindowDurations = executionTimestamps.slice(12)
-
-    firstWindowDurations.forEach(d => expect(d).toBeLessThan(10))
-    secondWindowDurations.forEach(d => expect(d).toBeGreaterThanOrEqual(60_000))
+    // Validate spacing: each subsequent execution ≥ 5 000 ms after the previous one.
+    for (let i = 1; i < executionTimestamps.length; i++) {
+      const diff = executionTimestamps[i] - executionTimestamps[i - 1]
+      expect(diff).toBeGreaterThanOrEqual(4_999) // allow ±1 ms jitter
+    }
   })
 })

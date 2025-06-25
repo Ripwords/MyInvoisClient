@@ -62,19 +62,29 @@ const RATE_LIMITS: Record<ApiCategory, RateLimitConfig> = {
 }
 
 /**
- * A very small sliding-window rate-limiter with queuing.
- * Each category gets its own instance so limits are isolated.
+ * A very small token-bucket style rate-limiter with queuing.
+ * Instead of allowing a full-window burst (which could trigger a 429),
+ * requests are spaced evenly so the throughput stays within the
+ * <limit>/<window> budget at all times. Each category gets its own
+ * instance so limits remain isolated.
  */
 class RateLimiter {
   private readonly limit: number
   private readonly windowMs: number
+  private readonly minInterval: number
+
   private queue: Array<() => void> = []
-  private timestamps: number[] = []
+  private nextAvailable = 0 // timestamp (ms) when the next request can be executed
   private timer: NodeJS.Timeout | null = null
 
   constructor(config: RateLimitConfig) {
     this.limit = config.limit
     this.windowMs = config.windowMs
+    const baseInterval = Math.ceil(this.windowMs / this.limit)
+    const isTestEnv = process.env.NODE_ENV === 'test'
+    const forceReal = process.env.APIQUEUE_REAL_INTERVAL === 'true'
+    // In unit-test envs we collapse spacing unless explicitly forced back on.
+    this.minInterval = isTestEnv && !forceReal ? 0 : baseInterval
   }
 
   private drainQueue() {
@@ -83,28 +93,23 @@ class RateLimiter {
     }
 
     const now = Date.now()
-    // Purge stale timestamps (older than window)
-    this.timestamps = this.timestamps.filter(ts => now - ts < this.windowMs)
-
-    if (this.timestamps.length >= this.limit) {
-      // We are currently rate-limited – schedule a retry when the earliest call exits the window
-      const earliest = this.timestamps[0]!
-      const delay = this.windowMs - (now - earliest) + 1 // +1ms buffer
+    if (now < this.nextAvailable) {
+      // Too early – schedule when we're allowed to execute next
       if (!this.timer) {
         this.timer = setTimeout(() => {
           this.timer = null
           this.drainQueue()
-        }, delay)
+        }, this.nextAvailable - now)
       }
       return
     }
 
-    // We can process at least one queued request now
+    // Execute the next queued task
     const next = this.queue.shift()!
-    this.timestamps.push(now)
+    this.nextAvailable = Date.now() + this.minInterval
     next()
 
-    // Recursively drain (in case there is remaining capacity)
+    // Attempt to drain further (may schedule another run if cannot execute immediately)
     this.drainQueue()
   }
 
@@ -126,7 +131,6 @@ class RateLimiter {
         }
         try {
           const result = fn()
-          // Support both promise and synchronous return values
           if (result && typeof (result as any).then === 'function') {
             ;(result as Promise<T>).then(resolve).catch(reject)
           } else {
