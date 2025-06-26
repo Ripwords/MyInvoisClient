@@ -216,6 +216,7 @@ export async function getSubmissionStatus(
     // No retries left - return timeout
     return {
       status: 'TimedOut',
+      documentSummary: data.documentSummary,
       error: {
         code: 'Timeout',
         message: 'Submission timed out',
@@ -241,6 +242,7 @@ export async function getSubmissionStatus(
     // No retries left - return timeout
     return {
       status: 'TimedOut',
+      documentSummary: [],
       error: {
         code: 'Timeout',
         message: 'Submission timed out after request errors',
