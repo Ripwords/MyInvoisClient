@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.2.19
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.18...v0.2.19)
+
+### 🩹 Fixes
+
+- Add originalEInvoiceInternalId to CreditNoteV1_1 and DebitNoteV1_1 interfaces ([1264ac6](https://github.com/Ripwords/MyInvoisClient/commit/1264ac6))
+
+### 🏡 Chore
+
+- **release:** V0.2.18 ([f5c333a](https://github.com/Ripwords/MyInvoisClient/commit/f5c333a))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.18
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.17...v0.2.18)
