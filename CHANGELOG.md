@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.20
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.19...v0.2.20)
+
+### 🩹 Fixes
+
+- Include documentSummary in submission timeout responses ([cc237bd](https://github.com/Ripwords/MyInvoisClient/commit/cc237bd))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.19
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.18...v0.2.19)
