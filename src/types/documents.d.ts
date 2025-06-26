@@ -273,6 +273,8 @@ export interface CreditNoteV1_1 {
   eInvoiceCodeOrNumber: string
   /** LHDNM Unique Identifier Number of the original invoice / document that is being adjusted. 26 chars. */
   originalEInvoiceReferenceNumber: string
+  /** LHDNM Unique Identifier Number of the original invoice / document that is being adjusted. Mandatory where applicable (Debit/Credit/Refund notes). */
+  originalEInvoiceInternalId: string
   /** Date of issuance (YYYY-MM-DD) in UTC. Must be the current date. */
   eInvoiceDate: string
   /** Time of issuance (HH:mm:ssZ) in UTC. Must be the current time. */
@@ -308,6 +310,8 @@ export interface DebitNoteV1_1 {
   eInvoiceCodeOrNumber: string
   /** LHDNM Unique Identifier Number of the original invoice / document that is being adjusted. Mandatory where applicable (Debit/Credit/Refund notes). */
   originalEInvoiceReferenceNumber: string
+  /** LHDNM Unique Identifier Number of the original invoice / document that is being adjusted. Mandatory where applicable (Debit/Credit/Refund notes). */
+  originalEInvoiceInternalId: string
   /** Date of issuance (YYYY-MM-DD) in UTC. Must be the current date. */
   eInvoiceDate: string
   /** Time of issuance (HH:mm:ssZ) in UTC. Must be the current time. */

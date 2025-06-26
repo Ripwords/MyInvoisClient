@@ -125,6 +125,7 @@ export const generateCleanInvoiceObject = (
 
     // === BILLING REFERENCE (only for credit/debit/refund notes) ===
     ...('originalEInvoiceReferenceNumber' in invoice &&
+    'originalEInvoiceInternalId' in invoice &&
     invoice.originalEInvoiceReferenceNumber
       ? {
           BillingReference: [
@@ -138,7 +139,7 @@ export const generateCleanInvoiceObject = (
                   ],
                   ID: [
                     {
-                      _: invoice.eInvoiceCodeOrNumber,
+                      _: invoice.originalEInvoiceInternalId,
                     },
                   ],
                 },

@@ -142,6 +142,7 @@ const createMinimalCreditNote = (): CreditNoteV1_1 => {
     eInvoiceTypeCode: '02',
     eInvoiceCodeOrNumber: `TEST-CN-${Date.now()}`,
     originalEInvoiceReferenceNumber: '12345678901234567890123456',
+    originalEInvoiceInternalId: '12345678901234567890123456',
     eInvoiceDate: currentDate,
     eInvoiceTime: currentTime,
     invoiceCurrencyCode: 'MYR',
