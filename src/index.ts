@@ -83,9 +83,10 @@ export class MyInvoisClient {
     }
   }
 
-  async updateBeneficiary(onBehalfOf: string) {
+  async updateBeneficiary(onBehalfOf: string): Promise<void> {
     this.onBehalfOf = onBehalfOf
     await this.refreshToken()
+    return
   }
 
   private async refreshToken() {
