@@ -39,7 +39,7 @@ export class MyInvoisClient {
   private readonly baseUrl: string
   private readonly clientId: string
   private readonly clientSecret: string
-  private readonly onBehalfOf?: string
+  private onBehalfOf?: string
   private readonly signingCredentials: SigningCredentials
   private readonly debug: boolean
   private token = ''
@@ -81,6 +81,11 @@ export class MyInvoisClient {
       issuerName,
       serialNumber,
     }
+  }
+
+  async updateBeneficiary(onBehalfOf: string) {
+    this.onBehalfOf = onBehalfOf
+    await this.refreshToken()
   }
 
   private async refreshToken() {
