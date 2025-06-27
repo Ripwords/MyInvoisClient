@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.22
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.21...v0.2.22)
+
+### 🩹 Fixes
+
+- Rename updateBeneficiary method to updateOnBehalfOf ([3194363](https://github.com/Ripwords/MyInvoisClient/commit/3194363))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.21
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.20...v0.2.21)
