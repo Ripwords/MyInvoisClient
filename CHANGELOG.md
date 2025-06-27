@@ -1,6 +1,19 @@
 # Changelog
 
 
+## v0.2.21
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.20...v0.2.21)
+
+### 🩹 Fixes
+
+- Update onBehalfOf property handling and add updateBeneficiary method ([053acdc](https://github.com/Ripwords/MyInvoisClient/commit/053acdc))
+- Update updateBeneficiary method to include return type ([1ba2a2f](https://github.com/Ripwords/MyInvoisClient/commit/1ba2a2f))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.20
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.19...v0.2.20)
