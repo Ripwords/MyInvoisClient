@@ -860,6 +860,8 @@ export interface InvoiceSubmission {
                         Cert: {
                           CertDigest: {
                             DigestMethod: {
+                              /** Optional text content field (required by MyInvois JSON signature spec). Typically blank string */
+                              _?: string
                               Algorithm: string
                             }[]
                             DigestValue: {
@@ -961,6 +963,8 @@ export interface SignedPropertiesObject {
           CertDigest: {
             /** Digest method algorithm */
             DigestMethod: {
+              /** Optional text content field (required by MyInvois JSON signature spec). Typically blank string */
+              _?: string
               Algorithm: string
             }[]
             /** Base64 encoded digest value */
@@ -1044,6 +1048,8 @@ export interface SignedInvoiceSubmission extends InvoiceSubmission {
                         Cert: {
                           CertDigest: {
                             DigestMethod: {
+                              /** Optional text content field (required by MyInvois JSON signature spec). Typically blank string */
+                              _?: string
                               Algorithm: string
                             }[]
                             DigestValue: {

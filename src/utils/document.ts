@@ -553,7 +553,7 @@ export const calculateDocumentDigest = (
     })
   }
 
-  // Convert to string for hashing (no canonicalization - use direct JSON.stringify)
+  // Use raw JSON representation (no key sorting) as required by MyInvois digest algorithm
   const documentString = JSON.stringify(documentForHashing)
 
   // Calculate SHA-256 hash
@@ -603,23 +603,22 @@ export const extractCertificateInfo = (
     // Extract serial number and convert to decimal string
     const serialNumberHex = cert.serialNumber
 
-    // ENHANCED: Normalize distinguished name format (DS326)
-    // Ensures MyInvois portal compatibility for X509IssuerName matching
+    // Keep the DN formatting exactly as it appears in the certificate to avoid
+    // mismatches when the signing service validates the X509IssuerName fields.
+    // We only replace raw new-lines with ", " so that the DN remains a single-line
+    // string while preserving all other whitespace and ordering.
     const normalizeDistinguishedName = (dn: string): string => {
-      // Convert multi-line format to comma-separated RFC2253 format
-      const normalized = dn
-        .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0)
-        .join(', ')
-
-      // MyInvois-specific normalization to prevent DS326 errors
-      return normalized
-        .replace(/\s*=\s*/g, '=') // Remove spaces around equals (CRITICAL for portal)
-        .replace(/,\s+/g, ', ') // Ensure single space after commas
-        .replace(/\r/g, '') // Remove any carriage returns
-        .replace(/\s{2,}/g, ' ') // Replace multiple spaces with single space
-        .trim() // Remove leading/trailing whitespace
+      // Node returns issuer DN in reverse RDN order (C, O, ... , CN).
+      // The MyInvois validator expects forward order (CN first).
+      // 1. Break DN into components separated by newline or commas.
+      // 2. Reverse to get CN → ... → C ordering.
+      // 3. Join with ", " and ensure single '=' spacing.
+      const parts = dn
+        .split(/\r?\n|,\s*/)
+        .map(part => part.trim())
+        .filter(part => part.length > 0)
+        .reverse()
+      return parts.join(', ').replace(/\s*=\s*/g, '=')
     }
 
     // Enhanced serial number formatting
@@ -667,6 +666,7 @@ export const createSignedProperties = (
                       {
                         DigestMethod: [
                           {
+                            _: '',
                             Algorithm:
                               'http://www.w3.org/2001/04/xmlenc#sha256',
                           },
@@ -699,20 +699,15 @@ export const createSignedProperties = (
 export const calculateSignedPropertiesDigest = (
   signedProperties: SignedPropertiesObject,
 ): string => {
-  // According to XAdES, the digest applies ONLY to the <SignedProperties> element
-  // (the element whose Id equals 'id-xades-signed-props'). It must NOT include
-  // the surrounding <QualifyingProperties> wrapper and its Target attribute.
+  // Digest must include exactly the xades:SignedProperties object as embedded.
+  const elementForDigest = signedProperties.SignedProperties
 
-  // Therefore, we hash the exact JSON representation that ends up inside
-  // QualifyingProperties – i.e. the SignedProperties array structure itself.
+  // Use raw JSON representation (no key sorting) as required by MyInvois digest algorithm
+  const signedPropertiesString = JSON.stringify(elementForDigest)
 
-  const signedPropertiesString = canonicalizeJSON(signedProperties)
-
-  // Calculate SHA-256 hash
   const hash = crypto.createHash('sha256')
   hash.update(signedPropertiesString, 'utf8')
 
-  // Return as Base64 (PropsDigest)
   return hash.digest('base64')
 }
 
@@ -726,7 +721,7 @@ export const createSignedInfoAndSign = (
   privateKeyPem: string,
 ): { signedInfo: SignedInfoObject; signatureValue: string } => {
   // Create SignedInfo structure following specification exactly
-  const signedInfo = {
+  const signedInfo: SignedInfoObject = {
     CanonicalizationMethod: [
       {
         _: '',
@@ -767,17 +762,15 @@ export const createSignedInfoAndSign = (
     ],
   }
 
-  // FIXED: Use direct JSON.stringify instead of canonicalization (DS333)
-  // Based on working implementation pattern
-  const signedInfoString = JSON.stringify(signedInfo)
+  // Serialize the SignedInfo exactly as it will be embedded (no reordering)
+  const signedInfoRaw = JSON.stringify(signedInfo)
 
-  // Sign with RSA-SHA256 directly (RSA-SHA256 handles hashing internally)
-  // FIXED: Removed double-hashing bug that was causing DS333 errors
   try {
     const signer = crypto.createSign('RSA-SHA256')
-    signer.update(signedInfoString, 'utf8')
+    signer.update(signedInfoRaw, 'utf8')
     const signatureValue = signer.sign(privateKeyPem, 'base64')
 
+    // Reuse the original object so ordering is preserved
     return { signedInfo, signatureValue }
   } catch (error) {
     throw new Error(
@@ -817,6 +810,7 @@ export const generateCompleteDocument = (
       certInfo.issuerName,
       certInfo.serialNumber,
     )
+    console.log(JSON.stringify(signedProperties, null, 2))
 
     // Step 6: Calculate SignedProperties digest
     const propsDigest = calculateSignedPropertiesDigest(signedProperties)

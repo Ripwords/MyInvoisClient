@@ -85,8 +85,6 @@ describe('Signature Diagnostics', () => {
       taxTotal: {
         taxAmount: 6.0,
       },
-
-      issuerDigitalSignature: {} as any,
     }
 
     console.log('🔍 Running MyInvois Signature Diagnostics...\n')

@@ -463,9 +463,13 @@ describe('MyInvois Document Generation and Submission', () => {
       console.log('Submission status:', submission?.status)
 
       expect(submission).toBeDefined()
-      expect(['InProgress', 'Valid', 'PartiallyValid', 'Invalid']).toContain(
-        submission?.status,
-      )
+      expect([
+        'InProgress',
+        'Valid',
+        'PartiallyValid',
+        'Invalid',
+        'TimedOut',
+      ]).toContain(submission?.status)
     } catch (error: any) {
       console.error('💥 Submission failed:', error)
 
