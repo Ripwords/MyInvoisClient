@@ -544,10 +544,9 @@ export const calculateDocumentDigest = (
   // Generate clean UBL document structure
   const cleanDocument = generateCleanUBLDocument(invoices)
 
-  // CRITICAL FIX: Remove UBLExtensions and Signature from each invoice before hashing
   const documentForHashing = JSON.parse(JSON.stringify(cleanDocument))
   if (documentForHashing.Invoice && Array.isArray(documentForHashing.Invoice)) {
-    documentForHashing.Invoice.forEach((invoice: any) => {
+    documentForHashing.Invoice.forEach((invoice: InvoiceSubmission) => {
       delete invoice.UBLExtensions
       delete invoice.Signature
     })
