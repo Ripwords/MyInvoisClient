@@ -1,6 +1,25 @@
 # Changelog
 
 
+## v0.2.24
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.23...v0.2.24)
+
+### 🩹 Fixes
+
+- Enhance MyInvois compliance and improve document handling ([4fb9216](https://github.com/Ripwords/MyInvoisClient/commit/4fb9216))
+- Refine document hashing process by specifying invoice type ([376e464](https://github.com/Ripwords/MyInvoisClient/commit/376e464))
+- Refactor document transformation and signing process ([03f5e4a](https://github.com/Ripwords/MyInvoisClient/commit/03f5e4a))
+- Improve document signing and digest calculation for compliance ([2974718](https://github.com/Ripwords/MyInvoisClient/commit/2974718))
+
+### 🏡 Chore
+
+- **release:** V0.2.23 ([b25627f](https://github.com/Ripwords/MyInvoisClient/commit/b25627f))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.23
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.22...v0.2.23)
