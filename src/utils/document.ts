@@ -534,6 +534,33 @@ export const generateCleanUBLDocument = (
 }
 
 /**
+ * Step 1: Transform the document for hashing or transmission
+ * Removes UBLExtensions and Signature, and minifies the JSON
+ * Returns the minified, cleaned JSON string
+ */
+export const transformDocumentForHashing = (
+  invoices: AllDocumentsV1_1[],
+): string => {
+  // Generate clean UBL document structure
+  const cleanDocument = generateCleanUBLDocument(invoices)
+
+  // Deep clone to avoid mutating input
+  const documentForTransform = JSON.parse(JSON.stringify(cleanDocument))
+  if (
+    documentForTransform.Invoice &&
+    Array.isArray(documentForTransform.Invoice)
+  ) {
+    documentForTransform.Invoice.forEach((invoice: InvoiceSubmission) => {
+      delete invoice.UBLExtensions
+      delete invoice.Signature
+    })
+  }
+
+  // Return minified JSON string
+  return JSON.stringify(documentForTransform)
+}
+
+/**
  * Step 2: Calculate Document Digest
  * FIXED: Remove UBLExtensions and Signature before hashing (DS322)
  * Based on working implementation pattern
@@ -541,19 +568,8 @@ export const generateCleanUBLDocument = (
 export const calculateDocumentDigest = (
   invoices: AllDocumentsV1_1[],
 ): string => {
-  // Generate clean UBL document structure
-  const cleanDocument = generateCleanUBLDocument(invoices)
-
-  const documentForHashing = JSON.parse(JSON.stringify(cleanDocument))
-  if (documentForHashing.Invoice && Array.isArray(documentForHashing.Invoice)) {
-    documentForHashing.Invoice.forEach((invoice: InvoiceSubmission) => {
-      delete invoice.UBLExtensions
-      delete invoice.Signature
-    })
-  }
-
-  // Use raw JSON representation (no key sorting) as required by MyInvois digest algorithm
-  const documentString = JSON.stringify(documentForHashing)
+  // Use the transformation function to get the minified, cleaned JSON string
+  const documentString = transformDocumentForHashing(invoices)
 
   // Calculate SHA-256 hash
   const hash = crypto.createHash('sha256')
@@ -698,12 +714,16 @@ export const createSignedProperties = (
 export const calculateSignedPropertiesDigest = (
   signedProperties: SignedPropertiesObject,
 ): string => {
-  // Digest must include exactly the xades:SignedProperties object as embedded.
-  const elementForDigest = signedProperties.SignedProperties
+  // Wrap in the required outer object
+  const elementForDigest = {
+    Target: 'signature',
+    SignedProperties: signedProperties.SignedProperties,
+  }
 
-  // Use raw JSON representation (no key sorting) as required by MyInvois digest algorithm
+  // Minify JSON
   const signedPropertiesString = JSON.stringify(elementForDigest)
 
+  // Hash and encode
   const hash = crypto.createHash('sha256')
   hash.update(signedPropertiesString, 'utf8')
 
@@ -779,6 +799,30 @@ export const createSignedInfoAndSign = (
 }
 
 /**
+ * Signs a digest (base64 or hex string) using the provided private key PEM
+ * Returns the signature as a base64 string
+ */
+export const signDigest = (digest: string, privateKeyPem: string): string => {
+  // The digest is a base64 string, decode to buffer
+  const digestBuffer = Buffer.from(digest, 'base64')
+  const signer = crypto.createSign('RSA-SHA256')
+  // For direct digest signing, use sign(null, ...) with the digest buffer
+  // Node.js does not support direct digest signing with createSign, so use privateEncrypt workaround
+  // But for compliance, we use sign with the digest as the only data
+  // This is a limitation; in practice, sign() expects the original data, not the digest
+  // So we use crypto.privateEncrypt for strict digest signing (PKCS#1 v1.5)
+  const privateKey = crypto.createPrivateKey(privateKeyPem)
+  const signature = crypto.privateEncrypt(
+    {
+      key: privateKey,
+      padding: crypto.constants.RSA_PKCS1_PADDING,
+    },
+    digestBuffer,
+  )
+  return signature.toString('base64')
+}
+
+/**
  * Complete document generation with signatures
  * Follows the complete MyInvois JSON signature creation process (Steps 1-7)
  */
@@ -790,6 +834,12 @@ export const generateCompleteDocument = (
     // Step 1: Generate clean document (done in calculateDocumentDigest)
     // Step 2: Calculate document digest
     const docDigest = calculateDocumentDigest(invoices)
+
+    // Step 3: Sign the document digest directly
+    const docDigestSignature = signDigest(
+      docDigest,
+      signingCredentials.privateKeyPem,
+    )
 
     // Generate signing time in proper ISO format
     const signingTime = new Date().toISOString()
@@ -814,8 +864,8 @@ export const generateCompleteDocument = (
     // Step 6: Calculate SignedProperties digest
     const propsDigest = calculateSignedPropertiesDigest(signedProperties)
 
-    // Step 3: Create SignedInfo and generate signature
-    const { signedInfo, signatureValue } = createSignedInfoAndSign(
+    // Step 3 (new): Create SignedInfo structure (but do not sign it, just include for type compliance)
+    const { signedInfo } = createSignedInfoAndSign(
       docDigest,
       propsDigest,
       signingCredentials.privateKeyPem,
@@ -900,7 +950,7 @@ export const generateCompleteDocument = (
                                     ],
                                   },
                                 ],
-                                SignatureValue: [{ _: signatureValue }],
+                                SignatureValue: [{ _: docDigestSignature }],
                                 SignedInfo: [signedInfo],
                               },
                             ],
