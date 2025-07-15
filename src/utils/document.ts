@@ -708,25 +708,27 @@ export const createSignedProperties = (
 
 /**
  * Step 6: Calculate SignedProperties Digest
- * FIXED: Add Target wrapper and use direct JSON stringify (DS320)
- * Based on working implementation pattern
+ * Calculates the digest over the correct structure for validator compliance.
  */
 export const calculateSignedPropertiesDigest = (
   signedProperties: SignedPropertiesObject,
+  useTargetWrapper: boolean = true, // now default to wrapper for compliance
 ): string => {
-  // Wrap in the required outer object
-  const elementForDigest = {
-    Target: 'signature',
-    SignedProperties: signedProperties.SignedProperties,
+  let signedPropertiesString: string
+  if (useTargetWrapper) {
+    const digestObj: {
+      Target: string
+      SignedProperties: SignedPropertiesObject['SignedProperties']
+    } = {
+      Target: 'signature',
+      SignedProperties: signedProperties.SignedProperties,
+    }
+    signedPropertiesString = JSON.stringify(digestObj)
+  } else {
+    signedPropertiesString = JSON.stringify(signedProperties.SignedProperties)
   }
-
-  // Minify JSON
-  const signedPropertiesString = JSON.stringify(elementForDigest)
-
-  // Hash and encode
   const hash = crypto.createHash('sha256')
   hash.update(signedPropertiesString, 'utf8')
-
   return hash.digest('base64')
 }
 
@@ -799,26 +801,17 @@ export const createSignedInfoAndSign = (
 }
 
 /**
- * Signs a digest (base64 or hex string) using the provided private key PEM
+ * Signs the minified document string using the provided private key PEM
  * Returns the signature as a base64 string
  */
-export const signDigest = (digest: string, privateKeyPem: string): string => {
-  // The digest is a base64 string, decode to buffer
-  const digestBuffer = Buffer.from(digest, 'base64')
-  const signer = crypto.createSign('RSA-SHA256')
-  // For direct digest signing, use sign(null, ...) with the digest buffer
-  // Node.js does not support direct digest signing with createSign, so use privateEncrypt workaround
-  // But for compliance, we use sign with the digest as the only data
-  // This is a limitation; in practice, sign() expects the original data, not the digest
-  // So we use crypto.privateEncrypt for strict digest signing (PKCS#1 v1.5)
-  const privateKey = crypto.createPrivateKey(privateKeyPem)
-  const signature = crypto.privateEncrypt(
-    {
-      key: privateKey,
-      padding: crypto.constants.RSA_PKCS1_PADDING,
-    },
-    digestBuffer,
-  )
+export const signDocumentString = (
+  documentString: string,
+  privateKeyPem: string,
+): string => {
+  const signature = crypto.sign('sha256', Buffer.from(documentString, 'utf8'), {
+    key: privateKeyPem,
+    padding: crypto.constants.RSA_PKCS1_PADDING,
+  })
   return signature.toString('base64')
 }
 
@@ -835,9 +828,12 @@ export const generateCompleteDocument = (
     // Step 2: Calculate document digest
     const docDigest = calculateDocumentDigest(invoices)
 
-    // Step 3: Sign the document digest directly
-    const docDigestSignature = signDigest(
-      docDigest,
+    // Get the minified, cleaned JSON string for signing
+    const documentString = transformDocumentForHashing(invoices)
+
+    // Step 3: Sign the minified document string (not the digest)
+    const docSignature = signDocumentString(
+      documentString,
       signingCredentials.privateKeyPem,
     )
 
@@ -859,10 +855,9 @@ export const generateCompleteDocument = (
       certInfo.issuerName,
       certInfo.serialNumber,
     )
-    console.log(JSON.stringify(signedProperties, null, 2))
 
-    // Step 6: Calculate SignedProperties digest
-    const propsDigest = calculateSignedPropertiesDigest(signedProperties)
+    // Step 6: Calculate SignedProperties digest (using Target wrapper for compliance)
+    const propsDigest = calculateSignedPropertiesDigest(signedProperties, true)
 
     // Step 3 (new): Create SignedInfo structure (but do not sign it, just include for type compliance)
     const { signedInfo } = createSignedInfoAndSign(
@@ -950,7 +945,7 @@ export const generateCompleteDocument = (
                                     ],
                                   },
                                 ],
-                                SignatureValue: [{ _: docDigestSignature }],
+                                SignatureValue: [{ _: docSignature }],
                                 SignedInfo: [signedInfo],
                               },
                             ],
