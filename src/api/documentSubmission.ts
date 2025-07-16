@@ -6,6 +6,7 @@ import type {
   DocumentSummary,
   Fetch,
   StandardError,
+  GetSubmissionResponse,
 } from '../types'
 import { generateCompleteDocument } from '../utils/document'
 
@@ -179,7 +180,7 @@ export async function getSubmissionStatus(
       `/api/v1.0/documentsubmissions/${submissionUid}`,
     )
 
-    const data = await response.json()
+    const data = (await response.json()) as GetSubmissionResponse
 
     if (debug) {
       console.log('Submission:', data)
@@ -213,16 +214,17 @@ export async function getSubmissionStatus(
       )
     }
 
-    // No retries left - return timeout
     return {
-      status: 'TimedOut',
+      status: data.overallStatus || 'TimedOut',
       documentSummary: data.documentSummary,
-      error: {
-        code: 'Timeout',
-        message: 'Submission timed out',
-        target: 'submission',
-        details: [],
-      },
+      error:
+        data.error ??
+        ({
+          code: 'Timeout',
+          message: 'Submission timed out',
+          target: 'submission',
+          details: [],
+        } satisfies StandardError),
     }
   } catch (error) {
     // Handle any request errors by retrying if we have retries left
