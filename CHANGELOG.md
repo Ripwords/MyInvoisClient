@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.25
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.24...v0.2.25)
+
+### 🩹 Fixes
+
+- Improve submission status handling in document submission API ([4d2f551](https://github.com/Ripwords/MyInvoisClient/commit/4d2f551))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.24
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.23...v0.2.24)
