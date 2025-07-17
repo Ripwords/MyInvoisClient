@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.2.26
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.25...v0.2.26)
+
+### 🩹 Fixes
+
+- Enhance document digest calculation for compliance and clarity ([943c3df](https://github.com/Ripwords/MyInvoisClient/commit/943c3df))
+
+### 🏡 Chore
+
+- **release:** V0.2.25 ([3d5ee1b](https://github.com/Ripwords/MyInvoisClient/commit/3d5ee1b))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.25
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.24...v0.2.25)
