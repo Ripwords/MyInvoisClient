@@ -714,19 +714,18 @@ export const calculateSignedPropertiesDigest = (
   signedProperties: SignedPropertiesObject,
   useTargetWrapper: boolean = true, // now default to wrapper for compliance
 ): string => {
-  let signedPropertiesString: string
+  let digestObj: unknown
   if (useTargetWrapper) {
-    const digestObj: {
-      Target: string
-      SignedProperties: SignedPropertiesObject['SignedProperties']
-    } = {
+    digestObj = {
       Target: 'signature',
       SignedProperties: signedProperties.SignedProperties,
     }
-    signedPropertiesString = JSON.stringify(digestObj)
   } else {
-    signedPropertiesString = JSON.stringify(signedProperties.SignedProperties)
+    digestObj = signedProperties.SignedProperties
   }
+  // Recursively sort all object keys for deterministic output
+  const sortedDigestObj = sortObjectKeys(digestObj)
+  const signedPropertiesString = JSON.stringify(sortedDigestObj)
   const hash = crypto.createHash('sha256')
   hash.update(signedPropertiesString, 'utf8')
   return hash.digest('base64')
@@ -856,8 +855,17 @@ export const generateCompleteDocument = (
       certInfo.serialNumber,
     )
 
-    // Step 6: Calculate SignedProperties digest (using Target wrapper for compliance)
-    const propsDigest = calculateSignedPropertiesDigest(signedProperties, true)
+    // Step 6: Build canonical digest object, sort, and stringify
+    const digestObj = {
+      Target: 'signature',
+      SignedProperties: signedProperties.SignedProperties,
+    }
+    const sortedDigestObj = sortObjectKeys(digestObj)
+    const signedPropertiesString = JSON.stringify(sortedDigestObj)
+    const propsDigest = crypto
+      .createHash('sha256')
+      .update(signedPropertiesString, 'utf8')
+      .digest('base64')
 
     // Step 3 (new): Create SignedInfo structure (but do not sign it, just include for type compliance)
     const { signedInfo } = createSignedInfoAndSign(
@@ -875,6 +883,9 @@ export const generateCompleteDocument = (
     // Step 7: Create final signed document
     const signedInvoices = invoices.map(invoice => {
       const cleanInvoice = generateCleanInvoiceObject(invoice)
+
+      // Parse the canonical signed properties string back to an object for embedding
+      const parsedCanonicalSignedProps = JSON.parse(signedPropertiesString)
 
       return {
         ...cleanInvoice,
@@ -911,11 +922,7 @@ export const generateCompleteDocument = (
                                 Object: [
                                   {
                                     QualifyingProperties: [
-                                      {
-                                        Target: 'signature',
-                                        SignedProperties:
-                                          signedProperties.SignedProperties,
-                                      },
+                                      parsedCanonicalSignedProps,
                                     ],
                                   },
                                 ],
