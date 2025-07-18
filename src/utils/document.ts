@@ -537,6 +537,8 @@ export const generateCleanUBLDocument = (
  * Step 1: Transform the document for hashing or transmission
  * Removes UBLExtensions and Signature, and minifies the JSON
  * Returns the minified, cleaned JSON string
+ *
+ * FIXED: Use regex-based minification to match PowerShell script exactly
  */
 export const transformDocumentForHashing = (
   invoices: AllDocumentsV1_1[],
@@ -556,8 +558,23 @@ export const transformDocumentForHashing = (
     })
   }
 
-  // Return minified JSON string
-  return JSON.stringify(documentForTransform)
+  // Convert to JSON string first
+  const jsonString = JSON.stringify(documentForTransform)
+
+  // Apply the exact same regex-based minification as PowerShell script
+  // This regex preserves whitespace within quoted strings but removes all other whitespace
+  const minifiedJson = jsonString.replace(
+    /("(?:\\.|[^"\\])*")|\s+/g,
+    (match, quotedString) => {
+      if (quotedString) {
+        return quotedString // Keep string content exactly as-is
+      } else {
+        return '' // Remove all other whitespace
+      }
+    },
+  )
+
+  return minifiedJson
 }
 
 /**
@@ -582,23 +599,39 @@ export const calculateDocumentDigest = (
 /**
  * Step 4: Calculate Certificate Digest
  * Enhanced to handle certificate content properly
+ * FIXED: Match PowerShell script exactly - use raw certificate data like $cert.RawData
  */
 export const calculateCertificateDigest = (certificatePem: string): string => {
-  // Extract certificate content (Base64 without PEM headers/footers)
-  const certificateContent = certificatePem
-    .replace(/-----BEGIN CERTIFICATE-----/g, '')
-    .replace(/-----END CERTIFICATE-----/g, '')
-    .replace(/\s+/g, '') // Remove all whitespace
+  try {
+    // Create X509Certificate object to get raw data (like PowerShell $cert.RawData)
+    const cert = new X509Certificate(certificatePem)
 
-  // Convert Base64 to binary
-  const certificateBinary = Buffer.from(certificateContent, 'base64')
+    // Get the raw certificate data (DER-encoded, like PowerShell $cert.RawData)
+    const rawCertificateData = cert.raw
 
-  // Calculate SHA-256 hash of binary content
-  const hash = crypto.createHash('sha256')
-  hash.update(certificateBinary)
+    // Calculate SHA-256 hash of raw certificate data (like PowerShell $sha256.ComputeHash($cert.RawData))
+    const hash = crypto.createHash('sha256')
+    hash.update(rawCertificateData)
 
-  // Return as Base64
-  return hash.digest('base64')
+    // Return as Base64 (like PowerShell [Convert]::ToBase64String($certHash))
+    return hash.digest('base64')
+  } catch (error) {
+    // Fallback to the previous method if X509Certificate fails
+    const certificateContent = certificatePem
+      .replace(/-----BEGIN CERTIFICATE-----/g, '')
+      .replace(/-----END CERTIFICATE-----/g, '')
+      .replace(/\s+/g, '') // Remove all whitespace
+
+    // Convert Base64 to binary
+    const certificateBinary = Buffer.from(certificateContent, 'base64')
+
+    // Calculate SHA-256 hash of binary content
+    const hash = crypto.createHash('sha256')
+    hash.update(certificateBinary)
+
+    // Return as Base64
+    return hash.digest('base64')
+  }
 }
 
 /**
@@ -618,17 +651,26 @@ export const extractCertificateInfo = (
     // Extract serial number and convert to decimal string
     const serialNumberHex = cert.serialNumber
 
-    // Keep the DN formatting exactly as it appears in the certificate to avoid
-    // mismatches when the signing service validates the X509IssuerName fields.
-    // We only replace raw new-lines with ", " so that the DN remains a single-line
-    // string while preserving all other whitespace and ordering.
-    const normalizeDistinguishedName = (dn: string): string => {
+    // FIXED: Use raw issuer name like PowerShell $cert.IssuerName.Name
+    // Apply XML escaping to match PowerShell [System.Security.SecurityElement]::Escape()
+    const escapeXmlSpecialChars = (str: string): string => {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;')
+    }
+
+    // FIXED: Normalize issuer name to match MyInvois expectations
+    // The issuer name should be in the format: "CN=Trial LHDNM Sub CA V1, OU=Terms of use at http://www.testcertcomp.com.my, O=LHDNM, C=MY"
+    const normalizeIssuerName = (issuer: string): string => {
       // Node returns issuer DN in reverse RDN order (C, O, ... , CN).
       // The MyInvois validator expects forward order (CN first).
       // 1. Break DN into components separated by newline or commas.
       // 2. Reverse to get CN → ... → C ordering.
       // 3. Join with ", " and ensure single '=' spacing.
-      const parts = dn
+      const parts = issuer
         .split(/\r?\n|,\s*/)
         .map(part => part.trim())
         .filter(part => part.length > 0)
@@ -643,10 +685,14 @@ export const extractCertificateInfo = (
       return decimal
     }
 
+    // FIXED: Use raw subject name without normalization to match PowerShell $cert.SubjectName.Name
+    // The subject name should be in the format shown in the specification
+    const rawSubjectName = cert.subject
+
     return {
-      issuerName: normalizeDistinguishedName(cert.issuer),
+      issuerName: escapeXmlSpecialChars(normalizeIssuerName(cert.issuer)),
       serialNumber: formatSerialNumber(serialNumberHex),
-      subjectName: normalizeDistinguishedName(cert.subject),
+      subjectName: rawSubjectName, // Use raw subject name like PowerShell
     }
   } catch (error: unknown) {
     throw new Error(
@@ -709,10 +755,11 @@ export const createSignedProperties = (
 /**
  * Step 6: Calculate SignedProperties Digest
  * Calculates the digest over the correct structure for validator compliance.
+ * FIXED: Calculate digest from SignedProperties only (without Target wrapper)
  */
 export const calculateSignedPropertiesDigest = (
   signedProperties: SignedPropertiesObject,
-  useTargetWrapper: boolean = true, // now default to wrapper for compliance
+  useTargetWrapper: boolean = true, // Changed to true - validator calculates digest from embedded structure with Target wrapper
 ): string => {
   let digestObj: unknown
   if (useTargetWrapper) {
@@ -723,11 +770,25 @@ export const calculateSignedPropertiesDigest = (
   } else {
     digestObj = signedProperties.SignedProperties
   }
-  // Recursively sort all object keys for deterministic output
-  const sortedDigestObj = sortObjectKeys(digestObj)
-  const signedPropertiesString = JSON.stringify(sortedDigestObj)
+
+  // FIXED: Don't sort object keys - use exact structure as embedded
+  // The validator calculates digest from the exact embedded structure
+  const signedPropertiesString = JSON.stringify(digestObj)
+
+  // Apply the same regex-based minification as the document transformation
+  const minifiedSignedProperties = signedPropertiesString.replace(
+    /("(?:\\.|[^"\\])*")|\s+/g,
+    (match, quotedString) => {
+      if (quotedString) {
+        return quotedString // Keep string content exactly as-is
+      } else {
+        return '' // Remove all other whitespace
+      }
+    },
+  )
+
   const hash = crypto.createHash('sha256')
-  hash.update(signedPropertiesString, 'utf8')
+  hash.update(minifiedSignedProperties, 'utf8')
   return hash.digest('base64')
 }
 
@@ -802,16 +863,16 @@ export const createSignedInfoAndSign = (
 /**
  * Signs the minified document string using the provided private key PEM
  * Returns the signature as a base64 string
+ * FIXED: Match PowerShell script exactly - first compute hash, then sign the hash
  */
 export const signDocumentString = (
   documentString: string,
   privateKeyPem: string,
 ): string => {
-  const signature = crypto.sign('sha256', Buffer.from(documentString, 'utf8'), {
-    key: privateKeyPem,
-    padding: crypto.constants.RSA_PKCS1_PADDING,
-  })
-  return signature.toString('base64')
+  // Create signer with RSA-SHA256 (matches PowerShell RSAPKCS1SignatureFormatter)
+  const signer = crypto.createSign('RSA-SHA256')
+  signer.update(documentString, 'utf8')
+  return signer.sign(privateKeyPem, 'base64')
 }
 
 /**
@@ -836,8 +897,22 @@ export const generateCompleteDocument = (
       signingCredentials.privateKeyPem,
     )
 
-    // Generate signing time in proper ISO format
-    const signingTime = new Date().toISOString()
+    // Generate signing time in proper ISO format matching PowerShell exactly
+    // PowerShell: Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ"
+    const now = new Date()
+    const signingTime =
+      now.getFullYear() +
+      '-' +
+      String(now.getMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(now.getDate()).padStart(2, '0') +
+      'T' +
+      String(now.getHours()).padStart(2, '0') +
+      ':' +
+      String(now.getMinutes()).padStart(2, '0') +
+      ':' +
+      String(now.getSeconds()).padStart(2, '0') +
+      'Z'
 
     // Extract certificate information (enhanced)
     const certInfo = extractCertificateInfo(signingCredentials.certificatePem)
@@ -855,37 +930,58 @@ export const generateCompleteDocument = (
       certInfo.serialNumber,
     )
 
-    // Step 6: Build canonical digest object, sort, and stringify
-    const digestObj = {
-      Target: 'signature',
-      SignedProperties: signedProperties.SignedProperties,
+    // Step 6: Calculate SignedProperties digest using the dedicated function
+    const propsDigest = calculateSignedPropertiesDigest(signedProperties)
+
+    // Create simple SignedInfo structure (matching PowerShell approach)
+    const signedInfo: SignedInfoObject = {
+      CanonicalizationMethod: [
+        {
+          _: '',
+          Algorithm: 'http://www.w3.org/2006/12/xml-c14n11',
+        },
+      ],
+      SignatureMethod: [
+        {
+          _: '',
+          Algorithm: 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256',
+        },
+      ],
+      Reference: [
+        {
+          Id: 'id-doc-signed-data',
+          Type: '',
+          URI: '',
+          DigestMethod: [
+            {
+              _: '',
+              Algorithm: 'http://www.w3.org/2001/04/xmlenc#sha256',
+            },
+          ],
+          DigestValue: [{ _: docDigest }],
+        },
+        {
+          Id: 'id-xades-signed-props',
+          Type: 'http://uri.etsi.org/01903/v1.3.2#SignedProperties',
+          URI: '#id-xades-signed-props',
+          DigestMethod: [
+            {
+              _: '',
+              Algorithm: 'http://www.w3.org/2001/04/xmlenc#sha256',
+            },
+          ],
+          DigestValue: [{ _: propsDigest }],
+        },
+      ],
     }
-    const sortedDigestObj = sortObjectKeys(digestObj)
-    const signedPropertiesString = JSON.stringify(sortedDigestObj)
-    const propsDigest = crypto
-      .createHash('sha256')
-      .update(signedPropertiesString, 'utf8')
-      .digest('base64')
 
-    // Step 3 (new): Create SignedInfo structure (but do not sign it, just include for type compliance)
-    const { signedInfo } = createSignedInfoAndSign(
-      docDigest,
-      propsDigest,
-      signingCredentials.privateKeyPem,
-    )
-
-    // Extract certificate content (Base64 without PEM headers)
-    const certificate = signingCredentials.certificatePem
-      .replace(/-----BEGIN CERTIFICATE-----/g, '')
-      .replace(/-----END CERTIFICATE-----/g, '')
-      .replace(/\s+/g, '')
+    // Extract certificate content using raw data (like PowerShell $cert.RawData)
+    const cert = new X509Certificate(signingCredentials.certificatePem)
+    const certificate = cert.raw.toString('base64')
 
     // Step 7: Create final signed document
     const signedInvoices = invoices.map(invoice => {
       const cleanInvoice = generateCleanInvoiceObject(invoice)
-
-      // Parse the canonical signed properties string back to an object for embedding
-      const parsedCanonicalSignedProps = JSON.parse(signedPropertiesString)
 
       return {
         ...cleanInvoice,
@@ -922,7 +1018,11 @@ export const generateCompleteDocument = (
                                 Object: [
                                   {
                                     QualifyingProperties: [
-                                      parsedCanonicalSignedProps,
+                                      {
+                                        Target: 'signature',
+                                        SignedProperties:
+                                          signedProperties.SignedProperties,
+                                      },
                                     ],
                                   },
                                 ],
