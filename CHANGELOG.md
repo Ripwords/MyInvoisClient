@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.27
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.26...v0.2.27)
+
+### 🩹 Fixes
+
+- Align document processing with PowerShell script for compliance ([697f99a](https://github.com/Ripwords/MyInvoisClient/commit/697f99a))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.26
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.25...v0.2.26)
