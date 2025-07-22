@@ -691,8 +691,6 @@ export class MyInvoisClient {
       documentUid,
     )
 
-    console.log(doc)
-
     const qrCodeBaseLink = `https://${this.environment === 'sandbox' ? 'preprod.' : ''}myinvois.hasil.gov.my/`
     return qrCodeBaseLink + documentUid + '/share/' + doc.longId
   }
