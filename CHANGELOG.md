@@ -1,6 +1,26 @@
 # Changelog
 
 
+## v0.2.28
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.26...v0.2.28)
+
+### 🚀 Enhancements
+
+- Add QR code generation for document sharing ([cccfa3d](https://github.com/Ripwords/MyInvoisClient/commit/cccfa3d))
+
+### 🩹 Fixes
+
+- Align document processing with PowerShell script for compliance ([697f99a](https://github.com/Ripwords/MyInvoisClient/commit/697f99a))
+
+### 🏡 Chore
+
+- **release:** V0.2.27 ([ff90628](https://github.com/Ripwords/MyInvoisClient/commit/ff90628))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.27
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.26...v0.2.27)
