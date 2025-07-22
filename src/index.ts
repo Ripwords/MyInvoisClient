@@ -39,6 +39,7 @@ export class MyInvoisClient {
   private readonly baseUrl: string
   private readonly clientId: string
   private readonly clientSecret: string
+  private readonly environment: 'sandbox' | 'production'
   private onBehalfOf?: string
   private readonly signingCredentials: SigningCredentials
   private readonly debug: boolean
@@ -69,6 +70,7 @@ export class MyInvoisClient {
     this.clientId = clientId
     this.clientSecret = clientSecret
     this.baseUrl = getBaseUrl(environment)
+    this.environment = environment
     this.onBehalfOf = onBehalfOf
     this.debug = (debug ?? process.env.MYINVOIS_DEBUG === 'true') ? true : false
 
@@ -657,6 +659,40 @@ export class MyInvoisClient {
       { fetch: this.fetch.bind(this) },
       id,
     )
+  }
+
+  /**
+   * Generates a shareable QR code URL for a specific document.
+   *
+   * This method retrieves the document details using its unique identifier,
+   * then constructs a URL that can be used to access or share the document
+   * via the MyInvois platform. The URL format differs between sandbox and
+   * production environments.
+   *
+   * @param documentUid - The unique identifier of the document
+   * @returns Promise resolving to a string containing the QR code URL
+   *
+   * @example
+   * ```typescript
+   * const qrCodeUrl = await client.getDocumentQrCode('abc123');
+   * console.log('Shareable QR code URL:', qrCodeUrl);
+   * // Output (sandbox): https://preprod.myinvois.hasil.gov.my/abc123/share/longID
+   * // Output (production): https://myinvois.hasil.gov.my/abc123/share/longID
+   * ```
+   *
+   * @remarks
+   * - The returned URL can be embedded in a QR code for document sharing.
+   * - The method fetches the document to obtain its longID, which is required for the URL.
+   * - Ensure the documentUid is valid and accessible by the current client.
+   */
+  async getDocumentQrCode(documentUid: string): Promise<string> {
+    const doc = await DocumentManagementAPI.getDocument(
+      { fetch: this.fetch.bind(this) },
+      documentUid,
+    )
+
+    const qrCodeBaseLink = `https://${this.environment === 'sandbox' ? 'preprod.' : ''}myinvois.hasil.gov.my/`
+    return qrCodeBaseLink + documentUid + '/share/' + doc.longID
   }
 
   /**

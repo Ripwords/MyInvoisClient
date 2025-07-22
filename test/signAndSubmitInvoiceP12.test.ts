@@ -3,6 +3,7 @@ import { MyInvoisClient } from '../src/index'
 import fs from 'fs'
 import path from 'path'
 import type { InvoiceV1_1, ClassificationCode, TaxTypeCode } from '../src/types'
+import QRCode from 'qrcode'
 
 /**
  * ⚠️ SECURITY NOTICE: This test relies on environment variables for sensitive data.
@@ -124,7 +125,38 @@ describe('MyInvois Invoice Submission (PKCS#12)', () => {
       true, // debug
     )
 
-    const { status } = await client.submitDocument([invoice])
+    const { data, status } = await client.submitDocument([invoice])
     expect(status).toBe(202)
+
+    // Wait for submission to be Valid
+    const submissionUid = data.submissionUid
+    const statusResult = await client.getSubmissionStatus(
+      submissionUid,
+      1000,
+      20,
+    )
+    expect(statusResult.status).toBe('Valid')
+    expect(statusResult.documentSummary).toBeDefined()
+    expect(Array.isArray(statusResult.documentSummary)).toBe(true)
+    expect(statusResult.documentSummary!.length).toBeGreaterThan(0)
+
+    // Get the document UUID
+    const uuid = statusResult.documentSummary![0].uuid
+    expect(typeof uuid).toBe('string')
+    expect(uuid.length).toBeGreaterThan(0)
+
+    // Fetch QR code URL
+    const qrCodeUrl = await client.getDocumentQrCode(uuid)
+    console.log(qrCodeUrl)
+    expect(typeof qrCodeUrl).toBe('string')
+    expect(qrCodeUrl).toMatch(/^https:\/\/preprod\.myinvois\.hasil\.gov\.my\//)
+
+    // Generate and print QR code in terminal
+    console.log('\n📱 QR Code for document:')
+    const qrCodeString = await QRCode.toString(qrCodeUrl, {
+      type: 'terminal',
+      small: true,
+    })
+    console.log(qrCodeString)
   }, 60000)
 })

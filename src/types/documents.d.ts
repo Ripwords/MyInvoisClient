@@ -510,7 +510,7 @@ export interface DocumentValidationStepResult {
 export interface DocumentSummary {
   uuid: string
   submissionUid: string
-  longId: string
+  longID: string
   internalId: string
   typeName: string
   typeVersionName: string
