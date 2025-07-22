@@ -1,6 +1,19 @@
 # Changelog
 
 
+## v0.2.29
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.28...v0.2.29)
+
+### 🩹 Fixes
+
+- Simplify error handling in certificate digest calculation ([f92a165](https://github.com/Ripwords/MyInvoisClient/commit/f92a165))
+- Standardize longId naming and enhance document fetching ([1e6b8b4](https://github.com/Ripwords/MyInvoisClient/commit/1e6b8b4))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.28
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.26...v0.2.28)
