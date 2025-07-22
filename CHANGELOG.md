@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.30
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.29...v0.2.30)
+
+### 🩹 Fixes
+
+- Remove unnecessary console log in getDocumentQrCode method ([7644ed0](https://github.com/Ripwords/MyInvoisClient/commit/7644ed0))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.29
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.28...v0.2.29)
