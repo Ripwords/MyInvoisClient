@@ -20,7 +20,9 @@ export async function getDocument(
   const response = await fetch(`/api/v1.0/documents/${documentUid}/raw`)
   const data = await response.json()
 
-  return data as DocumentSummary & { document: string }
+  return { ...data, longId: data.longID ?? data.longId } as DocumentSummary & {
+    document: string
+  }
 }
 
 export async function getDocumentDetails(
@@ -37,15 +39,18 @@ export async function getDocumentDetails(
   const { fetch } = context
 
   const response = await fetch(`/api/v1.0/documents/${documentUid}/details`)
-
-  const data = (await response.json()) as DocumentSummary & {
+  const data = await response.json()
+  const resp = {
+    ...data,
+    longId: data.longID ?? data.longId,
+  } as DocumentSummary & {
     validationResults: {
       status: DocumentValidationResult
       validationSteps: DocumentValidationStepResult[]
     }
   }
 
-  return data
+  return resp
 }
 
 export async function searchDocuments(
@@ -98,7 +103,10 @@ export async function searchDocuments(
     `/api/v1.0/documents/search?${queryParams.toString()}`,
   )
 
-  const data = (await response.json()) as DocumentSummary[]
+  const data = await response.json()
 
-  return data
+  return data.map((doc: DocumentSummary & { longID: string }) => ({
+    ...doc,
+    longId: doc.longID ?? doc.longId,
+  })) as DocumentSummary[]
 }

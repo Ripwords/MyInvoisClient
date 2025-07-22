@@ -676,13 +676,13 @@ export class MyInvoisClient {
    * ```typescript
    * const qrCodeUrl = await client.getDocumentQrCode('abc123');
    * console.log('Shareable QR code URL:', qrCodeUrl);
-   * // Output (sandbox): https://preprod.myinvois.hasil.gov.my/abc123/share/longID
-   * // Output (production): https://myinvois.hasil.gov.my/abc123/share/longID
+   * // Output (sandbox): https://preprod.myinvois.hasil.gov.my/abc123/share/longId
+   * // Output (production): https://myinvois.hasil.gov.my/abc123/share/longId
    * ```
    *
    * @remarks
    * - The returned URL can be embedded in a QR code for document sharing.
-   * - The method fetches the document to obtain its longID, which is required for the URL.
+   * - The method fetches the document to obtain its longId, which is required for the URL.
    * - Ensure the documentUid is valid and accessible by the current client.
    */
   async getDocumentQrCode(documentUid: string): Promise<string> {
@@ -691,8 +691,10 @@ export class MyInvoisClient {
       documentUid,
     )
 
+    console.log(doc)
+
     const qrCodeBaseLink = `https://${this.environment === 'sandbox' ? 'preprod.' : ''}myinvois.hasil.gov.my/`
-    return qrCodeBaseLink + documentUid + '/share/' + doc.longID
+    return qrCodeBaseLink + documentUid + '/share/' + doc.longId
   }
 
   /**
