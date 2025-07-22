@@ -615,7 +615,7 @@ export const calculateCertificateDigest = (certificatePem: string): string => {
 
     // Return as Base64 (like PowerShell [Convert]::ToBase64String($certHash))
     return hash.digest('base64')
-  } catch (error) {
+  } catch {
     // Fallback to the previous method if X509Certificate fails
     const certificateContent = certificatePem
       .replace(/-----BEGIN CERTIFICATE-----/g, '')
