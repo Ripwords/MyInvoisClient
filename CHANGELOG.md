@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.2.31
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.30...v0.2.31)
+
+### 🩹 Fixes
+
+- Add pagination parameters to document submission status retrieval ([1f18bb1](https://github.com/Ripwords/MyInvoisClient/commit/1f18bb1))
+
+### 🏡 Chore
+
+- **release:** V0.2.30 ([9b7b69a](https://github.com/Ripwords/MyInvoisClient/commit/9b7b69a))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.30
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.29...v0.2.30)
