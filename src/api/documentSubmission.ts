@@ -159,6 +159,8 @@ export async function getSubmissionStatus(
   submissionUid: string,
   pollInterval: number = 1000,
   maxRetries: number = 10,
+  pageNo: number = 0,
+  pageSize: number = 10,
 ): Promise<{
   status: SubmissionStatus
   documentSummary?: DocumentSummary[]
@@ -177,7 +179,7 @@ export async function getSubmissionStatus(
 
   try {
     const response = await fetch(
-      `/api/v1.0/documentsubmissions/${submissionUid}`,
+      `/api/v1.0/documentsubmissions/${submissionUid}?pageNo=${pageNo}&pageSize=${pageSize}`,
     )
 
     const data = (await response.json()) as GetSubmissionResponse

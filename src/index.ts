@@ -394,6 +394,8 @@ export class MyInvoisClient {
     submissionUid: string,
     pollInterval: number = 1000,
     maxRetries: number = 10,
+    pageNo: number = 0,
+    pageSize: number = 10,
   ): Promise<{
     status: SubmissionStatus
     documentSummary?: DocumentSummary[]
@@ -413,6 +415,8 @@ export class MyInvoisClient {
       submissionUid,
       pollInterval,
       maxRetries,
+      pageNo,
+      pageSize,
     )
   }
 
