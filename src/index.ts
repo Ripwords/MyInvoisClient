@@ -689,17 +689,20 @@ export class MyInvoisClient {
    * - The method fetches the document to obtain its longId, which is required for the URL.
    * - Ensure the documentUid is valid and accessible by the current client.
    */
-  async getDocumentQrCode(documentUid: string): Promise<string | null> {
+  async getDocumentQrCode(
+    documentUid: string,
+    longId?: string,
+  ): Promise<string | null> {
     const doc = await DocumentManagementAPI.getDocument(
       { fetch: this.fetch.bind(this) },
       documentUid,
     )
 
     const qrCodeBaseLink = `https://${this.environment === 'sandbox' ? 'preprod.' : ''}myinvois.hasil.gov.my/`
-    if (!doc.longId) {
+    if (!doc.longId && !longId) {
       return null
     }
-    return qrCodeBaseLink + documentUid + '/share/' + doc.longId
+    return qrCodeBaseLink + documentUid + '/share/' + (longId ?? doc.longId)
   }
 
   /**
