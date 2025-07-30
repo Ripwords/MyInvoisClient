@@ -696,6 +696,9 @@ export class MyInvoisClient {
     )
 
     const qrCodeBaseLink = `https://${this.environment === 'sandbox' ? 'preprod.' : ''}myinvois.hasil.gov.my/`
+    if (!doc.longId) {
+      throw new Error('Document longId not found')
+    }
     return qrCodeBaseLink + documentUid + '/share/' + doc.longId
   }
 
