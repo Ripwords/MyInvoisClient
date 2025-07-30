@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.32
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.31...v0.2.32)
+
+### 🩹 Fixes
+
+- Add error handling for missing document longId ([b6dc8be](https://github.com/Ripwords/MyInvoisClient/commit/b6dc8be))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.31
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.30...v0.2.31)
