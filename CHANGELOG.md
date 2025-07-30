@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.33
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.32...v0.2.33)
+
+### 🩹 Fixes
+
+- Update getDocumentQrCode method to return null for missing longId ([4cf066c](https://github.com/Ripwords/MyInvoisClient/commit/4cf066c))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.32
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.31...v0.2.32)
