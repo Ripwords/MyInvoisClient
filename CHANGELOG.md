@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.34
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.33...v0.2.34)
+
+### 🩹 Fixes
+
+- Enhance getDocumentQrCode method to accept optional longId parameter ([2a4303c](https://github.com/Ripwords/MyInvoisClient/commit/2a4303c))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.33
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.32...v0.2.33)
