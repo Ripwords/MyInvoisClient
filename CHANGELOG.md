@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.2.35
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.34...v0.2.35)
+
+### 🚀 Enhancements
+
+- Add 'Submitted' status to SubmissionStatus type ([1f22e67](https://github.com/Ripwords/MyInvoisClient/commit/1f22e67))
+
+### 🏡 Chore
+
+- **release:** V0.2.34 ([538182d](https://github.com/Ripwords/MyInvoisClient/commit/538182d))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.34
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.33...v0.2.34)
