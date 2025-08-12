@@ -487,6 +487,7 @@ export type SubmissionStatus =
   | 'PartiallyValid'
   | 'Invalid'
   | 'TimedOut'
+  | 'Submitted'
 
 export type DocumentStatus = 'Valid' | 'Invalid' | 'Cancelled' | 'Submitted'
 
