@@ -160,6 +160,20 @@ export interface InvoiceLineItem {
    */
   baseUnitMeasureCode?: UnitTypeCode
   /**
+   * Discount amount. Optional per spec; include when a line discount exists.
+   * UBL mapping: / ubl:Invoice / cac:InvoiceLine / cac:AllowanceCharge / cbc:Amount
+   * Max 18 digits, 2 decimal places.
+   * @example 10.00
+   */
+  discountAmount?: number
+  /**
+   * Discount rate. Optional helper if you calculate discount by rate.
+   * If provided, maps to UBL cbc:MultiplierFactorNumeric on cac:AllowanceCharge.
+   * Ranges from 0.00 to 1.00.
+   * @example 0.15
+   */
+  discountRate?: number
+  /**
    * Tax amount. Max 18 digits, 2 decimal places.
    * For percentage tax: calculated as taxableAmount * taxRate / 100
    * For fixed rate: calculated as taxPerUnitAmount * baseUnitMeasure
@@ -736,6 +750,11 @@ export interface InvoiceSubmission {
       _: number
       currencyID: string
     }[]
+    /** Total allowance (discount) amount at document level (optional) */
+    AllowanceTotalAmount?: {
+      _: number
+      currencyID: string
+    }[]
     PayableAmount: {
       _: number
       currencyID: string
@@ -770,6 +789,25 @@ export interface InvoiceSubmission {
     }[]
     Price: {
       PriceAmount: {
+        _: number
+        currencyID: string
+      }[]
+    }[]
+    /** Line-level discount (AllowanceCharge with ChargeIndicator=false) */
+    AllowanceCharge?: {
+      ChargeIndicator: {
+        _: boolean
+      }[]
+      Amount: {
+        _: number
+        currencyID: string
+      }[]
+      /** Optional when discount is specified by rate */
+      MultiplierFactorNumeric?: {
+        _: number
+      }[]
+      /** Optional base amount for discount calculation */
+      BaseAmount?: {
         _: number
         currencyID: string
       }[]

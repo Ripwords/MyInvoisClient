@@ -557,6 +557,63 @@ describe('MyInvois Document Generation and Submission', () => {
     console.log('✅ Fixed rate tax UBL structure is correct!')
   })
 
+  it('should generate correct UBL structure for discounted line items', () => {
+    const invoice = createMinimalTestInvoice()
+    invoice.supplier.tin = process.env.VALID_SUPPLIER_TIN || 'IG50752733100'
+
+    // Overwrite first line with explicit discount amount + rate
+    invoice.invoiceLineItems = [
+      {
+        itemClassificationCode: '001' as ClassificationCode,
+        itemDescription: 'Discounted % tax item',
+        unitPrice: 100,
+        taxType: '01' as TaxTypeCode,
+        taxRate: 6,
+        discountAmount: 10,
+        discountRate: 0.1,
+        totalTaxableAmountPerLine: 90,
+        taxAmount: 5.4,
+        totalAmountPerLine: 95.4,
+      },
+    ]
+
+    // Adjust totals accordingly
+    invoice.legalMonetaryTotal = {
+      taxExclusiveAmount: 90,
+      taxInclusiveAmount: 95.4,
+      payableAmount: 95.4,
+    }
+    invoice.taxTotal = { taxAmount: 5.4 }
+
+    const certInfo = extractCertificateInfo(CERTIFICATE)
+    const document = generateCompleteDocument([invoice], {
+      privateKeyPem: PRIVATE_KEY,
+      certificatePem: CERTIFICATE,
+      issuerName: certInfo.issuerName,
+      serialNumber: certInfo.serialNumber,
+    })
+
+    const invoiceData = document.Invoice[0]
+    const line = invoiceData.InvoiceLine[0]
+
+    // Verify AllowanceCharge mapped
+    expect(line.AllowanceCharge).toBeDefined()
+    expect(line.AllowanceCharge[0].ChargeIndicator[0]._).toBe(false)
+    expect(line.AllowanceCharge[0].Amount[0]._).toBe(10)
+    expect(line.AllowanceCharge[0].Amount[0].currencyID).toBe('MYR')
+
+    // MultiplierFactorNumeric and BaseAmount present when discountRate provided
+    expect(line.AllowanceCharge[0].MultiplierFactorNumeric?.[0]._).toBe(0.1)
+    expect(line.AllowanceCharge[0].BaseAmount?.[0]._).toBe(100)
+    expect(line.AllowanceCharge[0].BaseAmount?.[0].currencyID).toBe('MYR')
+
+    // Totals correctness
+    expect(invoiceData.LegalMonetaryTotal[0].TaxExclusiveAmount[0]._).toBe(90)
+    expect(invoiceData.TaxTotal[0].TaxAmount[0]._).toBe(5.4)
+    expect(line.TaxTotal[0].TaxSubtotal[0].TaxableAmount[0]._).toBe(90)
+    expect(line.TaxTotal[0].TaxSubtotal[0].TaxAmount[0]._).toBe(5.4)
+  })
+
   // ---------- Generalised submission tests for other document types ----------
   const docVariants: [string, () => any][] = [
     ['Credit Note', createMinimalCreditNote],

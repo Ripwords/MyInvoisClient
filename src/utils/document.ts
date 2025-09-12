@@ -399,7 +399,9 @@ export const generateCleanInvoiceObject = (
         {
           Amount: [
             {
-              _: item.totalTaxableAmountPerLine,
+              _:
+                (item.totalTaxableAmountPerLine ?? 0) +
+                (item.discountAmount ?? 0),
               currencyID: invoice.invoiceCurrencyCode,
             },
           ],
@@ -424,6 +426,36 @@ export const generateCleanInvoiceObject = (
           ],
         },
       ],
+
+      // Line-level discount (AllowanceCharge with ChargeIndicator=false) – include only if a discount exists
+      ...(item.discountAmount !== undefined || item.discountRate !== undefined
+        ? {
+            AllowanceCharge: [
+              {
+                ChargeIndicator: [{ _: false }],
+                Amount: [
+                  {
+                    _: item.discountAmount ?? 0,
+                    currencyID: invoice.invoiceCurrencyCode,
+                  },
+                ],
+                ...(item.discountRate !== undefined
+                  ? {
+                      MultiplierFactorNumeric: [{ _: item.discountRate }],
+                      BaseAmount: [
+                        {
+                          _:
+                            (item.totalTaxableAmountPerLine ?? 0) +
+                            (item.discountAmount ?? 0),
+                          currencyID: invoice.invoiceCurrencyCode,
+                        },
+                      ],
+                    }
+                  : {}),
+              },
+            ],
+          }
+        : {}),
 
       // Tax Information for line
       TaxTotal: [
@@ -1109,10 +1141,26 @@ export const createPercentageTaxLineItem = (params: {
   taxType: TaxTypeCode
   taxRate: number
   totalTaxableAmountPerLine?: number
+  discountAmount?: number
+  discountRate?: number
 }): InvoiceLineItem => {
   const quantity = params.quantity || 1
-  const totalTaxableAmount =
-    params.totalTaxableAmountPerLine || params.unitPrice * quantity
+  // Compute pre-discount from unit price and quantity only to avoid double-discounting
+  const preDiscountAmount = params.unitPrice * quantity
+  const hasDiscount =
+    params.discountAmount !== undefined || params.discountRate !== undefined
+  const computedDiscountByRate =
+    hasDiscount && params.discountRate !== undefined
+      ? preDiscountAmount * params.discountRate
+      : 0
+  const discountAmount =
+    hasDiscount && params.discountAmount !== undefined
+      ? params.discountAmount
+      : computedDiscountByRate
+  const totalTaxableAmount = Math.max(
+    0,
+    preDiscountAmount - (hasDiscount ? discountAmount : 0),
+  )
   const taxAmount = (totalTaxableAmount * params.taxRate) / 100
 
   return {
@@ -1121,6 +1169,10 @@ export const createPercentageTaxLineItem = (params: {
     unitPrice: params.unitPrice,
     taxType: params.taxType,
     taxRate: params.taxRate,
+    ...(hasDiscount && discountAmount !== undefined ? { discountAmount } : {}),
+    ...(hasDiscount && params.discountRate !== undefined
+      ? { discountRate: params.discountRate }
+      : {}),
     taxAmount: Math.round(taxAmount * 100) / 100, // Round to 2 decimal places
     totalTaxableAmountPerLine: totalTaxableAmount,
     totalAmountPerLine: totalTaxableAmount + taxAmount,
@@ -1140,10 +1192,26 @@ export const createFixedRateTaxLineItem = (params: {
   baseUnitMeasure: number
   baseUnitMeasureCode: UnitTypeCode
   totalTaxableAmountPerLine?: number
+  discountAmount?: number
+  discountRate?: number
 }): InvoiceLineItem => {
   const quantity = params.quantity || 1
-  const totalTaxableAmount =
-    params.totalTaxableAmountPerLine || params.unitPrice * quantity
+  // Compute pre-discount from unit price and quantity only to avoid double-discounting
+  const preDiscountAmount = params.unitPrice * quantity
+  const hasDiscount =
+    params.discountAmount !== undefined || params.discountRate !== undefined
+  const computedDiscountByRate =
+    hasDiscount && params.discountRate !== undefined
+      ? preDiscountAmount * params.discountRate
+      : 0
+  const discountAmount =
+    hasDiscount && params.discountAmount !== undefined
+      ? params.discountAmount
+      : computedDiscountByRate
+  const totalTaxableAmount = Math.max(
+    0,
+    preDiscountAmount - (hasDiscount ? discountAmount : 0),
+  )
   const taxAmount = params.taxPerUnitAmount * params.baseUnitMeasure
 
   return {
@@ -1154,6 +1222,10 @@ export const createFixedRateTaxLineItem = (params: {
     taxPerUnitAmount: params.taxPerUnitAmount,
     baseUnitMeasure: params.baseUnitMeasure,
     baseUnitMeasureCode: params.baseUnitMeasureCode,
+    ...(hasDiscount && discountAmount !== undefined ? { discountAmount } : {}),
+    ...(hasDiscount && params.discountRate !== undefined
+      ? { discountRate: params.discountRate }
+      : {}),
     taxAmount: Math.round(taxAmount * 100) / 100, // Round to 2 decimal places
     totalTaxableAmountPerLine: totalTaxableAmount,
     totalAmountPerLine: totalTaxableAmount + taxAmount,

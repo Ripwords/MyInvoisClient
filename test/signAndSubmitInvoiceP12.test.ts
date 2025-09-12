@@ -61,22 +61,24 @@ const createMinimalTestInvoice = (): InvoiceV1_1 => {
     invoiceLineItems: [
       {
         itemClassificationCode: '004' as ClassificationCode,
-        itemDescription: 'Test Product (Percentage Tax)',
+        itemDescription: 'Test Product (Percentage Tax with Discount)',
         unitPrice: 100,
         taxType: '01' as TaxTypeCode,
         taxRate: 6,
-        taxAmount: 6,
-        totalTaxableAmountPerLine: 100,
-        totalAmountPerLine: 106,
+        discountAmount: 10,
+        discountRate: 0.1,
+        totalTaxableAmountPerLine: 90,
+        taxAmount: 5.4,
+        totalAmountPerLine: 95.4,
       },
     ],
     legalMonetaryTotal: {
-      taxExclusiveAmount: 100,
-      taxInclusiveAmount: 106,
-      payableAmount: 106,
+      taxExclusiveAmount: 90,
+      taxInclusiveAmount: 95.4,
+      payableAmount: 95.4,
     },
     taxTotal: {
-      taxAmount: 6,
+      taxAmount: 5.4,
     },
   }
 }
@@ -153,10 +155,14 @@ describe('MyInvois Invoice Submission (PKCS#12)', () => {
 
     // Generate and print QR code in terminal
     console.log('\n📱 QR Code for document:')
-    const qrCodeString = await QRCode.toString(qrCodeUrl, {
-      type: 'terminal',
-      small: true,
-    })
-    console.log(qrCodeString)
+    if (qrCodeUrl) {
+      const qrCodeString = await QRCode.toString(qrCodeUrl, {
+        type: 'terminal',
+        small: true,
+      })
+      console.log(qrCodeString)
+    } else {
+      console.log('No QR code URL returned')
+    }
   }, 60000)
 })
