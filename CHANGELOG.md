@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.36
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.35...v0.2.36)
+
+### 🚀 Enhancements
+
+- Add discount handling to invoice processing ([7424362](https://github.com/Ripwords/MyInvoisClient/commit/7424362))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.35
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.34...v0.2.35)
