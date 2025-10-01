@@ -45,6 +45,7 @@ export class MyInvoisClient {
   private readonly debug: boolean
   private token = ''
   private tokenExpiration: Date | undefined = undefined
+  private requestCount = 0
 
   constructor(
     clientId: string,
@@ -121,6 +122,9 @@ export class MyInvoisClient {
   }
 
   private async fetch(path: string, options: Parameters<typeof fetch>[1] = {}) {
+    this.requestCount++
+    if (this.debug) console.log(`[fetch] Request count: ${this.requestCount}`)
+
     const token = await this.getToken()
 
     // Dynamically categorise the request and enqueue it so we never exceed the
