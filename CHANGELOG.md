@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.39
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.38...v0.2.39)
+
+### 💅 Refactors
+
+- Simplify token refresh logic in MyInvoisClient ([9b87c86](https://github.com/Ripwords/MyInvoisClient/commit/9b87c86))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.38
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.37...v0.2.38)
