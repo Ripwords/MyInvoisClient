@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.41
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.40...v0.2.41)
+
+### 💅 Refactors
+
+- Enhance rate limiting and request handling in apiQueue ([3254593](https://github.com/Ripwords/MyInvoisClient/commit/3254593))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.40
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.39...v0.2.40)
