@@ -251,44 +251,36 @@ export function categorizeRequest(
     return isPost ? 'submitDocuments' : 'getSubmission'
   }
 
-  if (cleanPath.includes('/documentmanagement')) {
-    if (cleanPath.endsWith('/cancel')) return 'cancelDocument'
-    if (cleanPath.endsWith('/reject')) return 'rejectDocument'
-    if (cleanPath.endsWith('/details')) return 'getDocumentDetails'
-    if (cleanPath.includes('/recent')) return 'getRecentDocuments'
-    // Fallbacks inside document management
-    return method === 'GET' ? 'getDocument' : 'searchDocuments'
-  }
-
-  if (cleanPath.includes('/searchtin')) return 'searchTin'
-  if (cleanPath.includes('/qrcode')) return 'taxpayerQr'
-  if (cleanPath.includes('/connect/token')) {
-    // Distinguish between taxpayer & intermediary based on path hint if possible
-    return 'loginTaxpayer'
-  }
-
   // -----------------------------
-  // New path matchers (v1.0 endpoints)
+  // v1.0 API endpoint matchers
   // -----------------------------
 
-  // Search Documents
+  // Get Recent Documents - /api/v1.0/documents/recent
+  if (cleanPath.includes('/documents/recent')) {
+    return 'getRecentDocuments'
+  }
+
+  // Search Documents - /api/v1.0/documents/search
   if (cleanPath.includes('/documents/search')) {
     return 'searchDocuments'
   }
 
-  // Document raw content
+  // Document state actions (cancel/reject) - PUT /api/v1.0/documents/state/{uuid}/state
+  // Both cancel and reject use the same endpoint, differentiated only by request body
+  if (cleanPath.includes('/documents/state/') && cleanPath.endsWith('/state')) {
+    // Both cancelDocument and rejectDocument share the same rate limit (12 RPM)
+    // Use cancelDocument category for both since they share the same bucket
+    return 'cancelDocument'
+  }
+
+  // Document raw content - /api/v1.0/documents/{uuid}/raw
   if (/\/documents\/[^/]+\/raw$/.test(cleanPath)) {
     return 'getDocument'
   }
 
-  // Document details
+  // Document details - /api/v1.0/documents/{uuid}/details
   if (/\/documents\/[^/]+\/details$/.test(cleanPath)) {
     return 'getDocumentDetails'
-  }
-
-  // Document state actions (cancel/reject)
-  if (cleanPath.includes('/documents/state/')) {
-    return isPost ? 'cancelDocument' : 'getDocument'
   }
 
   // Taxpayer TIN search & validation share same limit bucket
@@ -297,6 +289,13 @@ export function categorizeRequest(
 
   // Taxpayer QR code info
   if (cleanPath.includes('/taxpayer/qrcode')) return 'taxpayerQr'
+
+  // Legacy matchers (kept for backward compatibility)
+  if (cleanPath.includes('/searchtin')) return 'searchTin'
+  if (cleanPath.includes('/qrcode')) return 'taxpayerQr'
+  if (cleanPath.includes('/connect/token')) {
+    return 'loginTaxpayer'
+  }
 
   return 'default'
 }

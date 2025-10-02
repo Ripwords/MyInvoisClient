@@ -19,6 +19,29 @@ describe('categorizeRequest', () => {
     expect(categorizeRequest('/api/v1.0/documents/search?status=Valid')).toBe(
       'searchDocuments',
     )
+    expect(categorizeRequest('/api/v1.0/documents/recent')).toBe(
+      'getRecentDocuments',
+    )
+    expect(
+      categorizeRequest('/api/v1.0/documents/recent?pageNo=1&pageSize=20'),
+    ).toBe('getRecentDocuments')
+  })
+
+  it('maps document state endpoints (cancel/reject)', () => {
+    // Both cancel and reject use the same endpoint path
+    expect(
+      categorizeRequest(
+        '/api/v1.0/documents/state/F9D425P6DS7D8IU/state',
+        'POST',
+      ),
+    ).toBe('cancelDocument')
+    expect(
+      categorizeRequest(
+        '/api/v1.0/documents/state/F9D425P6DS7D8IU/state',
+        'PUT',
+      ),
+    ).toBe('cancelDocument')
+    // Both use the same rate limit bucket (12 RPM)
   })
 
   it('maps taxpayer endpoints', () => {
