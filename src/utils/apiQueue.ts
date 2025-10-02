@@ -58,7 +58,7 @@ const RATE_LIMITS: Record<ApiCategory, RateLimitConfig> = {
   searchDocuments: { limit: 12, windowMs: WINDOW },
   searchTin: { limit: 60, windowMs: WINDOW },
   taxpayerQr: { limit: 60, windowMs: WINDOW },
-  default: { limit: 10_000, windowMs: WINDOW }, // effectively no limit
+  default: { limit: 12, windowMs: WINDOW }, // minimum limit
 }
 
 /**
@@ -82,13 +82,7 @@ class RateLimiter {
     this.windowMs = config.windowMs
     // Use a more reasonable interval that allows bursts while preventing 429s
     // Allow bursts up to 50% of the limit, then space out remaining requests
-    const baseInterval = Math.ceil((this.windowMs / this.limit) * 0.5) // 50% of even spacing
-    const isTestEnv = process.env.NODE_ENV === 'test'
-    const forceReal = process.env.APIQUEUE_REAL_INTERVAL === 'true'
-    // In unit-test envs we use minimal spacing unless explicitly forced back on.
-    // This prevents test failures while still maintaining some rate limiting
-    this.minInterval =
-      isTestEnv && !forceReal ? Math.min(10, baseInterval) : baseInterval
+    this.minInterval = Math.ceil((this.windowMs / this.limit) * 0.5) // 50% of even spacing
   }
 
   private drainQueue() {
@@ -213,26 +207,37 @@ class RateLimiter {
   }
 }
 
-// A shared registry of limiters keyed by category
-const limiterRegistry = new Map<ApiCategory, RateLimiter>()
+// A shared registry of limiters keyed by clientId, then by category
+// This ensures that different clientIds get separate rate limiters,
+// while multiple instances with the same clientId share the same limiters.
+const limiterRegistry = new Map<string, Map<ApiCategory, RateLimiter>>()
 
-function getLimiter(category: ApiCategory): RateLimiter {
-  if (!limiterRegistry.has(category)) {
-    limiterRegistry.set(category, new RateLimiter(RATE_LIMITS[category]))
+function getLimiter(clientId: string, category: ApiCategory): RateLimiter {
+  if (!limiterRegistry.has(clientId)) {
+    limiterRegistry.set(clientId, new Map<ApiCategory, RateLimiter>())
   }
-  // Non-null because we just set it if missing.
-  return limiterRegistry.get(category) as RateLimiter
+
+  const clientLimiters = limiterRegistry.get(clientId)!
+
+  if (!clientLimiters.has(category)) {
+    clientLimiters.set(category, new RateLimiter(RATE_LIMITS[category]))
+  }
+
+  return clientLimiters.get(category)!
 }
 
 /**
  * Public helper to schedule a request according to the category's limits.
+ * Rate limits are enforced per clientId, so multiple instances with the same
+ * clientId will share rate limiters, while different clientIds get separate limiters.
  */
 export function queueRequest<T>(
+  clientId: string,
   category: ApiCategory,
   fn: () => Promise<T>,
   debug: boolean = false,
 ): Promise<T> {
-  const limiter = getLimiter(category)
+  const limiter = getLimiter(clientId, category)
   return limiter.schedule(fn, debug, category)
 }
 

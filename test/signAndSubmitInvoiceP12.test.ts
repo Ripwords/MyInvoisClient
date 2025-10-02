@@ -111,9 +111,6 @@ describe('MyInvois Invoice Submission (PKCS#12)', () => {
   const P12_PATH = process.env.TEST_P12_PATH!
   const P12_PASSPHRASE = process.env.TEST_P12_PASSPHRASE!
 
-  // Read the PKCS#12 bundle once
-  const p12Buffer = fs.readFileSync(path.resolve(P12_PATH))
-
   it('submits a minimal invoice successfully', async () => {
     const invoice = createMinimalTestInvoice()
 
@@ -121,7 +118,7 @@ describe('MyInvois Invoice Submission (PKCS#12)', () => {
       CLIENT_ID,
       CLIENT_SECRET,
       'sandbox',
-      p12Buffer,
+      P12_PATH,
       P12_PASSPHRASE,
       undefined,
       true, // debug
@@ -132,10 +129,11 @@ describe('MyInvois Invoice Submission (PKCS#12)', () => {
 
     // Wait for submission to be Valid
     const submissionUid = data.submissionUid
+    console.log('submissionUid', submissionUid)
     const statusResult = await client.getSubmissionStatus(
       submissionUid,
-      1000,
-      20,
+      10000,
+      5,
     )
     expect(statusResult.status).toBe('Valid')
     expect(statusResult.documentSummary).toBeDefined()

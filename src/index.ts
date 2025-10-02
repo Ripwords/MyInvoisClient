@@ -137,6 +137,7 @@ export class MyInvoisClient {
     )
 
     return queueRequest(
+      this.clientId,
       category,
       () =>
         fetch(`${this.baseUrl}${path}`, {

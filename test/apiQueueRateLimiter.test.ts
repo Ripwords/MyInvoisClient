@@ -25,7 +25,7 @@ describe('apiQueue Rate Limiter', () => {
     const executionTimestamps: number[] = []
 
     const promises = Array.from({ length: 15 }).map((_, idx) =>
-      queueRequest(category, () => {
+      queueRequest('test-client-id', category, () => {
         executionTimestamps.push(Date.now() - start)
         return Promise.resolve(idx)
       }),
@@ -63,7 +63,7 @@ describe('apiQueue Rate Limiter', () => {
 
     // Create 100 concurrent requests
     for (let i = 0; i < 100; i++) {
-      const promise = queueRequest(category, () => {
+      const promise = queueRequest('test-client-id', category, () => {
         executionTimestamps.push(Date.now())
         return Promise.resolve(i)
       })
@@ -102,7 +102,7 @@ describe('apiQueue Rate Limiter', () => {
       const requests = Math.min(limit + 5, 20) // Test with a few more than the limit
 
       const promises = Array.from({ length: requests }).map((_, idx) =>
-        queueRequest(name, () => {
+        queueRequest('test-client-id', name, () => {
           executionTimestamps.push(Date.now())
           return Promise.resolve(idx)
         }),
@@ -191,7 +191,7 @@ describe('apiQueue Rate Limiter', () => {
     let failureCount = 0
 
     const promises = Array.from({ length: 10 }).map((_, idx) =>
-      queueRequest(category, () => {
+      queueRequest('test-client-id', category, () => {
         executionTimestamps.push(Date.now())
 
         // Simulate some failures
@@ -233,7 +233,7 @@ describe('apiQueue Rate Limiter', () => {
     // Create mixed requests
     requests.forEach(({ category, count }) => {
       for (let i = 0; i < count; i++) {
-        const promise = queueRequest(category, () => {
+        const promise = queueRequest('test-client-id', category, () => {
           executionLog.push({ category, timestamp: Date.now() })
           return Promise.resolve(`${category}-${i}`)
         })
