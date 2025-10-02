@@ -2,14 +2,13 @@ import type { ClientCredentials, TokenResponse } from '../types'
 
 export const platformLogin = async (
   client: ClientCredentials,
-  fetchFn: (url: string, options?: RequestInit) => Promise<Response> = fetch,
 ): Promise<{
   token: string
   tokenExpiration: Date
 }> => {
   const { clientId, clientSecret, baseUrl, onBehalfOf, debug } = client
   try {
-    const response = await fetchFn(`${baseUrl}/connect/token`, {
+    const response = await fetch(`${baseUrl}/connect/token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',

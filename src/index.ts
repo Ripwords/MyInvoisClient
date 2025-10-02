@@ -93,16 +93,13 @@ export class MyInvoisClient {
   }
 
   private async refreshToken() {
-    const tokenResponse = await platformLogin(
-      {
-        clientId: this.clientId,
-        clientSecret: this.clientSecret,
-        baseUrl: this.baseUrl,
-        onBehalfOf: this.onBehalfOf,
-        debug: this.debug,
-      },
-      this.fetch.bind(this) as typeof fetch,
-    )
+    const tokenResponse = await platformLogin({
+      clientId: this.clientId,
+      clientSecret: this.clientSecret,
+      baseUrl: this.baseUrl,
+      onBehalfOf: this.onBehalfOf,
+      debug: this.debug,
+    })
 
     this.token = tokenResponse.token
     this.tokenExpiration = tokenResponse.tokenExpiration
