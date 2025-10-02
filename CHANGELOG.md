@@ -1,6 +1,20 @@
 # Changelog
 
 
+## v0.2.37
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.36...v0.2.37)
+
+### 🚀 Enhancements
+
+- Track request count in MyInvoisClient ([09c075e](https://github.com/Ripwords/MyInvoisClient/commit/09c075e))
+- Enhance API interaction with fetch function ([966193d](https://github.com/Ripwords/MyInvoisClient/commit/966193d))
+- Enhance apiQueue rate limiter tests and functionality ([d1959ca](https://github.com/Ripwords/MyInvoisClient/commit/d1959ca))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.36
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.35...v0.2.36)
