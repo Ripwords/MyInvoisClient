@@ -1,4 +1,4 @@
-// A very small utility that provides per-endpoint request queuing with fixed-window rate-limits.
+// A very small utility that provides per-endpoint request queuing with rate-limits.
 // The goal is to make sure that we never exceed the vendor-defined limits while also ensuring
 // that every request is eventually executed.
 //
@@ -37,208 +37,215 @@ export type ApiCategory =
   | 'taxpayerQr'
   | 'default'
 
-interface RateLimitConfig {
-  limit: number
-  windowMs: number
+type Task<T> = () => Promise<T>
+
+interface Queue {
+  running: number
+  queue: Array<{ run: () => void; addedAt: number }>
+  requestTimestamps: number[] // Track all request timestamps in the sliding window
 }
 
-const WINDOW = 60_000 // 60 seconds
+const queues: Record<string, Queue> = {}
 
-// Hard-coded limits based on the specification above.
-const RATE_LIMITS: Record<ApiCategory, RateLimitConfig> = {
-  loginTaxpayer: { limit: 12, windowMs: WINDOW },
-  loginIntermediary: { limit: 12, windowMs: WINDOW },
-  submitDocuments: { limit: 100, windowMs: WINDOW },
-  getSubmission: { limit: 300, windowMs: WINDOW },
-  cancelDocument: { limit: 12, windowMs: WINDOW },
-  rejectDocument: { limit: 12, windowMs: WINDOW },
-  getDocument: { limit: 60, windowMs: WINDOW },
-  getDocumentDetails: { limit: 125, windowMs: WINDOW },
-  getRecentDocuments: { limit: 12, windowMs: WINDOW },
-  searchDocuments: { limit: 12, windowMs: WINDOW },
-  searchTin: { limit: 60, windowMs: WINDOW },
-  taxpayerQr: { limit: 60, windowMs: WINDOW },
-  default: { limit: 12, windowMs: WINDOW }, // minimum limit
+// Rate limits: max requests per time window (in ms)
+const LIMITS: Record<ApiCategory, { max: number; perMs: number }> = {
+  loginTaxpayer: { max: 12, perMs: 60000 }, // 12 req/60s
+  loginIntermediary: { max: 12, perMs: 60000 }, // 12 req/60s
+  submitDocuments: { max: 100, perMs: 60000 }, // 100 req/60s
+  getSubmission: { max: 300, perMs: 60000 }, // 300 req/60s
+  cancelDocument: { max: 12, perMs: 60000 }, // 12 req/60s
+  rejectDocument: { max: 12, perMs: 60000 }, // 12 req/60s
+  getDocument: { max: 60, perMs: 60000 }, // 60 req/60s
+  getDocumentDetails: { max: 125, perMs: 60000 }, // 125 req/60s
+  getRecentDocuments: { max: 12, perMs: 60000 }, // 12 req/60s
+  searchDocuments: { max: 12, perMs: 60000 }, // 12 req/60s
+  searchTin: { max: 60, perMs: 60000 }, // 60 req/60s
+  taxpayerQr: { max: 60, perMs: 60000 }, // 60 req/60s
+  default: { max: 12, perMs: 60000 }, // 12 req/60s (minimum limit)
 }
 
 /**
- * A token-bucket style rate-limiter with queuing.
- * Uses a sliding window approach to allow bursts while respecting overall limits.
- * Each category gets its own instance so limits remain isolated.
+ * Clean up old timestamps outside the sliding window
  */
-class RateLimiter {
-  private readonly limit: number
-  private readonly windowMs: number
-  private readonly minInterval: number
-
-  private queue: Array<() => void> = []
-  private nextAvailable = 0 // timestamp (ms) when the next request can be executed
-  private timer: NodeJS.Timeout | null = null
-  private requestTimes: number[] = [] // Track request timestamps for sliding window
-  private isProcessing = false // Prevent race conditions in drainQueue
-
-  constructor(config: RateLimitConfig) {
-    this.limit = config.limit
-    this.windowMs = config.windowMs
-    // Use a more reasonable interval that allows bursts while preventing 429s
-    // Allow bursts up to 50% of the limit, then space out remaining requests
-    this.minInterval = Math.ceil((this.windowMs / this.limit) * 0.5) // 50% of even spacing
-  }
-
-  private drainQueue() {
-    // Prevent race conditions by ensuring only one drainQueue runs at a time
-    if (this.isProcessing || this.queue.length === 0) {
-      return
-    }
-
-    this.isProcessing = true
-
-    try {
-      const now = Date.now()
-
-      // Clean up old request times outside the window
-      this.requestTimes = this.requestTimes.filter(
-        time => now - time < this.windowMs,
-      )
-
-      // Check if we can make another request within the rate limit
-      if (this.requestTimes.length >= this.limit) {
-        // We've hit the limit, schedule for when the oldest request expires
-        const oldestRequest = Math.min(...this.requestTimes)
-        const nextAvailable = oldestRequest + this.windowMs
-
-        this.scheduleNextDrain(nextAvailable - now)
-        return
-      }
-
-      // Check minimum interval constraint
-      if (now < this.nextAvailable) {
-        // Too early – schedule when we're allowed to execute next
-        this.scheduleNextDrain(this.nextAvailable - now)
-        return
-      }
-
-      // Execute the next queued task
-      const next = this.queue.shift()!
-      const requestStartTime = Date.now()
-      this.requestTimes.push(requestStartTime)
-      this.nextAvailable = requestStartTime + this.minInterval
-
-      // Execute the request immediately
-      next()
-    } finally {
-      this.isProcessing = false
-    }
-
-    // After resetting isProcessing, check if there are more requests
-    // and schedule the next drain with appropriate delay
-    if (this.queue.length > 0) {
-      // Calculate delay until we can process the next request
-      const now = Date.now()
-      const delay = Math.max(1, this.nextAvailable - now)
-
-      // Use scheduleNextDrain to ensure only one timer is active
-      this.scheduleNextDrain(delay)
-    }
-  }
-
-  private scheduleNextDrain(delay: number) {
-    if (this.timer) {
-      clearTimeout(this.timer)
-    }
-
-    this.timer = setTimeout(
-      () => {
-        this.timer = null
-        this.drainQueue()
-      },
-      Math.max(0, delay),
-    )
-  }
-
-  get queueSize() {
-    return this.queue.length
-  }
-
-  // Cleanup method to prevent memory leaks
-  cleanup() {
-    if (this.timer) {
-      clearTimeout(this.timer)
-      this.timer = null
-    }
-    this.queue = []
-    this.requestTimes = []
-    this.isProcessing = false
-  }
-
-  schedule<T>(
-    fn: () => Promise<T>,
-    debug: boolean = false,
-    category?: ApiCategory,
-  ): Promise<T> {
-    return new Promise((resolve, reject) => {
-      const execute = () => {
-        if (debug && category) {
-          console.log(
-            `[apiQueue] ▶️  Executing request (${category}). Remaining queue: ${this.queue.length}`,
-          )
-        }
-        try {
-          const result = fn()
-          if (result && typeof (result as any).then === 'function') {
-            ;(result as Promise<T>).then(resolve).catch(reject)
-          } else {
-            resolve(result as T)
-          }
-        } catch (err) {
-          reject(err)
-        }
-      }
-
-      if (debug && category) {
-        console.log(
-          `[apiQueue] ⏳ Queued request (${category}). Queue length before push: ${this.queue.length}`,
-        )
-      }
-
-      this.queue.push(execute)
-      this.drainQueue()
-    })
-  }
+function cleanupTimestamps(
+  timestamps: number[],
+  windowMs: number,
+  now: number,
+): number[] {
+  return timestamps.filter(ts => now - ts < windowMs)
 }
 
-// A shared registry of limiters keyed by clientId, then by category
-// This ensures that different clientIds get separate rate limiters,
-// while multiple instances with the same clientId share the same limiters.
-const limiterRegistry = new Map<string, Map<ApiCategory, RateLimiter>>()
-
-function getLimiter(clientId: string, category: ApiCategory): RateLimiter {
-  if (!limiterRegistry.has(clientId)) {
-    limiterRegistry.set(clientId, new Map<ApiCategory, RateLimiter>())
+/**
+ * Calculate when we can make the next request without exceeding the rate limit
+ */
+function getNextAvailableTime(
+  timestamps: number[],
+  max: number,
+  windowMs: number,
+  now: number,
+): number {
+  if (timestamps.length < max) {
+    return now // Can execute immediately
   }
 
-  const clientLimiters = limiterRegistry.get(clientId)!
-
-  if (!clientLimiters.has(category)) {
-    clientLimiters.set(category, new RateLimiter(RATE_LIMITS[category]))
+  // We're at the limit. Find when the oldest request will expire
+  const oldestTimestamp = timestamps[0]
+  if (!oldestTimestamp) {
+    return now // Shouldn't happen, but fallback to now
   }
-
-  return clientLimiters.get(category)!
+  return oldestTimestamp + windowMs
 }
 
 /**
  * Public helper to schedule a request according to the category's limits.
  * Rate limits are enforced per clientId, so multiple instances with the same
  * clientId will share rate limiters, while different clientIds get separate limiters.
+ *
+ * This implementation uses a sliding window to track all requests within the time window.
  */
 export function queueRequest<T>(
   clientId: string,
   category: ApiCategory,
-  fn: () => Promise<T>,
-  debug: boolean = false,
+  task: Task<T>,
+  debug = false,
 ): Promise<T> {
-  const limiter = getLimiter(clientId, category)
-  return limiter.schedule(fn, debug, category)
+  const key = `${clientId}:${category}`
+  if (!queues[key]) {
+    queues[key] = { running: 0, queue: [], requestTimestamps: [] }
+  }
+
+  const queue = queues[key]!
+  const { max, perMs } = LIMITS[category] ?? LIMITS.default
+
+  return new Promise<T>((resolve, reject) => {
+    const run = () => {
+      const now = Date.now()
+
+      // Clean up old timestamps before checking
+      queue.requestTimestamps = cleanupTimestamps(
+        queue.requestTimestamps,
+        perMs,
+        now,
+      )
+
+      // Check if we can execute now
+      if (queue.requestTimestamps.length >= max) {
+        // We've hit the rate limit, need to wait
+        const nextAvailable = getNextAvailableTime(
+          queue.requestTimestamps,
+          max,
+          perMs,
+          now,
+        )
+        const waitTime = nextAvailable - now
+
+        if (debug) {
+          console.log(
+            `[apiQueue] 🚫 Rate limit reached (${queue.requestTimestamps.length}/${max} in last ${perMs}ms). Queuing request. Need to wait ${waitTime.toFixed(0)}ms. Queue size: ${queue.queue.length + 1}`,
+          )
+        }
+
+        // Re-queue this request to try again later
+        queue.queue.push({ run, addedAt: now })
+        processQueue(key, debug, category)
+        return
+      }
+
+      // Record this request timestamp
+      queue.requestTimestamps.push(now)
+      queue.running++
+
+      if (debug) {
+        console.log(
+          `[apiQueue] ▶️  Executing request (${category}). Requests in window: ${queue.requestTimestamps.length}/${max}. Running: ${queue.running}. Queue size: ${queue.queue.length}`,
+        )
+      }
+
+      task()
+        .then(resolve)
+        .catch(reject)
+        .finally(() => {
+          queue.running--
+          if (debug) {
+            console.log(
+              `[apiQueue] ✅ Request completed (${category}). Requests in window: ${queue.requestTimestamps.length}/${max}. Running: ${queue.running}. Queue size: ${queue.queue.length}`,
+            )
+          }
+          processQueue(key, debug, category)
+        })
+    }
+
+    // Add to queue or run immediately
+    const now = Date.now()
+    queue.requestTimestamps = cleanupTimestamps(
+      queue.requestTimestamps,
+      perMs,
+      now,
+    )
+
+    if (queue.queue.length > 0 || queue.requestTimestamps.length >= max) {
+      // Either there's already a queue, or we're at the rate limit
+      queue.queue.push({ run, addedAt: now })
+      if (debug) {
+        console.log(
+          `[apiQueue] ⏳ Queued request (${category}). Requests in window: ${queue.requestTimestamps.length}/${max}. Queue size: ${queue.queue.length}`,
+        )
+      }
+      processQueue(key, debug, category)
+    } else {
+      // Can run immediately
+      run()
+    }
+  })
+}
+
+function processQueue(key: string, debug: boolean, category: ApiCategory) {
+  const queue = queues[key]
+  if (!queue || queue.queue.length === 0) return
+
+  const { max, perMs } = LIMITS[category] ?? LIMITS.default
+  const now = Date.now()
+
+  // Clean up old timestamps
+  queue.requestTimestamps = cleanupTimestamps(
+    queue.requestTimestamps,
+    perMs,
+    now,
+  )
+
+  // Check if we can process the next request
+  if (queue.requestTimestamps.length < max) {
+    // We have capacity, process immediately
+    const next = queue.queue.shift()
+    if (next) {
+      if (debug) {
+        const waitTime = Date.now() - next.addedAt
+        console.log(
+          `[apiQueue] 🚀 Processing queued request (${category}). Waited: ${waitTime.toFixed(0)}ms. Queue size: ${queue.queue.length}`,
+        )
+      }
+      next.run()
+    }
+  } else {
+    // We're at capacity, schedule for when the oldest request expires
+    const nextAvailable = getNextAvailableTime(
+      queue.requestTimestamps,
+      max,
+      perMs,
+      now,
+    )
+    const delay = Math.max(0, nextAvailable - now)
+
+    if (debug) {
+      console.log(
+        `[apiQueue] ⏸️  Delaying queue processing (${category}). Will retry in ${delay.toFixed(0)}ms. Queue size: ${queue.queue.length}`,
+      )
+    }
+
+    setTimeout(() => {
+      processQueue(key, debug, category)
+    }, delay + 10) // Add small buffer to ensure the window has passed
+  }
 }
 
 /**
