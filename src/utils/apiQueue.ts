@@ -130,10 +130,21 @@ class RateLimiter {
       this.requestTimes.push(requestStartTime)
       this.nextAvailable = requestStartTime + this.minInterval
 
-      // Execute the request and handle completion
-      this.executeRequest(next)
+      // Execute the request immediately
+      next()
     } finally {
       this.isProcessing = false
+    }
+
+    // After resetting isProcessing, check if there are more requests
+    // and schedule the next drain with appropriate delay
+    if (this.queue.length > 0) {
+      // Calculate delay until we can process the next request
+      const now = Date.now()
+      const delay = Math.max(1, this.nextAvailable - now)
+
+      // Use scheduleNextDrain to ensure only one timer is active
+      this.scheduleNextDrain(delay)
     }
   }
 
@@ -149,21 +160,6 @@ class RateLimiter {
       },
       Math.max(0, delay),
     )
-  }
-
-  private async executeRequest(requestFn: () => void) {
-    try {
-      await requestFn()
-    } catch {
-      // Request failed, but we still count it against rate limits
-      // This is important to prevent retry storms
-    }
-
-    // Continue processing the queue after a short delay
-    // This allows the request to complete before scheduling the next one
-    setTimeout(() => {
-      this.drainQueue()
-    }, 50) // Reduced delay for better responsiveness
   }
 
   get queueSize() {
