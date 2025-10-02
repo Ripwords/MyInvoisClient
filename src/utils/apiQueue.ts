@@ -43,6 +43,7 @@ interface Queue {
   running: number
   queue: Array<{ run: () => void; addedAt: number }>
   requestTimestamps: number[] // Track all request timestamps in the sliding window
+  nextTimer: NodeJS.Timeout | null // Track scheduled timer to avoid pile-up
 }
 
 const queues: Record<string, Queue> = {}
@@ -111,7 +112,12 @@ export function queueRequest<T>(
 ): Promise<T> {
   const key = `${clientId}:${category}`
   if (!queues[key]) {
-    queues[key] = { running: 0, queue: [], requestTimestamps: [] }
+    queues[key] = {
+      running: 0,
+      queue: [],
+      requestTimestamps: [],
+      nextTimer: null,
+    }
   }
 
   const queue = queues[key]!
@@ -147,7 +153,8 @@ export function queueRequest<T>(
 
         // Re-queue this request to try again later
         queue.queue.push({ run, addedAt: now })
-        processQueue(key, debug, category)
+        // Don't call processQueue here - let the scheduled timer handle it
+        // to avoid potential requeue loops
         return
       }
 
@@ -226,6 +233,10 @@ function processQueue(key: string, debug: boolean, category: ApiCategory) {
       }
       next.run()
     }
+    // After one runs, immediately try again (in case there's more space)
+    if (queue.queue.length > 0) {
+      processQueue(key, debug, category)
+    }
   } else {
     // We're at capacity, schedule for when the oldest request expires
     const nextAvailable = getNextAvailableTime(
@@ -234,7 +245,7 @@ function processQueue(key: string, debug: boolean, category: ApiCategory) {
       perMs,
       now,
     )
-    const delay = Math.max(0, nextAvailable - now)
+    const delay = Math.max(0, nextAvailable - now + 50) // +50ms buffer for timer precision
 
     if (debug) {
       console.log(
@@ -242,9 +253,46 @@ function processQueue(key: string, debug: boolean, category: ApiCategory) {
       )
     }
 
-    setTimeout(() => {
-      processQueue(key, debug, category)
-    }, delay + 10) // Add small buffer to ensure the window has passed
+    // Only schedule a timer if one isn't already scheduled
+    // This prevents timer pile-up during bursts
+    if (!queue.nextTimer) {
+      queue.nextTimer = setTimeout(() => {
+        queue.nextTimer = null
+        processQueue(key, debug, category)
+      }, delay)
+    }
+  }
+}
+
+/**
+ * Cleanup function to clear all queues and timers for a specific client.
+ * Useful for testing or cleanup on application shutdown.
+ */
+export function clearQueue(clientId: string, category?: ApiCategory) {
+  if (category) {
+    const key = `${clientId}:${category}`
+    const queue = queues[key]
+    if (queue) {
+      if (queue.nextTimer) {
+        clearTimeout(queue.nextTimer)
+        queue.nextTimer = null
+      }
+      queue.queue = []
+      queue.requestTimestamps = []
+      queue.running = 0
+    }
+  } else {
+    // Clear all queues for this client
+    Object.keys(queues).forEach(key => {
+      if (key.startsWith(`${clientId}:`)) {
+        const queue = queues[key]
+        if (queue?.nextTimer) {
+          clearTimeout(queue.nextTimer)
+          queue.nextTimer = null
+        }
+        delete queues[key]
+      }
+    })
   }
 }
 
