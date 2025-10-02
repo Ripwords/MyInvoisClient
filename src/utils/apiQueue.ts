@@ -268,7 +268,7 @@ function processQueue(key: string, debug: boolean, category: ApiCategory) {
  * Cleanup function to clear all queues and timers for a specific client.
  * Useful for testing or cleanup on application shutdown.
  */
-export function clearQueue(clientId: string, category?: ApiCategory) {
+export function clearQueue(clientId: string, category?: ApiCategory): void {
   if (category) {
     const key = `${clientId}:${category}`
     const queue = queues[key]
