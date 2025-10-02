@@ -1,6 +1,20 @@
 # Changelog
 
 
+## v0.3.0
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.41...v0.3.0)
+
+### 💅 Refactors
+
+- Streamline apiQueue request handling and rate limiting ([68b010d](https://github.com/Ripwords/MyInvoisClient/commit/68b010d))
+- Enhance apiQueue with timer management and cleanup functionality ([9344a0d](https://github.com/Ripwords/MyInvoisClient/commit/9344a0d))
+- Update clearQueue function signature for clarity ([0a09bde](https://github.com/Ripwords/MyInvoisClient/commit/0a09bde))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.41
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.40...v0.2.41)
