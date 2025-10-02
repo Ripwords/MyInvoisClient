@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.40
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.39...v0.2.40)
+
+### 💅 Refactors
+
+- Update categorizeRequest function for v1.0 API endpoints ([2798c37](https://github.com/Ripwords/MyInvoisClient/commit/2798c37))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.2.39
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.38...v0.2.39)
