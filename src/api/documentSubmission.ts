@@ -258,6 +258,7 @@ export async function getSubmissionStatus(
 }
 
 export async function performDocumentAction(
+  context: Pick<SubmissionContext, 'fetch'>,
   documentUid: string,
   status: 'rejected' | 'cancelled',
   reason: string,
@@ -266,6 +267,7 @@ export async function performDocumentAction(
   status: string
   error: StandardError
 }> {
+  const { fetch } = context
   const response = await fetch(
     `/api/v1.0/documents/state/${documentUid}/state`,
     {

@@ -62,11 +62,9 @@ const RATE_LIMITS: Record<ApiCategory, RateLimitConfig> = {
 }
 
 /**
- * A very small token-bucket style rate-limiter with queuing.
- * Instead of allowing a full-window burst (which could trigger a 429),
- * requests are spaced evenly so the throughput stays within the
- * <limit>/<window> budget at all times. Each category gets its own
- * instance so limits remain isolated.
+ * A token-bucket style rate-limiter with queuing.
+ * Uses a sliding window approach to allow bursts while respecting overall limits.
+ * Each category gets its own instance so limits remain isolated.
  */
 class RateLimiter {
   private readonly limit: number
@@ -76,45 +74,111 @@ class RateLimiter {
   private queue: Array<() => void> = []
   private nextAvailable = 0 // timestamp (ms) when the next request can be executed
   private timer: NodeJS.Timeout | null = null
+  private requestTimes: number[] = [] // Track request timestamps for sliding window
+  private isProcessing = false // Prevent race conditions in drainQueue
 
   constructor(config: RateLimitConfig) {
     this.limit = config.limit
     this.windowMs = config.windowMs
-    const baseInterval = Math.ceil(this.windowMs / this.limit)
+    // Use a more reasonable interval that allows bursts while preventing 429s
+    // Allow bursts up to 50% of the limit, then space out remaining requests
+    const baseInterval = Math.ceil((this.windowMs / this.limit) * 0.5) // 50% of even spacing
     const isTestEnv = process.env.NODE_ENV === 'test'
     const forceReal = process.env.APIQUEUE_REAL_INTERVAL === 'true'
-    // In unit-test envs we collapse spacing unless explicitly forced back on.
-    this.minInterval = isTestEnv && !forceReal ? 0 : baseInterval
+    // In unit-test envs we use minimal spacing unless explicitly forced back on.
+    // This prevents test failures while still maintaining some rate limiting
+    this.minInterval =
+      isTestEnv && !forceReal ? Math.min(10, baseInterval) : baseInterval
   }
 
   private drainQueue() {
-    if (this.queue.length === 0) {
+    // Prevent race conditions by ensuring only one drainQueue runs at a time
+    if (this.isProcessing || this.queue.length === 0) {
       return
     }
 
-    const now = Date.now()
-    if (now < this.nextAvailable) {
-      // Too early – schedule when we're allowed to execute next
-      if (!this.timer) {
-        this.timer = setTimeout(() => {
-          this.timer = null
-          this.drainQueue()
-        }, this.nextAvailable - now)
+    this.isProcessing = true
+
+    try {
+      const now = Date.now()
+
+      // Clean up old request times outside the window
+      this.requestTimes = this.requestTimes.filter(
+        time => now - time < this.windowMs,
+      )
+
+      // Check if we can make another request within the rate limit
+      if (this.requestTimes.length >= this.limit) {
+        // We've hit the limit, schedule for when the oldest request expires
+        const oldestRequest = Math.min(...this.requestTimes)
+        const nextAvailable = oldestRequest + this.windowMs
+
+        this.scheduleNextDrain(nextAvailable - now)
+        return
       }
-      return
+
+      // Check minimum interval constraint
+      if (now < this.nextAvailable) {
+        // Too early – schedule when we're allowed to execute next
+        this.scheduleNextDrain(this.nextAvailable - now)
+        return
+      }
+
+      // Execute the next queued task
+      const next = this.queue.shift()!
+      const requestStartTime = Date.now()
+      this.requestTimes.push(requestStartTime)
+      this.nextAvailable = requestStartTime + this.minInterval
+
+      // Execute the request and handle completion
+      this.executeRequest(next)
+    } finally {
+      this.isProcessing = false
+    }
+  }
+
+  private scheduleNextDrain(delay: number) {
+    if (this.timer) {
+      clearTimeout(this.timer)
     }
 
-    // Execute the next queued task
-    const next = this.queue.shift()!
-    this.nextAvailable = Date.now() + this.minInterval
-    next()
+    this.timer = setTimeout(
+      () => {
+        this.timer = null
+        this.drainQueue()
+      },
+      Math.max(0, delay),
+    )
+  }
 
-    // Attempt to drain further (may schedule another run if cannot execute immediately)
-    this.drainQueue()
+  private async executeRequest(requestFn: () => void) {
+    try {
+      await requestFn()
+    } catch {
+      // Request failed, but we still count it against rate limits
+      // This is important to prevent retry storms
+    }
+
+    // Continue processing the queue after a short delay
+    // This allows the request to complete before scheduling the next one
+    setTimeout(() => {
+      this.drainQueue()
+    }, 50) // Reduced delay for better responsiveness
   }
 
   get queueSize() {
     return this.queue.length
+  }
+
+  // Cleanup method to prevent memory leaks
+  cleanup() {
+    if (this.timer) {
+      clearTimeout(this.timer)
+      this.timer = null
+    }
+    this.queue = []
+    this.requestTimes = []
+    this.isProcessing = false
   }
 
   schedule<T>(

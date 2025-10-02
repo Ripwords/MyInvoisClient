@@ -93,13 +93,16 @@ export class MyInvoisClient {
   }
 
   private async refreshToken() {
-    const tokenResponse = await platformLogin({
-      clientId: this.clientId,
-      clientSecret: this.clientSecret,
-      baseUrl: this.baseUrl,
-      onBehalfOf: this.onBehalfOf,
-      debug: this.debug,
-    })
+    const tokenResponse = await platformLogin(
+      {
+        clientId: this.clientId,
+        clientSecret: this.clientSecret,
+        baseUrl: this.baseUrl,
+        onBehalfOf: this.onBehalfOf,
+        debug: this.debug,
+      },
+      this.fetch.bind(this) as typeof fetch,
+    )
 
     this.token = tokenResponse.token
     this.tokenExpiration = tokenResponse.tokenExpiration
@@ -306,6 +309,7 @@ export class MyInvoisClient {
     error: StandardError
   }> {
     return DocumentSubmissionAPI.performDocumentAction(
+      { fetch: this.fetch.bind(this) },
       documentUid,
       status,
       reason,
