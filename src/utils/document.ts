@@ -1144,7 +1144,11 @@ export const createPercentageTaxLineItem = (params: {
   discountAmount?: number
   discountRate?: number
 }): InvoiceLineItem => {
-  const quantity = params.quantity || 1
+  const quantity = params.quantity
+    ? params.quantity <= 0
+      ? 1
+      : (params.quantity ?? 1)
+    : 1
   // Compute pre-discount from unit price and quantity only to avoid double-discounting
   const preDiscountAmount = params.unitPrice * quantity
   const hasDiscount =
