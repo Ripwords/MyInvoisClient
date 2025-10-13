@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.3.1
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.3.0...v0.3.1)
+
+### 🚀 Enhancements
+
+- Add payable rounding amount to legal monetary total and invoice submission ([ac466ab](https://github.com/Ripwords/MyInvoisClient/commit/ac466ab))
+
+### 💅 Refactors
+
+- Improve quantity handling in createPercentageTaxLineItem function ([c7e21d1](https://github.com/Ripwords/MyInvoisClient/commit/c7e21d1))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.3.0
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.2.41...v0.3.0)
