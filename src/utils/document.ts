@@ -365,6 +365,12 @@ export const generateCleanInvoiceObject = (
             currencyID: invoice.invoiceCurrencyCode,
           },
         ],
+        PayableRoundingAmount: [
+          {
+            _: invoice.legalMonetaryTotal.payableRoundingAmount,
+            currencyID: invoice.invoiceCurrencyCode,
+          },
+        ],
         PayableAmount: [
           {
             _: invoice.legalMonetaryTotal.payableAmount,
@@ -1241,10 +1247,12 @@ export const createFixedRateTaxLineItem = (params: {
  */
 export const calculateInvoiceTotals = (
   lineItems: InvoiceLineItem[],
+  payableRoundingAmount: number = 0,
 ): {
   legalMonetaryTotal: {
     taxExclusiveAmount: number
     taxInclusiveAmount: number
+    payableRoundingAmount: number
     payableAmount: number
   }
   taxTotal: {
@@ -1260,12 +1268,14 @@ export const calculateInvoiceTotals = (
     0,
   )
   const taxInclusiveAmount = taxExclusiveAmount + totalTaxAmount
+  const payableAmount = taxInclusiveAmount + payableRoundingAmount
 
   return {
     legalMonetaryTotal: {
       taxExclusiveAmount: Math.round(taxExclusiveAmount * 100) / 100,
       taxInclusiveAmount: Math.round(taxInclusiveAmount * 100) / 100,
-      payableAmount: Math.round(taxInclusiveAmount * 100) / 100,
+      payableRoundingAmount: Math.round(payableRoundingAmount * 100) / 100,
+      payableAmount: Math.round(payableAmount * 100) / 100,
     },
     taxTotal: {
       taxAmount: Math.round(totalTaxAmount * 100) / 100,

@@ -210,6 +210,8 @@ export interface LegalMonetaryTotal {
   taxExclusiveAmount: number
   /** Total amount inclusive of taxes. Max 18 digits, 2 decimal places. */
   taxInclusiveAmount: number
+  /** Rounding amount applied to the payable amount. Max 18 digits, 2 decimal places. */
+  payableRoundingAmount: number
   /** The final payable amount. Max 18 digits, 2 decimal places. */
   payableAmount: number
 }
@@ -752,6 +754,10 @@ export interface InvoiceSubmission {
     }[]
     /** Total allowance (discount) amount at document level (optional) */
     AllowanceTotalAmount?: {
+      _: number
+      currencyID: string
+    }[]
+    PayableRoundingAmount: {
       _: number
       currencyID: string
     }[]
