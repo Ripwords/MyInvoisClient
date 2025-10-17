@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.3.2
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.3.1...v0.3.2)
+
+### 🚀 Enhancements
+
+- Add raw logging for document retrieval and search functions ([27cab26](https://github.com/Ripwords/MyInvoisClient/commit/27cab26))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.3.1
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.3.0...v0.3.1)
