@@ -11,6 +11,8 @@ interface DocumentContext {
   fetch: Fetch
 }
 
+const rawLogs = process.env.E_INV_RAW_LOGS === 'true'
+
 export async function getDocument(
   context: DocumentContext,
   documentUid: string,
@@ -19,6 +21,10 @@ export async function getDocument(
 
   const response = await fetch(`/api/v1.0/documents/${documentUid}/raw`)
   const data = await response.json()
+
+  if (rawLogs) {
+    console.log('Raw document:', data)
+  }
 
   return { ...data, longId: data.longID ?? data.longId } as DocumentSummary & {
     document: string
@@ -48,6 +54,10 @@ export async function getDocumentDetails(
       status: DocumentValidationResult
       validationSteps: DocumentValidationStepResult[]
     }
+  }
+
+  if (rawLogs) {
+    console.log('Raw document details:', resp)
   }
 
   return resp
@@ -104,6 +114,10 @@ export async function searchDocuments(
   )
 
   const data = await response.json()
+
+  if (rawLogs) {
+    console.log('Raw search documents:', data)
+  }
 
   return data.map((doc: DocumentSummary & { longID: string }) => ({
     ...doc,
