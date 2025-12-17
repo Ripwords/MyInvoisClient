@@ -1,6 +1,19 @@
 # Changelog
 
 
+## v0.3.3
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.3.2...v0.3.3)
+
+### 🚀 Enhancements
+
+- Add quantity and measurement fields to InvoiceLineItem interface ([4896fa3](https://github.com/Ripwords/MyInvoisClient/commit/4896fa3))
+- Enhance InvoiceLineItem with optional quantity and measurement fields ([6f3ffee](https://github.com/Ripwords/MyInvoisClient/commit/6f3ffee))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.3.2
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.3.1...v0.3.2)
