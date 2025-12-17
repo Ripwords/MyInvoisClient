@@ -384,6 +384,20 @@ export const generateCleanInvoiceObject = (
     InvoiceLine: lineItems.map((item, index) => ({
       ID: [{ _: (index + 1).toString() }],
 
+      // Quantity and Measurement (optional)
+      ...(item.quantity !== undefined || item.measurement !== undefined
+        ? {
+            InvoicedQuantity: [
+              {
+                _: item.quantity ?? 1,
+                ...(item.measurement !== undefined
+                  ? { unitCode: item.measurement }
+                  : {}),
+              },
+            ],
+          }
+        : {}),
+
       // Item Information
       Item: [
         {
@@ -1144,6 +1158,7 @@ export const createPercentageTaxLineItem = (params: {
   itemDescription: string
   unitPrice: number
   quantity?: number
+  measurement?: string
   taxType: TaxTypeCode
   taxRate: number
   totalTaxableAmountPerLine?: number
@@ -1179,6 +1194,10 @@ export const createPercentageTaxLineItem = (params: {
     unitPrice: params.unitPrice,
     taxType: params.taxType,
     taxRate: params.taxRate,
+    ...(params.quantity !== undefined ? { quantity: params.quantity } : {}),
+    ...(params.measurement !== undefined
+      ? { measurement: params.measurement }
+      : {}),
     ...(hasDiscount && discountAmount !== undefined ? { discountAmount } : {}),
     ...(hasDiscount && params.discountRate !== undefined
       ? { discountRate: params.discountRate }
@@ -1197,6 +1216,7 @@ export const createFixedRateTaxLineItem = (params: {
   itemDescription: string
   unitPrice: number
   quantity?: number
+  measurement?: string
   taxType: TaxTypeCode
   taxPerUnitAmount: number
   baseUnitMeasure: number
@@ -1232,6 +1252,10 @@ export const createFixedRateTaxLineItem = (params: {
     taxPerUnitAmount: params.taxPerUnitAmount,
     baseUnitMeasure: params.baseUnitMeasure,
     baseUnitMeasureCode: params.baseUnitMeasureCode,
+    ...(params.quantity !== undefined ? { quantity: params.quantity } : {}),
+    ...(params.measurement !== undefined
+      ? { measurement: params.measurement }
+      : {}),
     ...(hasDiscount && discountAmount !== undefined ? { discountAmount } : {}),
     ...(hasDiscount && params.discountRate !== undefined
       ? { discountRate: params.discountRate }
