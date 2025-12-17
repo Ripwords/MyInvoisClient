@@ -202,6 +202,22 @@ export interface InvoiceLineItem {
    * @example 1590.00
    */
   totalAmountPerLine: number
+  /**
+   * Number of units of a particular product or service in a commercial transaction.
+   * UBL mapping: / ubl:Invoice / cac:InvoiceLine / cbc:InvoicedQuantity
+   * Optional. Recommended: Up to 5 decimal places.
+   * @example 1.00
+   */
+  quantity?: number
+  /**
+   * Standard unit or system used to measure the product or service.
+   * This value should be represented in actual decimal value like 0.15.
+   * This field follows the UN/ECE Recommendation 20, Revision 17 (2021) standard.
+   * UBL mapping: / ubl:Invoice / cac:InvoiceLine / cbc:InvoicedQuantity / @unitCode
+   * Optional. Max 3 characters.
+   * @example KGM
+   */
+  measurement?: string
 }
 
 /** Represents monetary totals for the invoice. Based on UBL cac:LegalMonetaryTotal. */
