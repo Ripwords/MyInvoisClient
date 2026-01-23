@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.3.4
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.3.3...v0.3.4)
+
+### 🚀 Enhancements
+
+- Enhance tinSearch function with additional fileType parameter ([002c6e4](https://github.com/Ripwords/MyInvoisClient/commit/002c6e4))
+
+### 🏡 Chore
+
+- **release:** V0.3.3 ([f660781](https://github.com/Ripwords/MyInvoisClient/commit/f660781))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.3.3
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.3.2...v0.3.3)
