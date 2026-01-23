@@ -26,6 +26,7 @@ export interface TinSearchParams {
   taxpayerName?: string
   idType?: RegistrationType
   idValue?: string
+  fileType?: '1' | '2'
 }
 
 export interface TinSearchResponse {

@@ -17,29 +17,51 @@ export async function tinSearch(
   params: TinSearchParams,
 ): Promise<TinSearchResponse> {
   const { fetch, debug } = context
-  const { taxpayerName, idType, idValue } = params
+  const { taxpayerName, idType, idValue, fileType } = params
 
   // Validate input parameters according to API requirements
+  // Valid combinations:
+  // 1. taxpayerName alone
+  // 2. taxpayerName + idType + idValue (all three)
+  // 3. idType + idValue (both)
+  // 4. idType + idValue + fileType (all three)
+  // 5. All parameters together (AND operator)
+
+  // idType and idValue must be provided together
+  if ((idType && !idValue) || (!idType && idValue)) {
+    throw new Error('idType and idValue must be provided together')
+  }
+
+  // fileType can only be provided with idType and idValue
+  if (fileType && (!idType || !idValue)) {
+    throw new Error(
+      'fileType can only be provided together with idType and idValue',
+    )
+  }
+
+  // Must have at least one valid combination:
+  // - taxpayerName alone, OR
+  // - idType + idValue (with optional fileType)
   if (!taxpayerName && (!idType || !idValue)) {
     throw new Error(
       'Either taxpayerName must be provided, or both idType and idValue must be provided',
     )
   }
 
-  if ((idType && !idValue) || (!idType && idValue)) {
-    throw new Error('idType and idValue must be provided together')
-  }
-
   // Build query parameters
   const queryParams = new URLSearchParams()
-
-  if (taxpayerName) {
-    queryParams.append('taxpayerName', taxpayerName)
-  }
 
   if (idType && idValue) {
     queryParams.append('idType', idType)
     queryParams.append('idValue', formatIdValue(idValue))
+  }
+
+  if (fileType) {
+    queryParams.append('fileType', fileType)
+  }
+
+  if (taxpayerName) {
+    queryParams.append('idName', taxpayerName)
   }
 
   const queryString = queryParams.toString()
@@ -51,6 +73,9 @@ export async function tinSearch(
         method: 'GET',
       },
     )
+    if (!response.ok) {
+      throw new Error(`Failed to search TIN: ${await response.text()}`)
+    }
     return (await response.json()) as TinSearchResponse
   } catch (error) {
     if (debug) {
