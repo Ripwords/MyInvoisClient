@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.3.6
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.3.5...v0.3.6)
+
+### 🚀 Enhancements
+
+- Add document cancellation and rejection methods with character limit validation ([389ec56](https://github.com/Ripwords/MyInvoisClient/commit/389ec56))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.3.5
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.3.4...v0.3.5)
