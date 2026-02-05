@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.3.7
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.3.6...v0.3.7)
+
+### 🩹 Fixes
+
+- Add Content-Type header to document action requests ([15656d8](https://github.com/Ripwords/MyInvoisClient/commit/15656d8))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.3.6
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.3.5...v0.3.6)
