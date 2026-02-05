@@ -276,6 +276,9 @@ export async function performDocumentAction(
     `/api/v1.0/documents/state/${documentUid}/state`,
     {
       method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
         status,
         reason,
