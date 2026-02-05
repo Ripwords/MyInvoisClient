@@ -267,11 +267,15 @@ export async function performDocumentAction(
   status: string
   error: StandardError
 }> {
+  if (reason.length > 300) {
+    throw new Error('Reason must not exceed 300 characters')
+  }
+
   const { fetch } = context
   const response = await fetch(
     `/api/v1.0/documents/state/${documentUid}/state`,
     {
-      method: 'POST',
+      method: 'PUT',
       body: JSON.stringify({
         status,
         reason,

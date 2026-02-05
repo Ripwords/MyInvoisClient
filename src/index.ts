@@ -271,7 +271,7 @@ export class MyInvoisClient {
    *
    * @param documentUid - The unique identifier of the document
    * @param status - The new status to set ('rejected' or 'cancelled')
-   * @param reason - The reason for the status change
+   * @param reason - The reason for the status change (max 300 characters)
    * @returns Promise resolving to document action response containing UUID, status, and any errors
    *
    * @example
@@ -293,11 +293,11 @@ export class MyInvoisClient {
    *
    * @remarks
    * - Only valid for documents in appropriate states
-   * - Reason is required and should be descriptive
+   * - Reason is required, max 300 characters
    * - Action is irreversible once completed
    * - Returns error if document cannot be found or action is invalid
    */
-  async performDocumentAction(
+  private async performDocumentAction(
     documentUid: string,
     status: 'rejected' | 'cancelled',
     reason: string,
@@ -312,6 +312,74 @@ export class MyInvoisClient {
       status,
       reason,
     )
+  }
+
+  /**
+   * Cancels a document that was previously submitted.
+   *
+   * This is a convenience method that wraps performDocumentAction with 'cancelled' status.
+   * Documents can only be cancelled within 72 hours of validation.
+   *
+   * @param documentUid - The unique identifier of the document to cancel
+   * @param reason - The reason for cancellation (max 300 characters)
+   * @returns Promise resolving to document action response containing UUID, status, and any errors
+   *
+   * @example
+   * ```typescript
+   * const result = await client.cancelDocument(
+   *   'doc-456',
+   *   'Duplicate submission'
+   * );
+   * if (!result.error) {
+   *   console.log('Document cancelled:', result.uuid);
+   * }
+   * ```
+   *
+   * @remarks
+   * - Must be called within 72 hours of document validation
+   * - Reason is required, max 300 characters
+   * - Action is irreversible once completed
+   * - Rate limited to 12 requests per minute
+   */
+  async cancelDocument(
+    documentUid: string,
+    reason: string,
+  ): Promise<{ uuid: string; status: string; error?: StandardError }> {
+    return this.performDocumentAction(documentUid, 'cancelled', reason)
+  }
+
+  /**
+   * Rejects a document received from another party.
+   *
+   * This is a convenience method that wraps performDocumentAction with 'rejected' status.
+   * Only documents received from other taxpayers can be rejected.
+   *
+   * @param documentUid - The unique identifier of the document to reject
+   * @param reason - The reason for rejection (max 300 characters)
+   * @returns Promise resolving to document action response containing UUID, status, and any errors
+   *
+   * @example
+   * ```typescript
+   * const result = await client.rejectDocument(
+   *   'doc-123',
+   *   'Invalid tax calculation'
+   * );
+   * if (!result.error) {
+   *   console.log('Document rejected:', result.uuid);
+   * }
+   * ```
+   *
+   * @remarks
+   * - Only applicable to received documents
+   * - Reason is required, max 300 characters
+   * - Action is irreversible once completed
+   * - Rate limited to 12 requests per minute
+   */
+  async rejectDocument(
+    documentUid: string,
+    reason: string,
+  ): Promise<{ uuid: string; status: string; error?: StandardError }> {
+    return this.performDocumentAction(documentUid, 'rejected', reason)
   }
 
   /**
