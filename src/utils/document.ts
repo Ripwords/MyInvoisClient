@@ -110,6 +110,31 @@ export const generateCleanInvoiceObject = (
   invoice: AllDocumentsV1_1,
 ): InvoiceSubmission => {
   const lineItems = getLineItems(invoice)
+
+  // Group line items by tax category so the document-level TaxTotal carries one
+  // TaxSubtotal per distinct tax type (derived entirely from the line items).
+  const round2 = (n: number) => Math.round(n * 100) / 100
+  const taxCategoryOrder: string[] = []
+  const taxByCategory = new Map<string, { taxable: number; tax: number }>()
+  for (const item of lineItems) {
+    const category = item.taxType
+    if (!taxByCategory.has(category)) {
+      taxByCategory.set(category, { taxable: 0, tax: 0 })
+      taxCategoryOrder.push(category)
+    }
+    const bucket = taxByCategory.get(category)!
+    bucket.taxable += item.totalTaxableAmountPerLine ?? 0
+    bucket.tax += item.taxAmount ?? 0
+  }
+  // Fallback for the (invalid) no-line-items case: keep prior single-subtotal shape.
+  if (taxCategoryOrder.length === 0) {
+    taxCategoryOrder.push(lineItems[0]?.taxType || '01')
+    taxByCategory.set(taxCategoryOrder[0]!, {
+      taxable: invoice.legalMonetaryTotal.taxExclusiveAmount,
+      tax: invoice.taxTotal.taxAmount,
+    })
+  }
+
   return {
     // === MANDATORY CORE FIELDS ===
     ID: [{ _: invoice.eInvoiceCodeOrNumber }],
@@ -308,24 +333,25 @@ export const generateCleanInvoiceObject = (
             currencyID: invoice.invoiceCurrencyCode,
           },
         ],
-        TaxSubtotal: [
-          // Generate basic tax subtotal from invoice line items
-          {
+        // One TaxSubtotal per distinct tax category, derived from line items.
+        TaxSubtotal: taxCategoryOrder.map(category => {
+          const { taxable, tax } = taxByCategory.get(category)!
+          return {
             TaxableAmount: [
               {
-                _: invoice.legalMonetaryTotal.taxExclusiveAmount,
+                _: round2(taxable),
                 currencyID: invoice.invoiceCurrencyCode,
               },
             ],
             TaxAmount: [
               {
-                _: invoice.taxTotal.taxAmount,
+                _: round2(tax),
                 currencyID: invoice.invoiceCurrencyCode,
               },
             ],
             TaxCategory: [
               {
-                ID: [{ _: lineItems[0]?.taxType || '01' }],
+                ID: [{ _: category }],
                 TaxScheme: [
                   {
                     ID: [
@@ -339,8 +365,8 @@ export const generateCleanInvoiceObject = (
                 ],
               },
             ],
-          },
-        ],
+          }
+        }),
       },
     ],
 
