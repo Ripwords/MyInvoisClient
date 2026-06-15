@@ -159,7 +159,7 @@ export async function getSubmissionStatus(
   submissionUid: string,
   pollInterval: number = 1000,
   maxRetries: number = 10,
-  pageNo: number = 0,
+  pageNo: number = 1,
   pageSize: number = 10,
 ): Promise<{
   status: SubmissionStatus
@@ -213,6 +213,8 @@ export async function getSubmissionStatus(
         submissionUid,
         pollInterval,
         maxRetries - 1,
+        pageNo,
+        pageSize,
       )
     }
 
@@ -240,6 +242,8 @@ export async function getSubmissionStatus(
         submissionUid,
         pollInterval,
         maxRetries - 1,
+        pageNo,
+        pageSize,
       )
     }
 
