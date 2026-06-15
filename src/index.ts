@@ -35,6 +35,10 @@ import { getBaseUrl } from './utils/getBaseUrl'
 import { queueRequest, categorizeRequest } from './utils/apiQueue'
 
 export type * from './types/index.d.ts'
+export {
+  aggregateLineItemsByTaxCategory,
+  type AggregateByTaxCategoryOptions,
+} from './utils/lineItems'
 export class MyInvoisClient {
   private readonly baseUrl: string
   private readonly clientId: string
@@ -468,7 +472,7 @@ export class MyInvoisClient {
     submissionUid: string,
     pollInterval: number = 1000,
     maxRetries: number = 10,
-    pageNo: number = 0,
+    pageNo: number = 1,
     pageSize: number = 10,
   ): Promise<{
     status: SubmissionStatus
