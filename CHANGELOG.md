@@ -1,6 +1,36 @@
 # Changelog
 
 
+## v0.4.0
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.3.7...v0.4.0)
+
+### 🚀 Enhancements
+
+- Add aggregateLineItemsByTaxCategory helper ([484bccb](https://github.com/Ripwords/MyInvoisClient/commit/484bccb))
+
+### 🩹 Fixes
+
+- Parse search-documents { result, metadata } response wrapper ([87e7dfd](https://github.com/Ripwords/MyInvoisClient/commit/87e7dfd))
+- Default submission pageNo to 1 and preserve paging across retries ([d01c46d](https://github.com/Ripwords/MyInvoisClient/commit/d01c46d))
+- Emit one tax subtotal per tax category in document total ([5cbfd7d](https://github.com/Ripwords/MyInvoisClient/commit/5cbfd7d))
+
+### 💅 Refactors
+
+- Consolidate extractCertificateInfo into one source ([111f384](https://github.com/Ripwords/MyInvoisClient/commit/111f384))
+
+### 📖 Documentation
+
+- Document rate-limiter limitations ([3ce2bd1](https://github.com/Ripwords/MyInvoisClient/commit/3ce2bd1))
+
+### ✅ Tests
+
+- Correct rate-limiter burst expectation and document-action assertions ([421a3e9](https://github.com/Ripwords/MyInvoisClient/commit/421a3e9))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.3.7
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.3.6...v0.3.7)
