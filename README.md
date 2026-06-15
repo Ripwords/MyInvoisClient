@@ -123,6 +123,33 @@ Replace the placeholders with your actual values:
 - `YOUR_TIN`: `IG12345678901` (MyInvois TIN)
 - `YOUR_DOMAIN`: `mycompany.com`
 
+## Rate Limiting
+
+The client includes a built-in, per-`clientId` request queue that proactively
+keeps each API category within the MyInvois-documented limits (e.g. submit
+documents 100/min, get submission 300/min, cancel/reject 12/min). Requests that
+would exceed a category's limit are queued and released as the sliding window
+frees up — you can fire calls freely and the queue paces them.
+
+### Known limitations
+
+These are intentional trade-offs for a dependency-free, in-process limiter.
+Plan around them for production deployments:
+
+- **In-process only.** Limits are tracked in memory per Node.js process. If you
+  run multiple instances/workers (clustered NestJS, PM2 cluster, serverless,
+  multiple pods), each process tracks its own counts, so the *combined* traffic
+  can exceed the MyInvois limit. For horizontally-scaled deployments, throttle
+  upstream or route MyInvois calls through a single worker.
+- **Bursts within the cap.** The limiter allows up to `max` requests in the same
+  instant (as long as the 60s window allows it). This is within the documented
+  limit, but if you observe `429`s under heavy concurrency, reduce upstream
+  concurrency.
+- **No automatic `429` / `Retry-After` back-off.** The limiter is proactive
+  only; it does not currently inspect rate-limit response headers and retry.
+- **Login is not queued.** Token requests (`/connect/token`) bypass the queue.
+  Cache and reuse the client so token refreshes stay infrequent.
+
 ## Production Certificates
 
 ⚠️ **For production use, obtain official business certificates from MyInvois-approved Certificate Authorities:**
