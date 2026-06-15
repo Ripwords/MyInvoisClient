@@ -22,6 +22,7 @@ describe('performDocumentAction', () => {
       '/api/v1.0/documents/state/doc-123/state',
       {
         method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status: 'cancelled',
           reason: 'Duplicate submission',
@@ -52,6 +53,7 @@ describe('performDocumentAction', () => {
       '/api/v1.0/documents/state/doc-456/state',
       {
         method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status: 'rejected',
           reason: 'Invalid tax calculation',

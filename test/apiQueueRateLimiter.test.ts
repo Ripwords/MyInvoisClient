@@ -19,8 +19,9 @@ describe('apiQueue Rate Limiter', () => {
     vi.useFakeTimers()
   })
 
-  it('enforces per-category limits with improved algorithm', async () => {
+  it('allows a burst up to the cap, then defers the rest to the next window', async () => {
     const category = 'cancelDocument' as const // limit = 12 / 60s
+    const max = 12
     const start = Date.now()
     const executionTimestamps: number[] = []
 
@@ -31,28 +32,24 @@ describe('apiQueue Rate Limiter', () => {
       }),
     )
 
-    // Initially, the first call can run immediately
+    // Up to `max` may run immediately (sliding-window limiter — a burst within
+    // the cap is allowed); the remaining 3 are queued.
     await vi.runAllTicks()
-    expect(executionTimestamps.length).toBe(1)
+    expect(executionTimestamps.length).toBe(max)
 
-    // With the new algorithm (50% spacing), we should have 2.5s between requests
-    // Advance by 30 seconds - should allow 12 more requests (total 13)
-    await vi.advanceTimersByTimeAsync(30_000)
+    // Once the window rolls over, the queued remainder runs (timer fires at
+    // oldest + window + buffer, so advance a little past the window).
+    await vi.advanceTimersByTimeAsync(61_000)
     await vi.runAllTicks()
-    expect(executionTimestamps.length).toBe(13)
-
-    // Advance by another 5 seconds to allow the remaining 2 requests
-    await vi.advanceTimersByTimeAsync(5_000)
-    await vi.runAllTicks()
+    await Promise.all(promises)
     expect(executionTimestamps.length).toBe(15)
 
-    await Promise.all(promises)
-
-    // Validate spacing: each subsequent execution should be at least 2.5s apart
-    // (50% of 5s = 2.5s minimum interval)
-    for (let i = 1; i < executionTimestamps.length; i++) {
-      const diff = executionTimestamps[i] - executionTimestamps[i - 1]
-      expect(diff).toBeGreaterThanOrEqual(2_499) // allow ±1 ms jitter
+    // The cap is never exceeded within any 60s window.
+    for (let i = 0; i < executionTimestamps.length; i++) {
+      const inWindow = executionTimestamps.filter(
+        t => t >= executionTimestamps[i]! && t < executionTimestamps[i]! + 60_000,
+      ).length
+      expect(inWindow).toBeLessThanOrEqual(max)
     }
   })
 
