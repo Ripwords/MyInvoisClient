@@ -2,34 +2,11 @@ import crypto from 'crypto'
 import * as forge from 'node-forge'
 import fs from 'fs'
 
-/**
- * Extracts certificate information from PEM certificate
- * Converts hex serial number to decimal as required by MyInvois
- *
- * @param certificatePem - Certificate in PEM format
- * @returns Object with issuer name and decimal serial number
- */
-export const extractCertificateInfo = (
-  certificatePem: string,
-): {
-  issuerName: string
-  serialNumber: string
-} => {
-  try {
-    const cert = new crypto.X509Certificate(certificatePem)
-
-    // Convert hex serial number to decimal (MyInvois requirement)
-    const serialNumberHex = cert.serialNumber
-    const serialNumberDecimal = BigInt('0x' + serialNumberHex).toString()
-
-    return {
-      issuerName: cert.issuer,
-      serialNumber: serialNumberDecimal,
-    }
-  } catch (error) {
-    throw new Error(`Failed to extract certificate info: ${error}`)
-  }
-}
+// Single source of truth for issuer name / serial number extraction. The signer
+// (utils/document) owns the canonical normalization (RDN order + XML escaping)
+// that MyInvois validates against (DS326), so re-export it here rather than
+// maintaining a second, divergent implementation.
+export { extractCertificateInfo } from './document'
 
 /**
  * Validates that certificate and private key form a valid pair
