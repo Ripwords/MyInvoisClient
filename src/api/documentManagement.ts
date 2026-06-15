@@ -119,7 +119,15 @@ export async function searchDocuments(
     console.log('Raw search documents:', data)
   }
 
-  return data.map((doc: DocumentSummary & { longID: string }) => ({
+  // The MyInvois API wraps results in `{ result: [...], metadata: {...} }`.
+  // Fall back to a bare array for forward/backward compatibility.
+  const documents: (DocumentSummary & { longID?: string })[] = Array.isArray(
+    data,
+  )
+    ? data
+    : (data?.result ?? [])
+
+  return documents.map(doc => ({
     ...doc,
     longId: doc.longID ?? doc.longId,
   })) as DocumentSummary[]
