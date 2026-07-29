@@ -39,6 +39,30 @@ export {
   aggregateLineItemsByTaxCategory,
   type AggregateByTaxCategoryOptions,
 } from './utils/lineItems'
+
+/**
+ * Options for {@link MyInvoisClient.create}.
+ *
+ * Preferred over the positional constructor: new options can be added here
+ * without changing any existing call site.
+ */
+export interface MyInvoisClientOptions {
+  /** Client ID issued by the MyInvois portal. */
+  clientId: string
+  /** Client secret issued by the MyInvois portal. */
+  clientSecret: string
+  /** Target environment. */
+  environment: 'sandbox' | 'production'
+  /** Signing certificate in PEM format. */
+  certificatePem: string
+  /** Private key in PEM format. Must match the certificate. */
+  privateKeyPem: string
+  /** TIN of the taxpayer being represented, for intermediary access. */
+  onBehalfOf?: string
+  /** Enable verbose logging. Defaults to `MYINVOIS_DEBUG === 'true'`. */
+  debug?: boolean
+}
+
 export class MyInvoisClient {
   private readonly baseUrl: string
   private readonly clientId: string
@@ -855,6 +879,36 @@ export class MyInvoisClient {
       { fetch: this.fetch.bind(this) },
       id,
       versionId,
+    )
+  }
+
+  /**
+   * Creates a client from an options object.
+   *
+   * Equivalent to the positional constructor, but avoids ordering mistakes
+   * between same-typed parameters and does not require placeholder
+   * arguments to reach optional ones.
+   *
+   * @example
+   * ```typescript
+   * const client = MyInvoisClient.create({
+   *   clientId,
+   *   clientSecret,
+   *   environment: 'sandbox',
+   *   certificatePem,
+   *   privateKeyPem,
+   * })
+   * ```
+   */
+  static create(options: MyInvoisClientOptions): MyInvoisClient {
+    return new MyInvoisClient(
+      options.clientId,
+      options.clientSecret,
+      options.environment,
+      options.certificatePem,
+      options.privateKeyPem,
+      options.onBehalfOf,
+      options.debug,
     )
   }
 
