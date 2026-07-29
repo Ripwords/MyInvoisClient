@@ -48,7 +48,6 @@ export const legacyInvoice: InvoiceV1_1 = {
     tin: 'EI00000000010', // Standard consolidated buyer TIN
     registrationType: 'NRIC',
     registrationNumber: '770101015678',
-    sstRegistrationNumber: 'NA',
     contactNumber: '+60123456789',
     address: {
       addressLine0: 'NA',
