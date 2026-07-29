@@ -13,7 +13,8 @@
 ## Global Constraints
 
 - **Additive only.** No existing field changes name, type, or optionality. No existing function signature changes. Verified by: existing tests compile unchanged.
-- **Byte-identical serialisation.** A document that sets no new field must produce exactly the same output from `generateCleanInvoiceObject` as before. Undefined optional fields are omitted from the object entirely — never emitted as `null`, `''`, or `'NA'`.
+- **Byte-identical serialisation.** A document that sets no new field must produce exactly the same output from `generateCleanInvoiceObject` as before. Undefined optional fields are omitted from the object entirely — never emitted as `null` or `''`.
+- **One deliberate exception, Task 5 only.** The supplier's `SST` and `TTX` identifications and the buyer's `TTX` identification are always emitted with an `'NA'` fallback, because the official sample document requires four identifications on both parties. Task 5 regenerates the snapshot and verifies the diff contains nothing else. **No other task may modify the snapshot.** If a later task's snapshot check fails, that is a defect in that task, not a licence to regenerate.
 - **Signing is out of scope.** Do not modify `createSignedProperties`, `calculateSignedPropertiesDigest`, `createSignedInfoAndSign`, `signDocumentString`, `calculateDocumentDigest`, `calculateCertificateDigest`, `extractCertificateInfo`, or anything in `src/utils/certificate.ts`.
 - **Cite the specification.** Every type change names its official source page in the commit body. Pages are listed in the spec's "Source of truth" table. The `/documents/` index returns HTTP 403; individual pages fetch normally.
 - **Baseline test state.** 60 unit tests pass, 12 fail. All 12 failures are live-sandbox tests with expired credentials (`Platform login failed with status 400`) in `MyInvoiClientWithRealData.test.ts`, `documentSubmission.test.ts`, and `signAndSubmitInvoiceP12.test.ts`. These must not get worse; they are not a regression signal and must not be used to mask one.
@@ -54,16 +55,14 @@
 - Consumes: nothing
 - Produces: nothing consumed by later tasks
 
-> **BLOCKING — ask the author before starting:** the copyright line. Personal name (e.g. `Teoh Jia Jing`) or a company entity. Do not guess. The rest of this task cannot be committed without it.
+Copyright holder confirmed by the author: **Jia Jing Teoh**.
 
 - [ ] **Step 1: Create `LICENSE`**
-
-Replace `<COPYRIGHT HOLDER>` with the answer to the blocking question above.
 
 ```
 MIT License
 
-Copyright (c) 2026 <COPYRIGHT HOLDER>
+Copyright (c) 2026 Jia Jing Teoh
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -623,15 +622,28 @@ Specification: https://sdk.myinvois.hasil.gov.my/documents/invoice-v1-1/ — Sup
 
 Current state: `Buyer` has `sstRegistrationNumber?` (`documents.d.ts:103`) and the serialiser emits it with an `'NA'` fallback (`document.ts:278`). `Supplier` has no such field, and its `PartyIdentification` array (`document.ts:191-208`) contains only TIN and registration number.
 
-> **DECISION REQUIRED — ask the author before Step 3.**
+> **DECISION RESOLVED — Option B, confirmed by the author and by the official sample.**
 >
-> When the supplier's SST number is absent, what should the serialiser emit?
+> The official sample document was checked directly:
+> https://sdk.myinvois.hasil.gov.my/files/sdksamples/1.1-Invoice-Sample.json
 >
-> **Option A (this plan's default): omit the entry.** Existing documents serialise byte-identically. Suppliers who are SST-registered but do not set the field keep producing the same output they do today.
+> **Both** parties carry exactly four `PartyIdentification` entries:
 >
-> **Option B: always emit with an `'NA'` fallback,** mirroring what the buyer already does at `document.ts:278` and matching the `[1-1]` cardinality in the specification. More correct, but it changes the UBL output of *every* document, including those from existing production callers. It does not invalidate already-submitted documents, since signatures are computed fresh per submission — but it does change what the platform receives from the next submission onward.
+> | schemeID | Supplier sample value | Buyer sample value |
+> | --- | --- | --- |
+> | `TIN` | Supplier's TIN | Buyer's TIN |
+> | `BRN` | Supplier's BRN | Buyer's BRN |
+> | `SST` | `NA` | `NA` |
+> | `TTX` | `NA` | `NA` |
 >
-> Option A is the default because the plan's stated safety constraint is byte-identical output. Option B is arguably the real fix. **This is the author's call, not the implementer's.** If Option B is chosen, Task 4's snapshot must be regenerated in this task's commit, with the change explained in the commit body.
+> So `SST` and `TTX` are **always emitted**, with the literal string `NA` when the registration does not apply. This is what the buyer already does for SST at `document.ts:278`, so the convention is established in this codebase — it was simply applied to one field on one party.
+>
+> **Consequences, which the implementer must handle deliberately:**
+>
+> 1. This is the one place in the plan where the byte-identical constraint is intentionally broken. Supplier gains two entries, buyer gains one.
+> 2. **Task 4's snapshot must be regenerated in this task's commit** (`bunx vitest run test/serialization-stability.test.ts -u`), and the regenerated diff must be inspected before committing — it must show *only* the added `SST`/`TTX` entries and nothing else.
+> 3. Already-submitted documents are unaffected; signatures are computed fresh per submission. What changes is the payload from the next submission onward, in the direction of specification compliance.
+> 4. This task therefore also covers the **buyer's** missing `TTX` entry and `tourismTaxRegistrationNumber` field, not just the supplier's.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -654,13 +666,37 @@ const supplierIdentifications = (invoice: InvoiceV1_1) => {
   return party.PartyIdentification as Array<{ ID: Array<{ _: string; schemeID: string }> }>
 }
 
-describe('supplier tax registrations', () => {
-  it('omits SST when not supplied', () => {
-    const ids = supplierIdentifications(baseInvoice)
-    expect(ids.some(entry => entry.ID[0].schemeID === 'SST')).toBe(false)
+const buyerIdentifications = (invoice: InvoiceV1_1) => {
+  const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
+  const buyerParty = (clean.AccountingCustomerParty as Array<Record<string, unknown>>)[0]
+  const party = (buyerParty.Party as Array<Record<string, unknown>>)[0]
+  return party.PartyIdentification as Array<{ ID: Array<{ _: string; schemeID: string }> }>
+}
+
+describe('party tax registrations', () => {
+  it('emits four supplier identifications matching the official sample', () => {
+    const schemes = supplierIdentifications(baseInvoice).map(
+      entry => entry.ID[0].schemeID,
+    )
+    expect(schemes).toContain('TIN')
+    expect(schemes).toContain('SST')
+    expect(schemes).toContain('TTX')
+    expect(schemes).toHaveLength(4)
   })
 
-  it('emits SST when supplied', () => {
+  it('emits NA for supplier SST when not supplied', () => {
+    const ids = supplierIdentifications(baseInvoice)
+    const sst = ids.find(entry => entry.ID[0].schemeID === 'SST')
+    expect(sst?.ID[0]._).toBe('NA')
+  })
+
+  it('emits NA for supplier TTX when not supplied', () => {
+    const ids = supplierIdentifications(baseInvoice)
+    const ttx = ids.find(entry => entry.ID[0].schemeID === 'TTX')
+    expect(ttx?.ID[0]._).toBe('NA')
+  })
+
+  it('emits the supplier SST number when supplied', () => {
     const invoice = {
       ...baseInvoice,
       supplier: { ...baseInvoice.supplier, sstRegistrationNumber: 'A01-2345-67891012' },
@@ -670,7 +706,7 @@ describe('supplier tax registrations', () => {
     expect(sst?.ID[0]._).toBe('A01-2345-67891012')
   })
 
-  it('emits tourism tax registration when supplied', () => {
+  it('emits the supplier tourism tax number when supplied', () => {
     const invoice = {
       ...baseInvoice,
       supplier: { ...baseInvoice.supplier, tourismTaxRegistrationNumber: 'T-1234-5678' },
@@ -680,9 +716,23 @@ describe('supplier tax registrations', () => {
     expect(ttx?.ID[0]._).toBe('T-1234-5678')
   })
 
-  it('omits tourism tax registration when not supplied', () => {
-    const ids = supplierIdentifications(baseInvoice)
-    expect(ids.some(entry => entry.ID[0].schemeID === 'TTX')).toBe(false)
+  it('emits four buyer identifications including TTX', () => {
+    const schemes = buyerIdentifications(baseInvoice).map(
+      entry => entry.ID[0].schemeID,
+    )
+    expect(schemes).toContain('SST')
+    expect(schemes).toContain('TTX')
+    expect(schemes).toHaveLength(4)
+  })
+
+  it('emits the buyer tourism tax number when supplied', () => {
+    const invoice = {
+      ...baseInvoice,
+      buyer: { ...baseInvoice.buyer, tourismTaxRegistrationNumber: 'T-9999-0000' },
+    }
+    const ids = buyerIdentifications(invoice)
+    const ttx = ids.find(entry => entry.ID[0].schemeID === 'TTX')
+    expect(ttx?.ID[0]._).toBe('T-9999-0000')
   })
 })
 ```
@@ -699,18 +749,33 @@ In `src/types/documents.d.ts`, inside the `Supplier` interface, add after `regis
 ```ts
   /**
    * Supplier's SST registration number. Max 35 chars.
-   * Mandatory for SST registrants.
+   * Mandatory for SST registrants. Serialised as 'NA' when absent.
    * @example A01-2345-67891012
    */
   sstRegistrationNumber?: string
   /**
    * Supplier's Tourism Tax registration number. Max 17 chars.
-   * Mandatory for tourism tax registrants.
+   * Mandatory for tourism tax registrants. Serialised as 'NA' when absent.
    * @example T-1234-5678
    */
   tourismTaxRegistrationNumber?: string
   /**
    * Supplier's email address. Max 320 chars.
+   */
+  email?: string
+```
+
+Then, inside the `Buyer` interface, add after the existing `sstRegistrationNumber`:
+
+```ts
+  /**
+   * Buyer's Tourism Tax registration number. Max 17 chars.
+   * Serialised as 'NA' when absent.
+   * @example T-9999-0000
+   */
+  tourismTaxRegistrationNumber?: string
+  /**
+   * Buyer's email address. Max 320 chars.
    */
   email?: string
 ```
@@ -738,70 +803,97 @@ In `src/utils/document.ts`, replace the supplier `PartyIdentification` array at 
                   },
                 ],
               },
-              // Optional registrations are omitted entirely when absent, so
-              // documents that do not set them serialise byte-identically.
-              ...(invoice.supplier.sstRegistrationNumber
-                ? [
-                    {
-                      ID: [
-                        {
-                          _: invoice.supplier.sstRegistrationNumber,
-                          schemeID: 'SST',
-                        },
-                      ],
-                    },
-                  ]
-                : []),
-              ...(invoice.supplier.tourismTaxRegistrationNumber
-                ? [
-                    {
-                      ID: [
-                        {
-                          _: invoice.supplier.tourismTaxRegistrationNumber,
-                          schemeID: 'TTX',
-                        },
-                      ],
-                    },
-                  ]
-                : []),
+              // SST and TTX are always present, falling back to 'NA', to match
+              // the official sample document, which shows four identifications
+              // for both parties:
+              // https://sdk.myinvois.hasil.gov.my/files/sdksamples/1.1-Invoice-Sample.json
+              {
+                ID: [
+                  {
+                    _: invoice.supplier.sstRegistrationNumber || 'NA',
+                    schemeID: 'SST',
+                  },
+                ],
+              },
+              {
+                ID: [
+                  {
+                    _: invoice.supplier.tourismTaxRegistrationNumber || 'NA',
+                    schemeID: 'TTX',
+                  },
+                ],
+              },
             ],
+```
+
+Then add the buyer's missing `TTX` entry. In the buyer `PartyIdentification` array, immediately after the existing `SST` entry at `document.ts:275-282`, add:
+
+```ts
+              {
+                ID: [
+                  {
+                    _: invoice.buyer.tourismTaxRegistrationNumber || 'NA',
+                    schemeID: 'TTX',
+                  },
+                ],
+              },
 ```
 
 - [ ] **Step 5: Run the test to verify it passes**
 
 Run: `bunx vitest run test/field-coverage.test.ts`
-Expected: PASS — 4 tests.
+Expected: PASS — 7 tests.
 
-- [ ] **Step 6: Verify the stability snapshot is untouched**
+- [ ] **Step 6: Confirm the snapshot fails, and inspect exactly how**
 
 Run: `bunx vitest run test/serialization-stability.test.ts`
-Expected: PASS with no snapshot update. If it fails, the change was not additive — the spread guards are wrong. Fix rather than updating the snapshot, unless Option B was chosen in the decision above.
+Expected: **FAIL.** This is the one task in the plan where that is correct. Read the printed diff carefully before doing anything else.
 
-- [ ] **Step 7: Verify typecheck and full suite**
+The diff must show **only**:
+- two added supplier `PartyIdentification` entries, `SST` and `TTX`, both with value `NA`
+- one added buyer `PartyIdentification` entry, `TTX`, with value `NA`
+
+If it shows anything else — a reordered key, a changed value, a removed entry — stop and fix the implementation. Do not update the snapshot to make an unexplained diff go away.
+
+- [ ] **Step 7: Regenerate the snapshot**
+
+Run: `bunx vitest run test/serialization-stability.test.ts -u`
+Then: `git diff test/__snapshots__/`
+Expected: exactly the three added entries described above and nothing more. Confirm this by reading the diff, not by assuming.
+
+- [ ] **Step 8: Verify typecheck and full suite**
 
 Run: `bunx tsc --noEmit && bunx vitest run 2>&1 | tail -5`
-Expected: no type errors; passing count is 74.
+Expected: no type errors; passing count is 77.
 
-- [ ] **Step 8: Lint and commit**
+- [ ] **Step 9: Lint and commit**
 
 ```bash
 bunx oxlint
-git add src/types/documents.d.ts src/utils/document.ts test/field-coverage.test.ts
-git commit -m "feat: add supplier SST and tourism tax registration numbers
+git add src/types/documents.d.ts src/utils/document.ts test/field-coverage.test.ts test/__snapshots__/
+git commit -m "fix: emit SST and tourism tax identifications for both parties
 
-Buyer already had an optional sstRegistrationNumber, but Supplier did
-not, even though the specification marks the supplier's SST
-registration as conditionally mandatory. The supplier issues the
-invoice, so the supplier's number is the one the platform validates.
+The official sample document shows four PartyIdentification entries
+for both supplier and buyer: TIN, BRN, SST and TTX, with the literal
+string NA where a registration does not apply.
 
-Tourism tax registration was absent for both parties. Tax type 03
-(tourism tax) already existed for line items, so a tourism tax
-registrant could charge the tax but not declare the registration that
-authorises it.
+This library emitted two for the supplier and three for the buyer.
+The supplier had no SST field at all, even though the supplier issues
+the invoice and so is the party whose SST number the platform
+validates. Neither party could declare a tourism tax registration,
+although tax type 03 already existed for line items, so a registrant
+could charge the tax without declaring the registration authorising
+it.
 
-Both fields are optional and are omitted from the UBL output when not
-supplied, so existing documents serialise unchanged.
+This changes the UBL payload for every document from the next
+submission onward, in the direction of specification compliance.
+Already-submitted documents are unaffected, since signatures are
+computed fresh per submission. The serialisation snapshot was
+regenerated and its diff verified to contain only the three added
+identification entries.
 
+Sample:
+https://sdk.myinvois.hasil.gov.my/files/sdksamples/1.1-Invoice-Sample.json
 Specification:
 https://sdk.myinvois.hasil.gov.my/documents/invoice-v1-1/"
 ```
@@ -947,7 +1039,7 @@ and the equivalent buyer `PostalAddress` block with:
 - [ ] **Step 5: Run the test to verify it passes**
 
 Run: `bunx vitest run test/field-coverage.test.ts`
-Expected: PASS — 8 tests.
+Expected: PASS — 11 tests.
 
 - [ ] **Step 6: Verify the stability snapshot is untouched**
 
@@ -957,7 +1049,7 @@ Expected: PASS with no snapshot update. This is the step that proves the refacto
 - [ ] **Step 7: Verify typecheck and full suite**
 
 Run: `bunx tsc --noEmit && bunx vitest run 2>&1 | tail -5`
-Expected: no type errors; passing count is 78.
+Expected: no type errors; passing count is 81.
 
 - [ ] **Step 8: Lint and commit**
 
@@ -1124,7 +1216,7 @@ Match the surrounding indentation and the local variable name for the line item 
 - [ ] **Step 6: Run the test to verify it passes**
 
 Run: `bunx vitest run test/field-coverage.test.ts`
-Expected: PASS — 12 tests.
+Expected: PASS — 15 tests.
 
 - [ ] **Step 7: Verify the stability snapshot is untouched**
 
@@ -1134,7 +1226,7 @@ Expected: PASS with no snapshot update.
 - [ ] **Step 8: Verify typecheck and full suite**
 
 Run: `bunx tsc --noEmit && bunx vitest run 2>&1 | tail -5`
-Expected: no type errors; passing count is 82.
+Expected: no type errors; passing count is 85.
 
 - [ ] **Step 9: Lint and commit**
 
@@ -1284,12 +1376,12 @@ export type AllDocumentsV1_1 =
 - [ ] **Step 6: Run the test to verify it passes**
 
 Run: `bunx vitest run test/field-coverage.test.ts`
-Expected: PASS — 13 tests.
+Expected: PASS — 16 tests.
 
 - [ ] **Step 7: Verify typecheck and full suite**
 
 Run: `bunx tsc --noEmit && bunx vitest run 2>&1 | tail -5`
-Expected: no type errors; passing count is 83.
+Expected: no type errors; passing count is 86.
 
 If `tsc` reports a non-exhaustive switch over `AllDocumentsV1_1` anywhere, fix that switch — it is exactly the risk the spec flagged when adding a union member.
 
@@ -1604,7 +1696,7 @@ In `generateCleanInvoiceObject`, add these guarded keys to the returned object. 
 - [ ] **Step 6: Run the test to verify it passes**
 
 Run: `bunx vitest run test/field-coverage.test.ts`
-Expected: PASS — 18 tests.
+Expected: PASS — 21 tests.
 
 - [ ] **Step 7: Verify the stability snapshot is untouched**
 
@@ -1614,7 +1706,7 @@ Expected: PASS with no snapshot update. This is the most important verification 
 - [ ] **Step 8: Verify typecheck and full suite**
 
 Run: `bunx tsc --noEmit && bunx vitest run 2>&1 | tail -5`
-Expected: no type errors; passing count is 88.
+Expected: no type errors; passing count is 91.
 
 - [ ] **Step 9: Lint and commit**
 
@@ -1655,7 +1747,7 @@ https://sdk.myinvois.hasil.gov.my/documents/invoice-v1-1/"
 - [ ] **Step 1: Confirm the whole suite is at baseline or better**
 
 Run: `bunx vitest run 2>&1 | tail -5`
-Expected: `Tests  12 failed | 88 passed`. The 12 failures must be the same live-sandbox tests as at baseline. Confirm with:
+Expected: `Tests  12 failed | 91 passed`. The 12 failures must be the same live-sandbox tests as at baseline. Confirm with:
 
 Run: `bunx vitest run 2>&1 | grep "×"`
 Expected: only tests in `MyInvoiClientWithRealData.test.ts`, `documentSubmission.test.ts`, and `signAndSubmitInvoiceP12.test.ts`.
@@ -1685,15 +1777,16 @@ This runs lint, build, changelog generation, and `npm publish`. Review the gener
 **Known gaps carried forward, deliberately.**
 
 - Task 9 lands the type fields for `taxCurrencyCode`, `tradeInformation`, and the prepayment group, but instructs the implementer to open a follow-up task for any UBL mapping that cannot be read unambiguously off the specification page. Guessing a UBL path produces documents the platform rejects with unhelpful errors, which is worse than the field simply being unserialised.
-- Buyer `email` is not covered by its own task. It is a one-line addition to the `Buyer` interface; fold it into Task 5's commit alongside the supplier email field.
+- Buyer `email` and `tourismTaxRegistrationNumber` are folded into Task 5 alongside the supplier equivalents rather than getting their own task, since they touch the same two files and the same serialisation block.
+- Party `email` fields land as types in Task 5 but are not serialised there. The official sample places them under `cac:Party / cac:Contact / cbc:ElectronicMail`; confirm that path against the sample before wiring it, and if it is not unambiguous, open a follow-up rather than guessing.
 
-**Two decisions require the author before implementation starts.**
+**Both author decisions are resolved.**
 
-1. Task 1 — the MIT copyright holder. Blocking.
-2. Task 5 — whether the supplier's absent SST number should be omitted (Option A, this plan's default) or emitted as `'NA'` to mirror the buyer's existing behaviour and the `[1-1]` cardinality (Option B). Option B is arguably more correct but changes the UBL output of every existing document.
+1. Task 1 — copyright holder is **Jia Jing Teoh**.
+2. Task 5 — **Option B**, and the official sample extended it further than the original question: `SST` and `TTX` are always emitted with an `'NA'` fallback on **both** parties, not just the supplier. The buyer was also missing its `TTX` entry. Task 5 therefore changes three identification entries, regenerates the snapshot once, and verifies the diff.
 
 **Type consistency.** `buildPostalAddress` is introduced in Task 6 and reused in Task 9. `CommonDocumentOptionalFields` is defined in Task 9 Step 2 and extended onto all eight interfaces including `SelfBilledDebitNoteV1_1` from Task 8, so Task 8 must precede Task 9. `MyInvoisClientOptions` is defined and used only in Task 3. The `selfBilledDebitNoteLineItems` field name is used identically in Task 8's interface, its test, and the `getLineItems` branch.
 
-**Test count arithmetic.** Baseline 60 passing. Task 2 adds 4 (64), Task 3 adds 4 (68), Task 4 adds 2 snapshot tests (70), Task 5 adds 4 (74), Task 6 adds 4 (78), Task 7 adds 4 (82), Task 8 adds 1 (83), Task 9 adds 5 (88). If Task 4's second assertion is relaxed per its Step 2 note, the count still holds since both tests remain.
+**Test count arithmetic.** Baseline 60 passing. Task 2 adds 4 (64), Task 3 adds 4 (68), Task 4 adds 2 snapshot tests (70), Task 5 adds 7 (77), Task 6 adds 4 (81), Task 7 adds 4 (85), Task 8 adds 1 (86), Task 9 adds 5 (91). If Task 4's second assertion is relaxed per its Step 2 note, the count still holds since both tests remain.
 
-Note that the per-file counts quoted inside Tasks 5 through 9 refer to `test/field-coverage.test.ts` alone (4, 8, 12, 13, 18), while the counts in the typecheck steps refer to the whole suite. They are different numbers on purpose.
+Note that the per-file counts quoted inside Tasks 5 through 9 refer to `test/field-coverage.test.ts` alone (7, 11, 15, 16, 21), while the counts in the typecheck steps refer to the whole suite. They are different numbers on purpose.
