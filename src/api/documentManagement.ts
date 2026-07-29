@@ -132,3 +132,78 @@ export async function searchDocuments(
     longId: doc.longID ?? doc.longId,
   })) as DocumentSummary[]
 }
+
+/**
+ * Retrieves recently submitted or received documents.
+ *
+ * Official specification:
+ * https://sdk.myinvois.hasil.gov.my/einvoicingapi/08-get-recent-documents/
+ *
+ * Rate limited to 12 requests per minute. The limiter category
+ * `getRecentDocuments` already covers this path.
+ */
+export async function getRecentDocuments(
+  context: DocumentContext,
+  params: {
+    pageNo?: number
+    pageSize?: number
+    submissionDateFrom?: string
+    submissionDateTo?: string
+    issueDateFrom?: string
+    issueDateTo?: string
+    invoiceDirection?: 'Sent' | 'Received'
+    status?: DocumentStatus
+    documentType?: EInvoiceTypeCode
+    searchQuery?: string
+  } = {},
+): Promise<DocumentSummary[]> {
+  const { fetch } = context
+  const {
+    pageNo,
+    pageSize,
+    submissionDateFrom,
+    submissionDateTo,
+    issueDateFrom,
+    issueDateTo,
+    invoiceDirection,
+    status,
+    documentType,
+    searchQuery,
+  } = params
+
+  const queryParams = new URLSearchParams()
+
+  if (pageNo) queryParams.set('pageNo', pageNo.toString())
+  if (pageSize) queryParams.set('pageSize', pageSize.toString())
+  if (submissionDateFrom)
+    queryParams.set('submissionDateFrom', submissionDateFrom)
+  if (submissionDateTo) queryParams.set('submissionDateTo', submissionDateTo)
+  if (issueDateFrom) queryParams.set('issueDateFrom', issueDateFrom)
+  if (issueDateTo) queryParams.set('issueDateTo', issueDateTo)
+  if (invoiceDirection) queryParams.set('invoiceDirection', invoiceDirection)
+  if (status) queryParams.set('status', status)
+  if (documentType) queryParams.set('documentType', documentType)
+  if (searchQuery) queryParams.set('searchQuery', searchQuery)
+
+  const query = queryParams.toString()
+  const response = await fetch(
+    `/api/v1.0/documents/recent${query ? `?${query}` : ''}`,
+  )
+
+  const data = await response.json()
+
+  if (rawLogs) {
+    console.log('Raw recent documents:', data)
+  }
+
+  const documents: (DocumentSummary & { longID?: string })[] = Array.isArray(
+    data,
+  )
+    ? data
+    : (data?.result ?? [])
+
+  return documents.map(doc => ({
+    ...doc,
+    longId: doc.longID ?? doc.longId,
+  })) as DocumentSummary[]
+}

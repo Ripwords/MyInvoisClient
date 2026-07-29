@@ -629,6 +629,29 @@ export class MyInvoisClient {
   }
 
   /**
+   * Retrieves recently submitted or received documents.
+   *
+   * @param params - Optional paging and filter parameters
+   * @returns Promise resolving to an array of document summaries
+   *
+   * @example
+   * ```typescript
+   * const recent = await client.getRecentDocuments({ pageSize: 20 })
+   * ```
+   *
+   * @remarks
+   * - Rate limited to 12 requests per minute
+   */
+  async getRecentDocuments(
+    params: Parameters<typeof DocumentManagementAPI.getRecentDocuments>[1] = {},
+  ): Promise<DocumentSummary[]> {
+    return DocumentManagementAPI.getRecentDocuments(
+      { fetch: this.fetch.bind(this) },
+      params,
+    )
+  }
+
+  /**
    * Retrieves notifications from the MyInvois platform based on specified search criteria.
    *
    * This method allows you to search for system notifications, alerts, and messages
