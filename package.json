@@ -1,7 +1,7 @@
 {
   "name": "@ripwords/myinvois-client",
   "version": "0.5.0",
-  "description": "MyInvois client",
+  "description": "TypeScript client for Malaysia's MyInvois (LHDN) e-invoicing API \u2014 document building, XAdES signing, submission and rate limiting.",
   "license": "MIT",
   "scripts": {
     "build": "tsdown",
@@ -50,7 +50,30 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "crypto": "^1.0.1",
     "node-forge": "^1.3.1"
+  },
+  "author": "Jia Jing Teoh",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ripwords/MyInvoisClient.git"
+  },
+  "homepage": "https://github.com/Ripwords/MyInvoisClient#readme",
+  "bugs": {
+    "url": "https://github.com/Ripwords/MyInvoisClient/issues"
+  },
+  "keywords": [
+    "myinvois",
+    "lhdn",
+    "e-invoice",
+    "einvoice",
+    "malaysia",
+    "tax",
+    "ubl",
+    "xades",
+    "typescript",
+    "sdk"
+  ],
+  "engines": {
+    "node": ">=18"
   }
 }
