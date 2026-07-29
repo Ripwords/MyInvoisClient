@@ -2,6 +2,7 @@
   "name": "@ripwords/myinvois-client",
   "version": "0.4.2",
   "description": "MyInvois client",
+  "license": "MIT",
   "scripts": {
     "build": "tsdown",
     "verify-dist": "bun run scripts/verify-dist.ts",
@@ -20,7 +21,9 @@
   "type": "module",
   "types": "./dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "LICENSE",
+    "README.md"
   ],
   "exports": {
     ".": {

@@ -164,3 +164,7 @@ The certificate must include:
 - Issued by a MyInvois-trusted CA
 
 This project was created using `bun init` in bun v1.2.10. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
