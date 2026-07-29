@@ -1,6 +1,44 @@
 # Changelog
 
 
+## v0.5.0
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.4.2...v0.5.0)
+
+### Changed output
+
+The supplier and buyer parties now each carry four `PartyIdentification` entries -- TIN, BRN, SST and TTX -- with the literal string `NA` where a registration does not apply. Previously the supplier carried two and the buyer three. This matches the [official 1.1 invoice sample](https://sdk.myinvois.hasil.gov.my/files/sdksamples/1.1-Invoice-Sample.json).
+
+**This changes the submitted payload, and therefore the document digest, for every document type.** Documents already submitted are unaffected, because each is signed at the moment it is sent. If you are SST or tourism tax registered, set the new `supplier.sstRegistrationNumber`, `supplier.tourismTaxRegistrationNumber` or `buyer.tourismTaxRegistrationNumber` fields -- otherwise your documents now positively declare `NA` rather than omitting the element.
+
+Billing period fields on self-billed invoices (`frequencyOfBilling`, `billingPeriodStartDate`, `billingPeriodEndDate`) already existed but were silently dropped when the document was built. They now serialise as `cac:InvoicePeriod`, and are available on all document types.
+
+### Fixed
+
+- Refund notes, self-billed credit notes and self-billed refund notes could never emit a `BillingReference` linking to the original document, because the serialiser required a field those types did not declare. They now emit it when `originalEInvoiceInternalId` is supplied.
+- `getRecentDocuments` sent `invoiceDirection`, but the endpoint documents `InvoiceDirection` with a capital I, so the filter was silently ignored. It also sent a `searchQuery` parameter the endpoint does not accept and omitted six that it does. Note `searchDocuments` correctly keeps the lowercase spelling -- the platform differs between the two endpoints.
+- Credit and debit notes carrying an empty or missing `originalEInvoiceInternalId` previously emitted a malformed `BillingReference`; the block is now omitted.
+
+### Added
+
+- MIT licence. `LICENSE` and `README.md` now ship with the package.
+- Self-Billed Debit Note (document type `13`), the one official type that was missing.
+- `MyInvoisClient.getRecentDocuments()`.
+- `MyInvoisClient.create({ ... })`, an options-object alternative to the positional constructor, which is unchanged and not deprecated.
+- Optional fields now written to the document: second and third address lines, postal zone, line item tariff code and country of origin, tax currency code, billing period, payment means and terms, prepayment, bill reference, and shipping recipient.
+- Optional fields accepted but **not yet written** to the document, each marked in its documentation: `supplier.email`, `buyer.email`, `shippingRecipient.registrationNumber`, all `tradeInformation` fields, `taxExemptionAmount` and `taxExemptionDescription`.
+
+### Type changes
+
+- `AllDocumentsV1_1` gained an eighth member. If you narrow over it with a `never` exhaustiveness check, add a branch for `SelfBilledDebitNoteV1_1`.
+- `InvoiceSubmission.BillingReference[].InvoiceDocumentReference` is now optional, because the block may carry only a bill reference number.
+
+No other field changed name, type or optionality, no export was removed or renamed, and no existing function signature changed.
+
+### Before upgrading
+
+The supplier SST and TTX entries have not been exercised against the live platform. Submit one document of each type you use to the sandbox and confirm it validates.
+
 ## v0.4.2
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.4.1...v0.4.2)

@@ -1,6 +1,6 @@
 {
   "name": "@ripwords/myinvois-client",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "MyInvois client",
   "license": "MIT",
   "scripts": {
