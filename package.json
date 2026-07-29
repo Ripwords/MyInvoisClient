@@ -1,10 +1,13 @@
 {
   "name": "@ripwords/myinvois-client",
-  "version": "0.4.0",
+  "version": "0.4.2",
   "description": "MyInvois client",
+  "license": "MIT",
   "scripts": {
     "build": "tsdown",
-    "prerelease": "bun run lint && bun run build",
+    "verify-dist": "bun run scripts/verify-dist.ts",
+    "prepublishOnly": "rm -rf dist && bun run build && bun run verify-dist",
+    "prerelease": "bun run lint && rm -rf dist && bun run build && bun run verify-dist",
     "postrelease": "git push --follow-tags",
     "changelog": "changelogen --release",
     "release": "bun run prerelease && bun run changelog && npm publish --access public",
@@ -13,16 +16,26 @@
     "lint": "oxlint",
     "test": "vitest"
   },
-  "main": "dist/index.js",
-  "module": "src/index.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "type": "module",
-  "types": "dist/index.d.ts",
+  "types": "./dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "LICENSE",
+    "README.md"
   ],
   "exports": {
-    "import": "./dist/index.js",
-    "require": "./dist/index.cjs"
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
   },
   "devDependencies": {
     "@types/bun": "latest",

@@ -12,6 +12,7 @@ import {
 } from '../types'
 import type { ClassificationCode } from '../types'
 import type { TaxTypeCode } from '../types'
+import type { Address } from '../types'
 import { formatIdValue } from './formatIdValue'
 
 /**
@@ -58,6 +59,8 @@ const getLineItems = (doc: AllDocumentsV1_1): InvoiceLineItem[] => {
   if ('refundNoteLineItems' in doc) return doc.refundNoteLineItems
   if ('selfBilledCreditNoteLineItems' in doc)
     return doc.selfBilledCreditNoteLineItems
+  if ('selfBilledDebitNoteLineItems' in doc)
+    return doc.selfBilledDebitNoteLineItems
   if ('selfBilledRefundNoteLineItems' in doc)
     return doc.selfBilledRefundNoteLineItems
   // Fallback (should never happen with exhaustive types)
@@ -95,6 +98,34 @@ export const canonicalizeJSON = (obj: unknown): string => {
   // Use compact JSON with no extra whitespace
   return JSON.stringify(sortedObj, null, 0)
 }
+
+/**
+ * Builds the UBL PostalAddress block for a party.
+ *
+ * Optional lines and postal zone are omitted entirely when absent, so
+ * addresses that set only addressLine0 serialise exactly as before.
+ */
+const buildPostalAddress = (address: Address) => ({
+  CityName: [{ _: address.cityName }],
+  CountrySubentityCode: [{ _: address.state }],
+  ...(address.postalZone ? { PostalZone: [{ _: address.postalZone }] } : {}),
+  AddressLine: [
+    { Line: [{ _: address.addressLine0 }] },
+    ...(address.addressLine1 ? [{ Line: [{ _: address.addressLine1 }] }] : []),
+    ...(address.addressLine2 ? [{ Line: [{ _: address.addressLine2 }] }] : []),
+  ],
+  Country: [
+    {
+      IdentificationCode: [
+        {
+          _: address.country || 'MYS',
+          listID: '3166-1',
+          listAgencyID: 'ISO',
+        },
+      ],
+    },
+  ],
+})
 
 /**
  * Generates a clean invoice object following MyInvois v1.1 specification exactly
@@ -148,25 +179,219 @@ export const generateCleanInvoiceObject = (
     ],
     DocumentCurrencyCode: [{ _: invoice.invoiceCurrencyCode }],
 
-    // === BILLING REFERENCE (only for credit/debit/refund notes) ===
-    ...('originalEInvoiceReferenceNumber' in invoice &&
-    'originalEInvoiceInternalId' in invoice &&
-    invoice.originalEInvoiceReferenceNumber
+    // === BILLING REFERENCE ===
+    // InvoiceDocumentReference links to the original document (credit/debit/
+    // refund notes only). AdditionalDocumentReference carries the supplier's
+    // bill reference number, which every document type may set.
+    // https://sdk.myinvois.hasil.gov.my/documents/invoice-v1-1/
+    ...((('originalEInvoiceReferenceNumber' in invoice &&
+      invoice.originalEInvoiceReferenceNumber &&
+      'originalEInvoiceInternalId' in invoice &&
+      invoice.originalEInvoiceInternalId) ||
+      invoice.paymentInformation?.billReferenceNumber
       ? {
           BillingReference: [
             {
-              InvoiceDocumentReference: [
+              ...('originalEInvoiceReferenceNumber' in invoice &&
+              invoice.originalEInvoiceReferenceNumber &&
+              'originalEInvoiceInternalId' in invoice &&
+              invoice.originalEInvoiceInternalId
+                ? {
+                    InvoiceDocumentReference: [
+                      {
+                        UUID: [
+                          {
+                            _: invoice.originalEInvoiceReferenceNumber,
+                          },
+                        ],
+                        ID: [
+                          {
+                            _: invoice.originalEInvoiceInternalId,
+                          },
+                        ],
+                      },
+                    ],
+                  }
+                : {}),
+              ...(invoice.paymentInformation?.billReferenceNumber
+                ? {
+                    AdditionalDocumentReference: [
+                      {
+                        ID: [
+                          {
+                            _: invoice.paymentInformation.billReferenceNumber,
+                          },
+                        ],
+                      },
+                    ],
+                  }
+                : {}),
+            },
+          ],
+        }
+      : {})),
+
+    // === TAX CURRENCY CODE ===
+    // https://sdk.myinvois.hasil.gov.my/documents/invoice-v1-1/
+    ...(invoice.taxCurrencyCode
+      ? { TaxCurrencyCode: [{ _: invoice.taxCurrencyCode }] }
+      : {}),
+
+    // === BILLING PERIOD ===
+    // Omitted entirely when no part of it is supplied.
+    ...(invoice.billingPeriodStartDate ||
+    invoice.billingPeriodEndDate ||
+    invoice.frequencyOfBilling
+      ? {
+          InvoicePeriod: [
+            {
+              ...(invoice.billingPeriodStartDate
+                ? { StartDate: [{ _: invoice.billingPeriodStartDate }] }
+                : {}),
+              ...(invoice.billingPeriodEndDate
+                ? { EndDate: [{ _: invoice.billingPeriodEndDate }] }
+                : {}),
+              ...(invoice.frequencyOfBilling
+                ? { Description: [{ _: invoice.frequencyOfBilling }] }
+                : {}),
+            },
+          ],
+        }
+      : {}),
+
+    // === PAYMENT MEANS AND TERMS ===
+    ...(invoice.paymentInformation?.paymentMode ||
+    invoice.paymentInformation?.supplierBankAccountNumber
+      ? {
+          PaymentMeans: [
+            {
+              ...(invoice.paymentInformation.paymentMode
+                ? {
+                    PaymentMeansCode: [
+                      { _: invoice.paymentInformation.paymentMode },
+                    ],
+                  }
+                : {}),
+              ...(invoice.paymentInformation.supplierBankAccountNumber
+                ? {
+                    PayeeFinancialAccount: [
+                      {
+                        ID: [
+                          {
+                            _: invoice.paymentInformation
+                              .supplierBankAccountNumber,
+                          },
+                        ],
+                      },
+                    ],
+                  }
+                : {}),
+            },
+          ],
+        }
+      : {}),
+    ...(invoice.paymentInformation?.paymentTerms
+      ? {
+          PaymentTerms: [
+            { Note: [{ _: invoice.paymentInformation.paymentTerms }] },
+          ],
+        }
+      : {}),
+
+    // === PREPAID PAYMENT ===
+    // https://sdk.myinvois.hasil.gov.my/documents/invoice-v1-1/
+    ...(invoice.paymentInformation?.prepaymentAmount !== undefined ||
+    invoice.paymentInformation?.prepaymentDate ||
+    invoice.paymentInformation?.prepaymentTime ||
+    invoice.paymentInformation?.prepaymentReferenceNumber
+      ? {
+          PrepaidPayment: [
+            {
+              ...(invoice.paymentInformation.prepaymentReferenceNumber
+                ? {
+                    ID: [
+                      {
+                        _: invoice.paymentInformation
+                          .prepaymentReferenceNumber,
+                      },
+                    ],
+                  }
+                : {}),
+              ...(invoice.paymentInformation.prepaymentAmount !== undefined
+                ? {
+                    PaidAmount: [
+                      {
+                        _: invoice.paymentInformation.prepaymentAmount,
+                        currencyID: invoice.invoiceCurrencyCode,
+                      },
+                    ],
+                  }
+                : {}),
+              ...(invoice.paymentInformation.prepaymentDate
+                ? {
+                    PaidDate: [
+                      { _: invoice.paymentInformation.prepaymentDate },
+                    ],
+                  }
+                : {}),
+              ...(invoice.paymentInformation.prepaymentTime
+                ? {
+                    PaidTime: [
+                      { _: invoice.paymentInformation.prepaymentTime },
+                    ],
+                  }
+                : {}),
+            },
+          ],
+        }
+      : {}),
+
+    // === DELIVERY / SHIPPING RECIPIENT ===
+    // registrationNumber is intentionally not serialised: see
+    // ShippingRecipient in src/types/documents.d.ts for why. It is also
+    // deliberately excluded from this guard — every field on
+    // ShippingRecipient is optional, so a recipient carrying only a
+    // registration number must not emit an otherwise-empty DeliveryParty.
+    ...(invoice.shippingRecipient?.name ||
+    invoice.shippingRecipient?.tin ||
+    invoice.shippingRecipient?.address
+      ? {
+          Delivery: [
+            {
+              DeliveryParty: [
                 {
-                  UUID: [
-                    {
-                      _: invoice.originalEInvoiceReferenceNumber,
-                    },
-                  ],
-                  ID: [
-                    {
-                      _: invoice.originalEInvoiceInternalId,
-                    },
-                  ],
+                  ...(invoice.shippingRecipient.name
+                    ? {
+                        PartyLegalEntity: [
+                          {
+                            RegistrationName: [
+                              { _: invoice.shippingRecipient.name },
+                            ],
+                          },
+                        ],
+                      }
+                    : {}),
+                  ...(invoice.shippingRecipient.tin
+                    ? {
+                        PartyIdentification: [
+                          {
+                            ID: [
+                              {
+                                _: invoice.shippingRecipient.tin,
+                                schemeID: 'TIN',
+                              },
+                            ],
+                          },
+                        ],
+                      }
+                    : {}),
+                  ...(invoice.shippingRecipient.address
+                    ? {
+                        PostalAddress: [
+                          buildPostalAddress(invoice.shippingRecipient.address),
+                        ],
+                      }
+                    : {}),
                 },
               ],
             },
@@ -205,31 +430,30 @@ export const generateCleanInvoiceObject = (
                   },
                 ],
               },
-            ],
-
-            // Postal Address - FIXED listID format
-            PostalAddress: [
+              // SST and TTX are always present, falling back to 'NA', to match
+              // the official sample document, which shows four identifications
+              // for both parties:
+              // https://sdk.myinvois.hasil.gov.my/files/sdksamples/1.1-Invoice-Sample.json
               {
-                CityName: [{ _: invoice.supplier.address.cityName }],
-                CountrySubentityCode: [{ _: invoice.supplier.address.state }],
-                AddressLine: [
+                ID: [
                   {
-                    Line: [{ _: invoice.supplier.address.addressLine0 }],
+                    _: invoice.supplier.sstRegistrationNumber || 'NA',
+                    schemeID: 'SST',
                   },
                 ],
-                Country: [
+              },
+              {
+                ID: [
                   {
-                    IdentificationCode: [
-                      {
-                        _: invoice.supplier.address.country || 'MYS',
-                        listID: '3166-1', // FIXED: was "ISO3166-1"
-                        listAgencyID: 'ISO',
-                      },
-                    ],
+                    _: invoice.supplier.tourismTaxRegistrationNumber || 'NA',
+                    schemeID: 'TTX',
                   },
                 ],
               },
             ],
+
+            // Postal Address - FIXED listID format
+            PostalAddress: [buildPostalAddress(invoice.supplier.address)],
 
             // Party Legal Entity
             PartyLegalEntity: [
@@ -280,31 +504,18 @@ export const generateCleanInvoiceObject = (
                   },
                 ],
               },
-            ],
-
-            // Postal Address - FIXED listID format
-            PostalAddress: [
               {
-                CityName: [{ _: invoice.buyer.address.cityName }],
-                CountrySubentityCode: [{ _: invoice.buyer.address.state }],
-                AddressLine: [
+                ID: [
                   {
-                    Line: [{ _: invoice.buyer.address.addressLine0 }],
-                  },
-                ],
-                Country: [
-                  {
-                    IdentificationCode: [
-                      {
-                        _: invoice.buyer.address.country || 'MYS',
-                        listID: '3166-1', // FIXED: was "ISO3166-1"
-                        listAgencyID: 'ISO',
-                      },
-                    ],
+                    _: invoice.buyer.tourismTaxRegistrationNumber || 'NA',
+                    schemeID: 'TTX',
                   },
                 ],
               },
             ],
+
+            // Postal Address - FIXED listID format
+            PostalAddress: [buildPostalAddress(invoice.buyer.address)],
 
             // Party Legal Entity
             PartyLegalEntity: [
@@ -436,8 +647,29 @@ export const generateCleanInvoiceObject = (
                 },
               ],
             },
+            ...(item.productTariffCode
+              ? [
+                  {
+                    ItemClassificationCode: [
+                      {
+                        _: item.productTariffCode,
+                        listID: 'PTC',
+                      },
+                    ],
+                  },
+                ]
+              : []),
           ],
           Description: [{ _: item.itemDescription }],
+          ...(item.countryOfOrigin
+            ? {
+                OriginCountry: [
+                  {
+                    IdentificationCode: [{ _: item.countryOfOrigin }],
+                  },
+                ],
+              }
+            : {}),
         },
       ],
 

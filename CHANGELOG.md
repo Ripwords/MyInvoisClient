@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.4.2
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.4.1...v0.4.2)
+
+## v0.4.1
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.4.0...v0.4.1)
+
+### 🩹 Fixes
+
+- **build:** Ship ESM entry + types; guard partial publishes ([18f5109](https://github.com/Ripwords/MyInvoisClient/commit/18f5109))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.4.0
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.3.7...v0.4.0)
