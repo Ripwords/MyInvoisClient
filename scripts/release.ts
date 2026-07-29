@@ -51,6 +51,21 @@ const nextVersion = (current: string, kind: Bump): string => {
 const readVersion = (): string =>
   JSON.parse(readFileSync('package.json', 'utf8')).version
 
+/**
+ * Pulls the body of a version's section out of CHANGELOG.md, for use as the
+ * GitHub release notes. Returns null when the section is absent.
+ */
+const extractChangelogSection = (version: string): string | null => {
+  const text = readFileSync('CHANGELOG.md', 'utf8')
+  const start = text.indexOf(`## v${version}`)
+  if (start === -1) return null
+  const rest = text.slice(start)
+  const nextHeading = rest.indexOf('\n## ', 1)
+  const section = nextHeading === -1 ? rest : rest.slice(0, nextHeading)
+  // Drop the heading itself — GitHub shows the tag name as the release title.
+  return section.split('\n').slice(1).join('\n').trim() || null
+}
+
 const step = (label: string) => console.log(`\n▶ ${label}`)
 
 // ---------------------------------------------------------------------------
@@ -165,4 +180,23 @@ try {
 step('Pushing commit and tags')
 await $`git push origin master --follow-tags`
 
-console.log(`\n✔ Released ${target} and pushed v${target}.`)
+step('Creating the GitHub release')
+// The old scripts pushed the tag but never created a release, so v0.4.2 and
+// v0.5.0 existed on npm and as git tags with nothing on the releases page.
+// A tag is not a release: it carries no notes and does not notify watchers.
+const notes = extractChangelogSection(target)
+if (notes) {
+  const gh = await $`gh release create v${target} --title ${`v${target}`} --notes ${notes} --latest`.nothrow()
+  if (gh.exitCode !== 0) {
+    console.warn(
+      `\n! The GitHub release could not be created (exit ${gh.exitCode}). ` +
+        `npm and the git tag are already published, so this is the only step ` +
+        `left. Create it by hand:\n` +
+        `  gh release create v${target} --title v${target} --notes-file <notes>`,
+    )
+  }
+} else {
+  console.warn(`\n! No CHANGELOG section found for v${target}; skipped the GitHub release.`)
+}
+
+console.log(`\n✔ Released ${target}, pushed v${target}, and created the GitHub release.`)
