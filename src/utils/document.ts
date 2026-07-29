@@ -59,6 +59,8 @@ const getLineItems = (doc: AllDocumentsV1_1): InvoiceLineItem[] => {
   if ('refundNoteLineItems' in doc) return doc.refundNoteLineItems
   if ('selfBilledCreditNoteLineItems' in doc)
     return doc.selfBilledCreditNoteLineItems
+  if ('selfBilledDebitNoteLineItems' in doc)
+    return doc.selfBilledDebitNoteLineItems
   if ('selfBilledRefundNoteLineItems' in doc)
     return doc.selfBilledRefundNoteLineItems
   // Fallback (should never happen with exhaustive types)

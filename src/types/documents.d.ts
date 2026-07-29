@@ -514,6 +514,53 @@ export interface SelfBilledCreditNoteV1_1 {
   taxTotal: TaxTotal
 }
 
+/**
+ * Self-Billed Debit Note (e-Invoice type 13), version 1.1.
+ *
+ * Issued by a buyer to record additional charges on a previously issued
+ * self-billed e-Invoice.
+ *
+ * Specification:
+ * https://sdk.myinvois.hasil.gov.my/documents/self-billed-debit-v1-1/
+ */
+export interface SelfBilledDebitNoteV1_1 {
+  /** Supplier information (AccountingSupplierParty). */
+  supplier: Supplier
+  /** Buyer information (AccountingCustomerParty). */
+  buyer: Buyer
+
+  /** e-Invoice version. Fixed value '1.1'. */
+  eInvoiceVersion: '1.1'
+  /** e-Invoice type code for Self-Billed Debit Note. Fixed value '13'. */
+  eInvoiceTypeCode: EInvoiceTypeCode
+  /** Document reference number used by the issuer. Max 50 chars. */
+  eInvoiceCodeOrNumber: string
+  /** LHDNM Unique Identifier Number of the original self-billed document being adjusted. 26 chars. */
+  originalEInvoiceReferenceNumber: string
+  /** Issuer's internal identifier for the original self-billed document. */
+  originalEInvoiceInternalId: string
+  /** Date of issuance (YYYY-MM-DD) in UTC. */
+  eInvoiceDate: string
+  /** Time of issuance (HH:mm:ssZ) in UTC. */
+  eInvoiceTime: string
+
+  /** Currency used for the monetary values in this document. */
+  invoiceCurrencyCode: CurrencyCode
+  /**
+   * Rate at which a non-Malaysian currency converts to Malaysian Ringgit.
+   * Mandatory when invoiceCurrencyCode is not 'MYR'.
+   */
+  currencyExchangeRate?: number
+
+  /** Self-billed debit note line items. */
+  selfBilledDebitNoteLineItems: InvoiceLineItem[]
+
+  /** Overall monetary totals. */
+  legalMonetaryTotal: LegalMonetaryTotal
+  /** Total tax amounts and subtotals. */
+  taxTotal: TaxTotal
+}
+
 export interface SelfBilledRefundNoteV1_1 {
   /** Supplier information issued in the self-billed refund note. */
   supplier: Supplier
@@ -554,6 +601,7 @@ export type AllDocumentsV1_1 =
   | RefundNoteV1_1
   | SelfBilledInvoiceV1_1
   | SelfBilledCreditNoteV1_1
+  | SelfBilledDebitNoteV1_1
   | SelfBilledRefundNoteV1_1
 
 export type SubmissionStatus =

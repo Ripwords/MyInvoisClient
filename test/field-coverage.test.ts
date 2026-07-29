@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { generateCleanInvoiceObject } from '../src/utils/document'
-import type { InvoiceV1_1 } from '../src/types'
+import type { InvoiceV1_1, SelfBilledDebitNoteV1_1 } from '../src/types'
 import { legacyInvoice as baseInvoice } from './fixtures/legacy-invoice'
 
 const supplierIdentifications = (invoice: InvoiceV1_1) => {
@@ -179,5 +179,33 @@ describe('line item trade fields', () => {
       ItemClassificationCode: Array<{ listID: string }>
     }>
     expect(classifications).toHaveLength(2)
+  })
+})
+
+describe('self-billed debit note', () => {
+  it('accepts a type 13 document and serialises its line items', () => {
+    const note: SelfBilledDebitNoteV1_1 = {
+      supplier: baseInvoice.supplier,
+      buyer: baseInvoice.buyer,
+      eInvoiceVersion: '1.1',
+      eInvoiceTypeCode: '13',
+      eInvoiceCodeOrNumber: 'SBDN-001',
+      originalEInvoiceReferenceNumber: 'F9D425P6DS7D8IU',
+      originalEInvoiceInternalId: 'SBINV-001',
+      eInvoiceDate: baseInvoice.eInvoiceDate,
+      eInvoiceTime: baseInvoice.eInvoiceTime,
+      invoiceCurrencyCode: 'MYR',
+      selfBilledDebitNoteLineItems: baseInvoice.invoiceLineItems,
+      legalMonetaryTotal: baseInvoice.legalMonetaryTotal,
+      taxTotal: baseInvoice.taxTotal,
+    }
+
+    const clean = generateCleanInvoiceObject(note) as Record<string, unknown>
+    const lines = clean.InvoiceLine as Array<Record<string, unknown>>
+    expect(lines).toHaveLength(baseInvoice.invoiceLineItems.length)
+
+    const firstItem = (lines[0].Item as Array<Record<string, unknown>>)[0]
+    const description = (firstItem.Description as Array<{ _: string }>)[0]._
+    expect(description).toBe(baseInvoice.invoiceLineItems[0].itemDescription)
   })
 })
