@@ -104,6 +104,11 @@ export async function searchDocuments(
   if (pageNo) queryParams.set('pageNo', pageNo.toString())
   if (issueDateFrom) queryParams.set('issueDateFrom', issueDateFrom)
   if (issueDateTo) queryParams.set('issueDateTo', issueDateTo)
+  // NOT a bug: searchDocuments genuinely uses lowercase `invoiceDirection`,
+  // while getRecentDocuments genuinely uses `InvoiceDirection` (capital I
+  // and D) — verified against both official pages. Do NOT harmonise these.
+  // https://sdk.myinvois.hasil.gov.my/einvoicingapi/09-search-documents/
+  // https://sdk.myinvois.hasil.gov.my/einvoicingapi/05-get-recent-documents/
   if (invoiceDirection) queryParams.set('invoiceDirection', invoiceDirection)
   if (status) queryParams.set('status', status)
   if (documentType) queryParams.set('documentType', documentType)
@@ -194,6 +199,12 @@ export async function getRecentDocuments(
   if (submissionDateTo) queryParams.set('submissionDateTo', submissionDateTo)
   if (issueDateFrom) queryParams.set('issueDateFrom', issueDateFrom)
   if (issueDateTo) queryParams.set('issueDateTo', issueDateTo)
+  // NOT a bug: getRecentDocuments genuinely uses `InvoiceDirection` (capital
+  // I and D), while searchDocuments genuinely uses lowercase
+  // `invoiceDirection` — verified against both official pages. Do NOT
+  // harmonise these.
+  // https://sdk.myinvois.hasil.gov.my/einvoicingapi/05-get-recent-documents/
+  // https://sdk.myinvois.hasil.gov.my/einvoicingapi/09-search-documents/
   if (invoiceDirection) queryParams.set('InvoiceDirection', invoiceDirection)
   if (status) queryParams.set('status', status)
   if (documentType) queryParams.set('documentType', documentType)

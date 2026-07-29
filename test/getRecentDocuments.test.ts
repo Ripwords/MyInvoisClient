@@ -5,7 +5,6 @@ const makeContext = (payload: unknown) => ({
   fetch: vi.fn(async () => ({
     json: async () => payload,
   })) as unknown as typeof fetch,
-  debug: false,
 })
 
 describe('getRecentDocuments', () => {

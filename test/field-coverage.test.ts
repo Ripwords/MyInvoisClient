@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { generateCleanInvoiceObject } from '../src/utils/document'
-import type { InvoiceV1_1, SelfBilledDebitNoteV1_1 } from '../src/types'
+import type {
+  CreditNoteV1_1,
+  InvoiceV1_1,
+  RefundNoteV1_1,
+  SelfBilledCreditNoteV1_1,
+  SelfBilledDebitNoteV1_1,
+  SelfBilledRefundNoteV1_1,
+} from '../src/types'
 import { legacyInvoice as baseInvoice } from './fixtures/legacy-invoice'
 
 const supplierIdentifications = (invoice: InvoiceV1_1) => {
@@ -378,5 +385,130 @@ describe('document level optional fields', () => {
       ID: Array<{ _: string }>
     }>
     expect(additionalDocRef[0].ID).toEqual([{ _: 'E12345678912' }])
+  })
+})
+
+/**
+ * BillingReference / InvoiceDocumentReference is the only pre-existing
+ * output node whose emitting code this branch restructured (the guard at
+ * `src/utils/document.ts` that requires both original-reference fields).
+ * It was verified manually once; these tests make that verification
+ * permanent so a regression fails the suite instead of surfacing at audit.
+ */
+describe('BillingReference original-document link', () => {
+  it('emits InvoiceDocumentReference with the correct UUID and ID on a credit note', () => {
+    const creditNote: CreditNoteV1_1 = {
+      supplier: baseInvoice.supplier,
+      buyer: baseInvoice.buyer,
+      eInvoiceVersion: '1.1',
+      eInvoiceTypeCode: '02',
+      eInvoiceCodeOrNumber: 'CN-001',
+      originalEInvoiceReferenceNumber: 'F9D425P6DS7D8IU',
+      originalEInvoiceInternalId: 'INV-001',
+      eInvoiceDate: baseInvoice.eInvoiceDate,
+      eInvoiceTime: baseInvoice.eInvoiceTime,
+      invoiceCurrencyCode: 'MYR',
+      creditNoteLineItems: baseInvoice.invoiceLineItems,
+      legalMonetaryTotal: baseInvoice.legalMonetaryTotal,
+      taxTotal: baseInvoice.taxTotal,
+    }
+
+    const clean = generateCleanInvoiceObject(creditNote) as Record<string, unknown>
+    const billingReference = (clean.BillingReference as Array<Record<string, unknown>>)[0]
+    const invoiceDocRef = (
+      billingReference.InvoiceDocumentReference as Array<{
+        UUID: Array<{ _: string }>
+        ID: Array<{ _: string }>
+      }>
+    )[0]
+    expect(invoiceDocRef.UUID).toEqual([{ _: 'F9D425P6DS7D8IU' }])
+    expect(invoiceDocRef.ID).toEqual([{ _: 'INV-001' }])
+  })
+
+  it('emits InvoiceDocumentReference with the correct UUID and ID on a refund note', () => {
+    const refundNote: RefundNoteV1_1 = {
+      supplier: baseInvoice.supplier,
+      buyer: baseInvoice.buyer,
+      eInvoiceVersion: '1.1',
+      eInvoiceTypeCode: '04',
+      eInvoiceCodeOrNumber: 'RN-001',
+      originalEInvoiceReferenceNumber: 'F9D425P6DS7D8IU',
+      originalEInvoiceInternalId: 'INV-001',
+      eInvoiceDate: baseInvoice.eInvoiceDate,
+      eInvoiceTime: baseInvoice.eInvoiceTime,
+      invoiceCurrencyCode: 'MYR',
+      refundNoteLineItems: baseInvoice.invoiceLineItems,
+      legalMonetaryTotal: baseInvoice.legalMonetaryTotal,
+      taxTotal: baseInvoice.taxTotal,
+    }
+
+    const clean = generateCleanInvoiceObject(refundNote) as Record<string, unknown>
+    const billingReference = (clean.BillingReference as Array<Record<string, unknown>>)[0]
+    const invoiceDocRef = (
+      billingReference.InvoiceDocumentReference as Array<{
+        UUID: Array<{ _: string }>
+        ID: Array<{ _: string }>
+      }>
+    )[0]
+    expect(invoiceDocRef.UUID).toEqual([{ _: 'F9D425P6DS7D8IU' }])
+    expect(invoiceDocRef.ID).toEqual([{ _: 'INV-001' }])
+  })
+
+  it('emits InvoiceDocumentReference with the correct UUID and ID on a self-billed credit note', () => {
+    const selfBilledCreditNote: SelfBilledCreditNoteV1_1 = {
+      supplier: baseInvoice.supplier,
+      buyer: baseInvoice.buyer,
+      eInvoiceVersion: '1.1',
+      eInvoiceTypeCode: '12',
+      eInvoiceCodeOrNumber: 'SBCN-001',
+      originalEInvoiceReferenceNumber: 'F9D425P6DS7D8IU',
+      originalEInvoiceInternalId: 'SBINV-001',
+      eInvoiceDate: baseInvoice.eInvoiceDate,
+      eInvoiceTime: baseInvoice.eInvoiceTime,
+      invoiceCurrencyCode: 'MYR',
+      selfBilledCreditNoteLineItems: baseInvoice.invoiceLineItems,
+      legalMonetaryTotal: baseInvoice.legalMonetaryTotal,
+      taxTotal: baseInvoice.taxTotal,
+    }
+
+    const clean = generateCleanInvoiceObject(selfBilledCreditNote) as Record<string, unknown>
+    const billingReference = (clean.BillingReference as Array<Record<string, unknown>>)[0]
+    const invoiceDocRef = (
+      billingReference.InvoiceDocumentReference as Array<{
+        UUID: Array<{ _: string }>
+        ID: Array<{ _: string }>
+      }>
+    )[0]
+    expect(invoiceDocRef.UUID).toEqual([{ _: 'F9D425P6DS7D8IU' }])
+    expect(invoiceDocRef.ID).toEqual([{ _: 'SBINV-001' }])
+  })
+
+  it('emits InvoiceDocumentReference with the correct UUID and ID on a self-billed refund note', () => {
+    const selfBilledRefundNote: SelfBilledRefundNoteV1_1 = {
+      supplier: baseInvoice.supplier,
+      buyer: baseInvoice.buyer,
+      eInvoiceVersion: '1.1',
+      eInvoiceTypeCode: '14',
+      eInvoiceCodeOrNumber: 'SBRN-001',
+      originalEInvoiceReferenceNumber: 'F9D425P6DS7D8IU',
+      originalEInvoiceInternalId: 'SBINV-001',
+      eInvoiceDate: baseInvoice.eInvoiceDate,
+      eInvoiceTime: baseInvoice.eInvoiceTime,
+      invoiceCurrencyCode: 'MYR',
+      selfBilledRefundNoteLineItems: baseInvoice.invoiceLineItems,
+      legalMonetaryTotal: baseInvoice.legalMonetaryTotal,
+      taxTotal: baseInvoice.taxTotal,
+    }
+
+    const clean = generateCleanInvoiceObject(selfBilledRefundNote) as Record<string, unknown>
+    const billingReference = (clean.BillingReference as Array<Record<string, unknown>>)[0]
+    const invoiceDocRef = (
+      billingReference.InvoiceDocumentReference as Array<{
+        UUID: Array<{ _: string }>
+        ID: Array<{ _: string }>
+      }>
+    )[0]
+    expect(invoiceDocRef.UUID).toEqual([{ _: 'F9D425P6DS7D8IU' }])
+    expect(invoiceDocRef.ID).toEqual([{ _: 'SBINV-001' }])
   })
 })

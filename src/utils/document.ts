@@ -185,15 +185,17 @@ export const generateCleanInvoiceObject = (
     // bill reference number, which every document type may set.
     // https://sdk.myinvois.hasil.gov.my/documents/invoice-v1-1/
     ...((('originalEInvoiceReferenceNumber' in invoice &&
+      invoice.originalEInvoiceReferenceNumber &&
       'originalEInvoiceInternalId' in invoice &&
-      invoice.originalEInvoiceReferenceNumber) ||
+      invoice.originalEInvoiceInternalId) ||
       invoice.paymentInformation?.billReferenceNumber
       ? {
           BillingReference: [
             {
               ...('originalEInvoiceReferenceNumber' in invoice &&
+              invoice.originalEInvoiceReferenceNumber &&
               'originalEInvoiceInternalId' in invoice &&
-              invoice.originalEInvoiceReferenceNumber
+              invoice.originalEInvoiceInternalId
                 ? {
                     InvoiceDocumentReference: [
                       {

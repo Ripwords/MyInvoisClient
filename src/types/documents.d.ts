@@ -73,6 +73,10 @@ export interface Supplier {
   tourismTaxRegistrationNumber?: string
   /**
    * Supplier's email address. Max 320 chars.
+   *
+   * Serialisation deferred: the UBL path is `cac:Party / cac:Contact /
+   * cbc:ElectronicMail`, but this field is not yet written to the document
+   * pending verification against the official sample. See task-9-report.md.
    */
   email?: string
   /** Supplier's address. */
@@ -132,6 +136,10 @@ export interface Buyer {
   tourismTaxRegistrationNumber?: string
   /**
    * Buyer's email address. Max 320 chars.
+   *
+   * Serialisation deferred: the UBL path is `cac:Party / cac:Contact /
+   * cbc:ElectronicMail`, but this field is not yet written to the document
+   * pending verification against the official sample. See task-9-report.md.
    */
   email?: string
   /** Buyer's address. */
@@ -393,9 +401,25 @@ export interface CommonDocumentOptionalFields {
   shippingRecipient?: ShippingRecipient
   /** Trade and customs information, for export invoicing. */
   tradeInformation?: TradeInformation
-  /** Amount exempted from tax at document level. */
+  /**
+   * Amount exempted from tax at document level.
+   *
+   * Serialisation deferred: emitting this would require splicing a
+   * synthetic entry into the dynamic TaxSubtotal grouping logic in
+   * `generateCleanInvoiceObject`, and the exact document-level node this
+   * maps to is not pinned down. This field is NOT currently serialised —
+   * setting it has no effect on the output. See task-9-report.md.
+   */
   taxExemptionAmount?: number
-  /** Tax exemption description at document level. Max 300 chars. */
+  /**
+   * Tax exemption description at document level. Max 300 chars.
+   *
+   * Serialisation deferred for the same reason as `taxExemptionAmount`:
+   * it would require splicing a synthetic entry into the dynamic
+   * TaxSubtotal grouping logic, and the exact document-level node is not
+   * pinned down. This field is NOT currently serialised. See
+   * task-9-report.md.
+   */
   taxExemptionDescription?: string
 }
 
@@ -522,6 +546,18 @@ export interface RefundNoteV1_1 extends CommonDocumentOptionalFields {
   eInvoiceCodeOrNumber: string
   /** LHDNM Unique Identifier Number of the original invoice / document that is being adjusted. Mandatory where applicable (Debit/Credit/Refund notes). */
   originalEInvoiceReferenceNumber: string
+  /**
+   * LHDNM Unique Identifier Number of the original invoice / document that is being adjusted. Mandatory where applicable (Debit/Credit/Refund notes).
+   *
+   * Optional here for backward compatibility, unlike its required
+   * counterpart on `CreditNoteV1_1` / `DebitNoteV1_1` /
+   * `SelfBilledDebitNoteV1_1` — making it required on this type would be a
+   * breaking change for existing callers. `BillingReference` /
+   * `InvoiceDocumentReference` is only emitted when this is supplied
+   * alongside `originalEInvoiceReferenceNumber`. This asymmetry should be
+   * revisited in a future major version.
+   */
+  originalEInvoiceInternalId?: string
   /** Date of issuance (YYYY-MM-DD) in UTC. Must be the current date. */
   eInvoiceDate: string
   /** Time of issuance (HH:mm:ssZ) in UTC. Must be the current time. */
@@ -588,6 +624,18 @@ export interface SelfBilledCreditNoteV1_1 extends CommonDocumentOptionalFields {
   eInvoiceCodeOrNumber: string
   /** LHDNM unique identifier of the original self-billed invoice being adjusted. */
   originalEInvoiceReferenceNumber: string
+  /**
+   * LHDNM Unique Identifier Number of the original invoice / document that is being adjusted. Mandatory where applicable (Debit/Credit/Refund notes).
+   *
+   * Optional here for backward compatibility, unlike its required
+   * counterpart on `CreditNoteV1_1` / `DebitNoteV1_1` /
+   * `SelfBilledDebitNoteV1_1` — making it required on this type would be a
+   * breaking change for existing callers. `BillingReference` /
+   * `InvoiceDocumentReference` is only emitted when this is supplied
+   * alongside `originalEInvoiceReferenceNumber`. This asymmetry should be
+   * revisited in a future major version.
+   */
+  originalEInvoiceInternalId?: string
   /** Date of issuance (YYYY-MM-DD, UTC). */
   eInvoiceDate: string
   /** Time of issuance (HH:mm:ssZ, UTC). */
@@ -668,6 +716,18 @@ export interface SelfBilledRefundNoteV1_1 extends CommonDocumentOptionalFields {
   eInvoiceCodeOrNumber: string
   /** Original self-billed invoice UUID being adjusted (mandatory for refund/credit/debit). */
   originalEInvoiceReferenceNumber: string
+  /**
+   * LHDNM Unique Identifier Number of the original invoice / document that is being adjusted. Mandatory where applicable (Debit/Credit/Refund notes).
+   *
+   * Optional here for backward compatibility, unlike its required
+   * counterpart on `CreditNoteV1_1` / `DebitNoteV1_1` /
+   * `SelfBilledDebitNoteV1_1` — making it required on this type would be a
+   * breaking change for existing callers. `BillingReference` /
+   * `InvoiceDocumentReference` is only emitted when this is supplied
+   * alongside `originalEInvoiceReferenceNumber`. This asymmetry should be
+   * revisited in a future major version.
+   */
+  originalEInvoiceInternalId?: string
   /** Issue date (YYYY-MM-DD, UTC). */
   eInvoiceDate: string
   /** Issue time (HH:mm:ssZ, UTC). */
