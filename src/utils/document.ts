@@ -451,8 +451,29 @@ export const generateCleanInvoiceObject = (
                 },
               ],
             },
+            ...(item.productTariffCode
+              ? [
+                  {
+                    ItemClassificationCode: [
+                      {
+                        _: item.productTariffCode,
+                        listID: 'PTC',
+                      },
+                    ],
+                  },
+                ]
+              : []),
           ],
           Description: [{ _: item.itemDescription }],
+          ...(item.countryOfOrigin
+            ? {
+                OriginCountry: [
+                  {
+                    IdentificationCode: [{ _: item.countryOfOrigin }],
+                  },
+                ],
+              }
+            : {}),
         },
       ],
 

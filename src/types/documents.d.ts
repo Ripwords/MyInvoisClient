@@ -158,6 +158,17 @@ export interface InvoiceLineItem {
    */
   itemDescription: string
   /**
+   * Harmonised System tariff code for the product. Max 12 chars.
+   * Period is permitted.
+   * @example 9800.00.0010
+   */
+  productTariffCode?: string
+  /**
+   * Country of origin (ISO 3166-1 alpha-3). Max 3 chars.
+   * @example GBR
+   */
+  countryOfOrigin?: CountryCode
+  /**
    * Unit price before tax. Max 18 digits, 6 decimal places.
    * @example 1500.00
    */

@@ -126,3 +126,58 @@ describe('address optional fields', () => {
     expect(address.PostalZone).toEqual([{ _: '50480' }])
   })
 })
+
+const firstLineItem = (invoice: InvoiceV1_1) => {
+  const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
+  const lines = clean.InvoiceLine as Array<Record<string, unknown>>
+  return (lines[0].Item as Array<Record<string, unknown>>)[0]
+}
+
+describe('line item trade fields', () => {
+  it('omits origin country when not supplied', () => {
+    expect(firstLineItem(baseInvoice).OriginCountry).toBeUndefined()
+  })
+
+  it('emits origin country when supplied', () => {
+    const invoice = {
+      ...baseInvoice,
+      invoiceLineItems: [
+        { ...baseInvoice.invoiceLineItems[0], countryOfOrigin: 'GBR' as const },
+      ],
+    }
+    const item = firstLineItem(invoice)
+    const origin = item.OriginCountry as Array<Record<string, unknown>>
+    expect(origin[0].IdentificationCode).toEqual([{ _: 'GBR' }])
+  })
+
+  it('emits the tariff code as an additional PTC classification', () => {
+    const invoice = {
+      ...baseInvoice,
+      invoiceLineItems: [
+        { ...baseInvoice.invoiceLineItems[0], productTariffCode: '9800.00.0010' },
+      ],
+    }
+    const item = firstLineItem(invoice)
+    const classifications = item.CommodityClassification as Array<{
+      ItemClassificationCode: Array<{ _: string; listID: string }>
+    }>
+    const ptc = classifications.find(
+      entry => entry.ItemClassificationCode[0].listID === 'PTC',
+    )
+    expect(ptc?.ItemClassificationCode[0]._).toBe('9800.00.0010')
+  })
+
+  it('keeps the original CLASS classification alongside PTC', () => {
+    const invoice = {
+      ...baseInvoice,
+      invoiceLineItems: [
+        { ...baseInvoice.invoiceLineItems[0], productTariffCode: '9800.00.0010' },
+      ],
+    }
+    const item = firstLineItem(invoice)
+    const classifications = item.CommodityClassification as Array<{
+      ItemClassificationCode: Array<{ listID: string }>
+    }>
+    expect(classifications).toHaveLength(2)
+  })
+})
