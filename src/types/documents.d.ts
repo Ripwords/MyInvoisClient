@@ -20,6 +20,12 @@ export interface Address {
    * @example Lot 66
    */
   addressLine0: string
+  /** Second address line. Max 150 chars. */
+  addressLine1?: string
+  /** Third address line. Max 150 chars. */
+  addressLine2?: string
+  /** Postal zone / postcode. Max 50 chars. */
+  postalZone?: string
   /** City name. Max 50 chars. */
   cityName: string
   /** State code. Refer to /codes/state-codes/. Max 50 chars. */

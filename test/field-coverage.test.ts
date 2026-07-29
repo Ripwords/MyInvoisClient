@@ -79,3 +79,50 @@ describe('party tax registrations', () => {
     expect(ttx?.ID[0]._).toBe('T-9999-0000')
   })
 })
+
+const supplierAddress = (invoice: InvoiceV1_1) => {
+  const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
+  const supplierParty = (clean.AccountingSupplierParty as Array<Record<string, unknown>>)[0]
+  const party = (supplierParty.Party as Array<Record<string, unknown>>)[0]
+  return (party.PostalAddress as Array<Record<string, unknown>>)[0]
+}
+
+describe('address optional fields', () => {
+  it('emits a single address line when only addressLine0 is set', () => {
+    const address = supplierAddress(baseInvoice)
+    expect(address.AddressLine).toHaveLength(1)
+  })
+
+  it('omits PostalZone when not supplied', () => {
+    const address = supplierAddress(baseInvoice)
+    expect(address.PostalZone).toBeUndefined()
+  })
+
+  it('emits additional address lines when supplied', () => {
+    const invoice = {
+      ...baseInvoice,
+      supplier: {
+        ...baseInvoice.supplier,
+        address: {
+          ...baseInvoice.supplier.address,
+          addressLine1: 'Bangunan Merdeka',
+          addressLine2: 'Persiaran Jaya',
+        },
+      },
+    }
+    const address = supplierAddress(invoice)
+    expect(address.AddressLine).toHaveLength(3)
+  })
+
+  it('emits PostalZone when supplied', () => {
+    const invoice = {
+      ...baseInvoice,
+      supplier: {
+        ...baseInvoice.supplier,
+        address: { ...baseInvoice.supplier.address, postalZone: '50480' },
+      },
+    }
+    const address = supplierAddress(invoice)
+    expect(address.PostalZone).toEqual([{ _: '50480' }])
+  })
+})

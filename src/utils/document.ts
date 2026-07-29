@@ -12,6 +12,7 @@ import {
 } from '../types'
 import type { ClassificationCode } from '../types'
 import type { TaxTypeCode } from '../types'
+import type { Address } from '../types'
 import { formatIdValue } from './formatIdValue'
 
 /**
@@ -95,6 +96,34 @@ export const canonicalizeJSON = (obj: unknown): string => {
   // Use compact JSON with no extra whitespace
   return JSON.stringify(sortedObj, null, 0)
 }
+
+/**
+ * Builds the UBL PostalAddress block for a party.
+ *
+ * Optional lines and postal zone are omitted entirely when absent, so
+ * addresses that set only addressLine0 serialise exactly as before.
+ */
+const buildPostalAddress = (address: Address) => ({
+  CityName: [{ _: address.cityName }],
+  CountrySubentityCode: [{ _: address.state }],
+  ...(address.postalZone ? { PostalZone: [{ _: address.postalZone }] } : {}),
+  AddressLine: [
+    { Line: [{ _: address.addressLine0 }] },
+    ...(address.addressLine1 ? [{ Line: [{ _: address.addressLine1 }] }] : []),
+    ...(address.addressLine2 ? [{ Line: [{ _: address.addressLine2 }] }] : []),
+  ],
+  Country: [
+    {
+      IdentificationCode: [
+        {
+          _: address.country || 'MYS',
+          listID: '3166-1',
+          listAgencyID: 'ISO',
+        },
+      ],
+    },
+  ],
+})
 
 /**
  * Generates a clean invoice object following MyInvois v1.1 specification exactly
@@ -228,28 +257,7 @@ export const generateCleanInvoiceObject = (
             ],
 
             // Postal Address - FIXED listID format
-            PostalAddress: [
-              {
-                CityName: [{ _: invoice.supplier.address.cityName }],
-                CountrySubentityCode: [{ _: invoice.supplier.address.state }],
-                AddressLine: [
-                  {
-                    Line: [{ _: invoice.supplier.address.addressLine0 }],
-                  },
-                ],
-                Country: [
-                  {
-                    IdentificationCode: [
-                      {
-                        _: invoice.supplier.address.country || 'MYS',
-                        listID: '3166-1', // FIXED: was "ISO3166-1"
-                        listAgencyID: 'ISO',
-                      },
-                    ],
-                  },
-                ],
-              },
-            ],
+            PostalAddress: [buildPostalAddress(invoice.supplier.address)],
 
             // Party Legal Entity
             PartyLegalEntity: [
@@ -311,28 +319,7 @@ export const generateCleanInvoiceObject = (
             ],
 
             // Postal Address - FIXED listID format
-            PostalAddress: [
-              {
-                CityName: [{ _: invoice.buyer.address.cityName }],
-                CountrySubentityCode: [{ _: invoice.buyer.address.state }],
-                AddressLine: [
-                  {
-                    Line: [{ _: invoice.buyer.address.addressLine0 }],
-                  },
-                ],
-                Country: [
-                  {
-                    IdentificationCode: [
-                      {
-                        _: invoice.buyer.address.country || 'MYS',
-                        listID: '3166-1', // FIXED: was "ISO3166-1"
-                        listAgencyID: 'ISO',
-                      },
-                    ],
-                  },
-                ],
-              },
-            ],
+            PostalAddress: [buildPostalAddress(invoice.buyer.address)],
 
             // Party Legal Entity
             PartyLegalEntity: [
