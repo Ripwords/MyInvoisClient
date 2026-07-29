@@ -6,6 +6,7 @@ import type { TaxTypeCode } from './tax-types.d.ts'
 import type { StateCode } from './state-codes.d.ts'
 import type { CountryCode } from './country-code.d.ts'
 import type { UnitTypeCode } from './unit-types.d.ts'
+import type { PaymentModeCode } from './payment-modes.d.ts'
 
 export type RegistrationType = 'BRN' | 'NRIC' | 'PASSPORT' | 'ARMY'
 
@@ -300,10 +301,109 @@ export interface TaxTotal {
 }
 
 /**
+ * Shipping recipient, when goods are delivered to a party other than the
+ * buyer. All fields optional per the specification.
+ */
+export interface ShippingRecipient {
+  /** Shipping recipient's name. Max 300 chars. */
+  name?: string
+  /** Shipping recipient's address. */
+  address?: Address
+  /** Shipping recipient's TIN. Max 14 chars. */
+  tin?: string
+  /**
+   * Shipping recipient's registration / identification number.
+   *
+   * Serialisation deferred: the UBL scheme (NRIC / BRN / PASSPORT / ARMY)
+   * depends on a registration *type* this interface does not carry (unlike
+   * `Supplier`/`Buyer`, which have `registrationType`). Without it, the
+   * correct `schemeID` attribute cannot be determined, so this field is
+   * not yet written to the document. See task-9-report.md.
+   */
+  registrationNumber?: string
+}
+
+/**
+ * Trade and customs information, for export invoicing.
+ *
+ * Serialisation deferred for all fields on this interface. The
+ * specification maps them onto a positional `cac:AdditionalDocumentReference`
+ * array (`[1]`..`[4]`) whose indices are only demonstrated for the
+ * all-fields-present case in the official sample; it is not defined
+ * whether a subset of fields shifts those indices. In addition,
+ * `certifiedExporterAuthorisationNumber` maps to a different node entirely
+ * (`cac:AccountingSupplierParty / cbc:AdditionalAccountID
+ * [@schemeAgencyName='CertEx']`), not `AdditionalDocumentReference`. See
+ * task-9-report.md.
+ */
+export interface TradeInformation {
+  /** Customs Form No. 1 / 9 reference. Max 1000 chars. */
+  customsFormReference?: string
+  /** Incoterms code. Max 3 chars. @example CIF */
+  incoterms?: string
+  /** Free Trade Agreement information. Max 300 chars. */
+  ftaInformation?: string
+  /** Certified exporter authorisation number. Max 300 chars. */
+  certifiedExporterAuthorisationNumber?: string
+  /** Customs Form No. 2 reference. Max 1000 chars. */
+  customsFormNo2Reference?: string
+}
+
+/**
+ * Payment information. All fields optional per the specification.
+ */
+export interface PaymentInformation {
+  /** Payment mode code. Max 2 chars. Refer to /codes/payment-methods/. */
+  paymentMode?: PaymentModeCode
+  /** Supplier's bank account number. Max 150 chars. */
+  supplierBankAccountNumber?: string
+  /** Payment terms. Max 300 chars. */
+  paymentTerms?: string
+  /** Prepayment amount. */
+  prepaymentAmount?: number
+  /** Prepayment date (YYYY-MM-DD). Max 10 chars. */
+  prepaymentDate?: string
+  /** Prepayment time (HH:mm:ssZ). Max 9 chars. */
+  prepaymentTime?: string
+  /** Prepayment reference number. Max 150 chars. */
+  prepaymentReferenceNumber?: string
+  /** Bill reference number. Max 150 chars. */
+  billReferenceNumber?: string
+}
+
+/**
+ * Optional fields shared by every e-Invoice document type.
+ *
+ * Kept as a separate interface so the eight document types stay in
+ * step. Every member is optional, so extending a document interface
+ * with this block does not affect existing callers.
+ */
+export interface CommonDocumentOptionalFields {
+  /** Tax currency code. Max 3 chars. */
+  taxCurrencyCode?: CurrencyCode
+  /** Frequency of billing. Max 50 chars. @example Monthly */
+  frequencyOfBilling?: string
+  /** Billing period start date (YYYY-MM-DD). Max 10 chars. */
+  billingPeriodStartDate?: string
+  /** Billing period end date (YYYY-MM-DD). Max 10 chars. */
+  billingPeriodEndDate?: string
+  /** Payment information. */
+  paymentInformation?: PaymentInformation
+  /** Shipping recipient, when different from the buyer. */
+  shippingRecipient?: ShippingRecipient
+  /** Trade and customs information, for export invoicing. */
+  tradeInformation?: TradeInformation
+  /** Amount exempted from tax at document level. */
+  taxExemptionAmount?: number
+  /** Tax exemption description at document level. Max 300 chars. */
+  taxExemptionDescription?: string
+}
+
+/**
  * Represents the core Invoice v1.1 document structure.
  * Based on the Core section of the documentation.
  */
-export interface InvoiceV1_1 {
+export interface InvoiceV1_1 extends CommonDocumentOptionalFields {
   /** Supplier information. */
   supplier: Supplier
   /** Buyer information. */
@@ -334,7 +434,7 @@ export interface InvoiceV1_1 {
   taxTotal: TaxTotal
 }
 
-export interface CreditNoteV1_1 {
+export interface CreditNoteV1_1 extends CommonDocumentOptionalFields {
   /** Supplier information (AccountingSupplierParty). */
   supplier: Supplier
   /** Buyer information (AccountingCustomerParty). */
@@ -371,7 +471,7 @@ export interface CreditNoteV1_1 {
   taxTotal: TaxTotal
 }
 
-export interface DebitNoteV1_1 {
+export interface DebitNoteV1_1 extends CommonDocumentOptionalFields {
   /** Supplier information (AccountingSupplierParty). */
   supplier: Supplier
   /** Buyer information (AccountingCustomerParty). */
@@ -408,7 +508,7 @@ export interface DebitNoteV1_1 {
   taxTotal: TaxTotal
 }
 
-export interface RefundNoteV1_1 {
+export interface RefundNoteV1_1 extends CommonDocumentOptionalFields {
   /** Supplier information (AccountingSupplierParty). */
   supplier: Supplier
   /** Buyer information (AccountingCustomerParty). */
@@ -443,7 +543,7 @@ export interface RefundNoteV1_1 {
   taxTotal: TaxTotal
 }
 
-export interface SelfBilledInvoiceV1_1 {
+export interface SelfBilledInvoiceV1_1 extends CommonDocumentOptionalFields {
   /** Supplier information (AccountingSupplierParty). */
   supplier: Supplier
   /** Buyer information (AccountingCustomerParty). */
@@ -465,13 +565,6 @@ export interface SelfBilledInvoiceV1_1 {
   /** Currency exchange rate to MYR when invoiceCurrencyCode is not 'MYR'. Mandatory where applicable. */
   currencyExchangeRate?: number
 
-  /** Frequency of billing (e.g., Daily, Monthly). Optional. */
-  frequencyOfBilling?: string
-  /** Billing period start date (YYYY-MM-DD). Optional but allowed; include to match spec for optional elements. */
-  billingPeriodStartDate?: string
-  /** Billing period end date (YYYY-MM-DD). Optional. */
-  billingPeriodEndDate?: string
-
   /** Invoice line items. */
   invoiceLineItems: InvoiceLineItem[]
 
@@ -481,7 +574,7 @@ export interface SelfBilledInvoiceV1_1 {
   taxTotal: TaxTotal
 }
 
-export interface SelfBilledCreditNoteV1_1 {
+export interface SelfBilledCreditNoteV1_1 extends CommonDocumentOptionalFields {
   /** Supplier information. */
   supplier: Supplier
   /** Buyer information. */
@@ -523,7 +616,7 @@ export interface SelfBilledCreditNoteV1_1 {
  * Specification:
  * https://sdk.myinvois.hasil.gov.my/documents/self-billed-debit-v1-1/
  */
-export interface SelfBilledDebitNoteV1_1 {
+export interface SelfBilledDebitNoteV1_1 extends CommonDocumentOptionalFields {
   /** Supplier information (AccountingSupplierParty). */
   supplier: Supplier
   /** Buyer information (AccountingCustomerParty). */
@@ -561,7 +654,7 @@ export interface SelfBilledDebitNoteV1_1 {
   taxTotal: TaxTotal
 }
 
-export interface SelfBilledRefundNoteV1_1 {
+export interface SelfBilledRefundNoteV1_1 extends CommonDocumentOptionalFields {
   /** Supplier information issued in the self-billed refund note. */
   supplier: Supplier
   /** Buyer information (issuer of the self-billed document). */
@@ -1073,13 +1166,74 @@ export interface InvoiceSubmission {
     }[]
   }[]
 
-  /** Billing reference linking to original invoice (used for credit/debit/refund). Optional. */
+  /**
+   * Billing reference. Used for the original-invoice link on
+   * credit/debit/refund notes, and/or the supplier's bill reference number
+   * (`cac:BillingReference / cac:AdditionalDocumentReference / cbc:ID`),
+   * available on every document type. Optional.
+   */
   BillingReference?: {
-    InvoiceDocumentReference: {
+    InvoiceDocumentReference?: {
       /** LHDNM Unique Identifier Number */
       UUID: { _: string }[]
       /** Internal ID (e-Invoice Code/Number) */
       ID: { _: string }[]
+    }[]
+    /** Supplier's bill reference number. */
+    AdditionalDocumentReference?: {
+      ID: { _: string }[]
+    }[]
+  }[]
+
+  /** Tax currency code. Optional. */
+  TaxCurrencyCode?: {
+    _: string
+  }[]
+
+  /** Billing period. Omitted entirely when no part of it is supplied. */
+  InvoicePeriod?: {
+    StartDate?: { _: string }[]
+    EndDate?: { _: string }[]
+    Description?: { _: string }[]
+  }[]
+
+  /** Payment means. Optional. */
+  PaymentMeans?: {
+    PaymentMeansCode?: { _: string }[]
+    PayeeFinancialAccount?: { ID: { _: string }[] }[]
+  }[]
+
+  /** Payment terms. Optional. */
+  PaymentTerms?: {
+    Note: { _: string }[]
+  }[]
+
+  /** Prepayment information. Optional. */
+  PrepaidPayment?: {
+    ID?: { _: string }[]
+    PaidAmount?: { _: number; currencyID: string }[]
+    PaidDate?: { _: string }[]
+    PaidTime?: { _: string }[]
+  }[]
+
+  /** Delivery / shipping recipient. Optional. */
+  Delivery?: {
+    DeliveryParty: {
+      PartyLegalEntity?: { RegistrationName: { _: string }[] }[]
+      PartyIdentification?: { ID: { _: string; schemeID: string }[] }[]
+      PostalAddress?: {
+        CityName: { _: string }[]
+        CountrySubentityCode: { _: string }[]
+        PostalZone?: { _: string }[]
+        AddressLine: { Line: { _: string }[] }[]
+        Country: {
+          IdentificationCode: {
+            _: string
+            listID: string
+            listAgencyID: string
+          }[]
+        }[]
+      }[]
     }[]
   }[]
 }

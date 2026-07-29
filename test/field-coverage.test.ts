@@ -209,3 +209,118 @@ describe('self-billed debit note', () => {
     expect(description).toBe(baseInvoice.invoiceLineItems[0].itemDescription)
   })
 })
+
+describe('document level optional fields', () => {
+  it('omits billing period when not supplied', () => {
+    const clean = generateCleanInvoiceObject(baseInvoice) as Record<string, unknown>
+    expect(clean.InvoicePeriod).toBeUndefined()
+  })
+
+  it('emits billing period when supplied', () => {
+    const invoice = {
+      ...baseInvoice,
+      frequencyOfBilling: 'Monthly',
+      billingPeriodStartDate: '2026-07-01',
+      billingPeriodEndDate: '2026-07-31',
+    }
+    const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
+    const period = (clean.InvoicePeriod as Array<Record<string, unknown>>)[0]
+    expect(period.StartDate).toEqual([{ _: '2026-07-01' }])
+    expect(period.EndDate).toEqual([{ _: '2026-07-31' }])
+    expect(period.Description).toEqual([{ _: 'Monthly' }])
+  })
+
+  it('omits delivery block when no shipping recipient is supplied', () => {
+    const clean = generateCleanInvoiceObject(baseInvoice) as Record<string, unknown>
+    expect(clean.Delivery).toBeUndefined()
+  })
+
+  it('emits payment means when a payment mode is supplied', () => {
+    const invoice = {
+      ...baseInvoice,
+      paymentInformation: { paymentMode: '01' as const },
+    }
+    const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
+    const means = (clean.PaymentMeans as Array<Record<string, unknown>>)[0]
+    expect(means.PaymentMeansCode).toEqual([{ _: '01' }])
+  })
+
+  it('omits payment means when no payment information is supplied', () => {
+    const clean = generateCleanInvoiceObject(baseInvoice) as Record<string, unknown>
+    expect(clean.PaymentMeans).toBeUndefined()
+  })
+
+  it('emits shipping recipient name, tin and address on the delivery block', () => {
+    const invoice = {
+      ...baseInvoice,
+      shippingRecipient: {
+        name: 'Recipient Sdn Bhd',
+        tin: 'C12345678901',
+        address: baseInvoice.buyer.address,
+      },
+    }
+    const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
+    const delivery = (clean.Delivery as Array<Record<string, unknown>>)[0]
+    const party = (delivery.DeliveryParty as Array<Record<string, unknown>>)[0]
+    const legalEntity = (party.PartyLegalEntity as Array<Record<string, unknown>>)[0]
+    expect(legalEntity.RegistrationName).toEqual([{ _: 'Recipient Sdn Bhd' }])
+    const identification = party.PartyIdentification as Array<{
+      ID: Array<{ _: string; schemeID: string }>
+    }>
+    expect(identification[0].ID).toEqual([{ _: 'C12345678901', schemeID: 'TIN' }])
+    expect(party.PostalAddress).toBeDefined()
+  })
+
+  it('omits tax currency code when not supplied', () => {
+    const clean = generateCleanInvoiceObject(baseInvoice) as Record<string, unknown>
+    expect(clean.TaxCurrencyCode).toBeUndefined()
+  })
+
+  it('emits tax currency code when supplied', () => {
+    const invoice = { ...baseInvoice, taxCurrencyCode: 'USD' as const }
+    const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
+    expect(clean.TaxCurrencyCode).toEqual([{ _: 'USD' }])
+  })
+
+  it('omits prepaid payment when no prepayment fields are supplied', () => {
+    const clean = generateCleanInvoiceObject(baseInvoice) as Record<string, unknown>
+    expect(clean.PrepaidPayment).toBeUndefined()
+  })
+
+  it('emits prepaid payment when prepayment fields are supplied', () => {
+    const invoice = {
+      ...baseInvoice,
+      paymentInformation: {
+        prepaymentAmount: 1,
+        prepaymentDate: '2026-07-23',
+        prepaymentTime: '00:30:00Z',
+        prepaymentReferenceNumber: 'E12345678912',
+      },
+    }
+    const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
+    const prepaid = (clean.PrepaidPayment as Array<Record<string, unknown>>)[0]
+    expect(prepaid.ID).toEqual([{ _: 'E12345678912' }])
+    expect(prepaid.PaidAmount).toEqual([{ _: 1, currencyID: baseInvoice.invoiceCurrencyCode }])
+    expect(prepaid.PaidDate).toEqual([{ _: '2026-07-23' }])
+    expect(prepaid.PaidTime).toEqual([{ _: '00:30:00Z' }])
+  })
+
+  it('omits bill reference number when not supplied', () => {
+    const clean = generateCleanInvoiceObject(baseInvoice) as Record<string, unknown>
+    expect(clean.BillingReference).toBeUndefined()
+  })
+
+  it('emits bill reference number nested under BillingReference on a plain invoice', () => {
+    const invoice = {
+      ...baseInvoice,
+      paymentInformation: { billReferenceNumber: 'E12345678912' },
+    }
+    const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
+    const billingReference = (clean.BillingReference as Array<Record<string, unknown>>)[0]
+    expect(billingReference.InvoiceDocumentReference).toBeUndefined()
+    const additionalDocRef = billingReference.AdditionalDocumentReference as Array<{
+      ID: Array<{ _: string }>
+    }>
+    expect(additionalDocRef[0].ID).toEqual([{ _: 'E12345678912' }])
+  })
+})

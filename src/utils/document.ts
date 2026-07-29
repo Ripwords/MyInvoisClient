@@ -179,25 +179,212 @@ export const generateCleanInvoiceObject = (
     ],
     DocumentCurrencyCode: [{ _: invoice.invoiceCurrencyCode }],
 
-    // === BILLING REFERENCE (only for credit/debit/refund notes) ===
-    ...('originalEInvoiceReferenceNumber' in invoice &&
-    'originalEInvoiceInternalId' in invoice &&
-    invoice.originalEInvoiceReferenceNumber
+    // === BILLING REFERENCE ===
+    // InvoiceDocumentReference links to the original document (credit/debit/
+    // refund notes only). AdditionalDocumentReference carries the supplier's
+    // bill reference number, which every document type may set.
+    // https://sdk.myinvois.hasil.gov.my/documents/invoice-v1-1/
+    ...((('originalEInvoiceReferenceNumber' in invoice &&
+      'originalEInvoiceInternalId' in invoice &&
+      invoice.originalEInvoiceReferenceNumber) ||
+      invoice.paymentInformation?.billReferenceNumber
       ? {
           BillingReference: [
             {
-              InvoiceDocumentReference: [
+              ...('originalEInvoiceReferenceNumber' in invoice &&
+              'originalEInvoiceInternalId' in invoice &&
+              invoice.originalEInvoiceReferenceNumber
+                ? {
+                    InvoiceDocumentReference: [
+                      {
+                        UUID: [
+                          {
+                            _: invoice.originalEInvoiceReferenceNumber,
+                          },
+                        ],
+                        ID: [
+                          {
+                            _: invoice.originalEInvoiceInternalId,
+                          },
+                        ],
+                      },
+                    ],
+                  }
+                : {}),
+              ...(invoice.paymentInformation?.billReferenceNumber
+                ? {
+                    AdditionalDocumentReference: [
+                      {
+                        ID: [
+                          {
+                            _: invoice.paymentInformation.billReferenceNumber,
+                          },
+                        ],
+                      },
+                    ],
+                  }
+                : {}),
+            },
+          ],
+        }
+      : {})),
+
+    // === TAX CURRENCY CODE ===
+    // https://sdk.myinvois.hasil.gov.my/documents/invoice-v1-1/
+    ...(invoice.taxCurrencyCode
+      ? { TaxCurrencyCode: [{ _: invoice.taxCurrencyCode }] }
+      : {}),
+
+    // === BILLING PERIOD ===
+    // Omitted entirely when no part of it is supplied.
+    ...(invoice.billingPeriodStartDate ||
+    invoice.billingPeriodEndDate ||
+    invoice.frequencyOfBilling
+      ? {
+          InvoicePeriod: [
+            {
+              ...(invoice.billingPeriodStartDate
+                ? { StartDate: [{ _: invoice.billingPeriodStartDate }] }
+                : {}),
+              ...(invoice.billingPeriodEndDate
+                ? { EndDate: [{ _: invoice.billingPeriodEndDate }] }
+                : {}),
+              ...(invoice.frequencyOfBilling
+                ? { Description: [{ _: invoice.frequencyOfBilling }] }
+                : {}),
+            },
+          ],
+        }
+      : {}),
+
+    // === PAYMENT MEANS AND TERMS ===
+    ...(invoice.paymentInformation?.paymentMode ||
+    invoice.paymentInformation?.supplierBankAccountNumber
+      ? {
+          PaymentMeans: [
+            {
+              ...(invoice.paymentInformation.paymentMode
+                ? {
+                    PaymentMeansCode: [
+                      { _: invoice.paymentInformation.paymentMode },
+                    ],
+                  }
+                : {}),
+              ...(invoice.paymentInformation.supplierBankAccountNumber
+                ? {
+                    PayeeFinancialAccount: [
+                      {
+                        ID: [
+                          {
+                            _: invoice.paymentInformation
+                              .supplierBankAccountNumber,
+                          },
+                        ],
+                      },
+                    ],
+                  }
+                : {}),
+            },
+          ],
+        }
+      : {}),
+    ...(invoice.paymentInformation?.paymentTerms
+      ? {
+          PaymentTerms: [
+            { Note: [{ _: invoice.paymentInformation.paymentTerms }] },
+          ],
+        }
+      : {}),
+
+    // === PREPAID PAYMENT ===
+    // https://sdk.myinvois.hasil.gov.my/documents/invoice-v1-1/
+    ...(invoice.paymentInformation?.prepaymentAmount !== undefined ||
+    invoice.paymentInformation?.prepaymentDate ||
+    invoice.paymentInformation?.prepaymentTime ||
+    invoice.paymentInformation?.prepaymentReferenceNumber
+      ? {
+          PrepaidPayment: [
+            {
+              ...(invoice.paymentInformation.prepaymentReferenceNumber
+                ? {
+                    ID: [
+                      {
+                        _: invoice.paymentInformation
+                          .prepaymentReferenceNumber,
+                      },
+                    ],
+                  }
+                : {}),
+              ...(invoice.paymentInformation.prepaymentAmount !== undefined
+                ? {
+                    PaidAmount: [
+                      {
+                        _: invoice.paymentInformation.prepaymentAmount,
+                        currencyID: invoice.invoiceCurrencyCode,
+                      },
+                    ],
+                  }
+                : {}),
+              ...(invoice.paymentInformation.prepaymentDate
+                ? {
+                    PaidDate: [
+                      { _: invoice.paymentInformation.prepaymentDate },
+                    ],
+                  }
+                : {}),
+              ...(invoice.paymentInformation.prepaymentTime
+                ? {
+                    PaidTime: [
+                      { _: invoice.paymentInformation.prepaymentTime },
+                    ],
+                  }
+                : {}),
+            },
+          ],
+        }
+      : {}),
+
+    // === DELIVERY / SHIPPING RECIPIENT ===
+    // registrationNumber is intentionally not serialised: see
+    // ShippingRecipient in src/types/documents.d.ts for why.
+    ...(invoice.shippingRecipient
+      ? {
+          Delivery: [
+            {
+              DeliveryParty: [
                 {
-                  UUID: [
-                    {
-                      _: invoice.originalEInvoiceReferenceNumber,
-                    },
-                  ],
-                  ID: [
-                    {
-                      _: invoice.originalEInvoiceInternalId,
-                    },
-                  ],
+                  ...(invoice.shippingRecipient.name
+                    ? {
+                        PartyLegalEntity: [
+                          {
+                            RegistrationName: [
+                              { _: invoice.shippingRecipient.name },
+                            ],
+                          },
+                        ],
+                      }
+                    : {}),
+                  ...(invoice.shippingRecipient.tin
+                    ? {
+                        PartyIdentification: [
+                          {
+                            ID: [
+                              {
+                                _: invoice.shippingRecipient.tin,
+                                schemeID: 'TIN',
+                              },
+                            ],
+                          },
+                        ],
+                      }
+                    : {}),
+                  ...(invoice.shippingRecipient.address
+                    ? {
+                        PostalAddress: [
+                          buildPostalAddress(invoice.shippingRecipient.address),
+                        ],
+                      }
+                    : {}),
                 },
               ],
             },
