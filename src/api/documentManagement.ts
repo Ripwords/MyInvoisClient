@@ -137,10 +137,14 @@ export async function searchDocuments(
  * Retrieves recently submitted or received documents.
  *
  * Official specification:
- * https://sdk.myinvois.hasil.gov.my/einvoicingapi/08-get-recent-documents/
+ * https://sdk.myinvois.hasil.gov.my/einvoicingapi/05-get-recent-documents/
  *
  * Rate limited to 12 requests per minute. The limiter category
  * `getRecentDocuments` already covers this path.
+ *
+ * @remarks
+ * - Only returns documents issued within the last 31 days
+ * - Intended for troubleshooting; excessive use may result in throttling
  */
 export async function getRecentDocuments(
   context: DocumentContext,
@@ -154,7 +158,12 @@ export async function getRecentDocuments(
     invoiceDirection?: 'Sent' | 'Received'
     status?: DocumentStatus
     documentType?: EInvoiceTypeCode
-    searchQuery?: string
+    receiverIdType?: string
+    receiverId?: string
+    issuerIdType?: string
+    issuerId?: string
+    receiverTin?: string
+    issuerTin?: string
   } = {},
 ): Promise<DocumentSummary[]> {
   const { fetch } = context
@@ -168,7 +177,12 @@ export async function getRecentDocuments(
     invoiceDirection,
     status,
     documentType,
-    searchQuery,
+    receiverIdType,
+    receiverId,
+    issuerIdType,
+    issuerId,
+    receiverTin,
+    issuerTin,
   } = params
 
   const queryParams = new URLSearchParams()
@@ -180,10 +194,15 @@ export async function getRecentDocuments(
   if (submissionDateTo) queryParams.set('submissionDateTo', submissionDateTo)
   if (issueDateFrom) queryParams.set('issueDateFrom', issueDateFrom)
   if (issueDateTo) queryParams.set('issueDateTo', issueDateTo)
-  if (invoiceDirection) queryParams.set('invoiceDirection', invoiceDirection)
+  if (invoiceDirection) queryParams.set('InvoiceDirection', invoiceDirection)
   if (status) queryParams.set('status', status)
   if (documentType) queryParams.set('documentType', documentType)
-  if (searchQuery) queryParams.set('searchQuery', searchQuery)
+  if (receiverIdType) queryParams.set('receiverIdType', receiverIdType)
+  if (receiverId) queryParams.set('receiverId', receiverId)
+  if (issuerIdType) queryParams.set('issuerIdType', issuerIdType)
+  if (issuerId) queryParams.set('issuerId', issuerId)
+  if (receiverTin) queryParams.set('receiverTin', receiverTin)
+  if (issuerTin) queryParams.set('issuerTin', issuerTin)
 
   const query = queryParams.toString()
   const response = await fetch(
