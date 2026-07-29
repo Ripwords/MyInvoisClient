@@ -205,6 +205,26 @@ export const generateCleanInvoiceObject = (
                   },
                 ],
               },
+              // SST and TTX are always present, falling back to 'NA', to match
+              // the official sample document, which shows four identifications
+              // for both parties:
+              // https://sdk.myinvois.hasil.gov.my/files/sdksamples/1.1-Invoice-Sample.json
+              {
+                ID: [
+                  {
+                    _: invoice.supplier.sstRegistrationNumber || 'NA',
+                    schemeID: 'SST',
+                  },
+                ],
+              },
+              {
+                ID: [
+                  {
+                    _: invoice.supplier.tourismTaxRegistrationNumber || 'NA',
+                    schemeID: 'TTX',
+                  },
+                ],
+              },
             ],
 
             // Postal Address - FIXED listID format
@@ -277,6 +297,14 @@ export const generateCleanInvoiceObject = (
                   {
                     _: invoice.buyer.sstRegistrationNumber || 'NA',
                     schemeID: 'SST',
+                  },
+                ],
+              },
+              {
+                ID: [
+                  {
+                    _: invoice.buyer.tourismTaxRegistrationNumber || 'NA',
+                    schemeID: 'TTX',
                   },
                 ],
               },

@@ -52,6 +52,22 @@ export interface Supplier {
    * @example BRN: 202001234567
    */
   registrationNumber: string
+  /**
+   * Supplier's SST registration number. Max 35 chars.
+   * Mandatory for SST registrants. Serialised as 'NA' when absent.
+   * @example A01-2345-67891012
+   */
+  sstRegistrationNumber?: string
+  /**
+   * Supplier's Tourism Tax registration number. Max 17 chars.
+   * Mandatory for tourism tax registrants. Serialised as 'NA' when absent.
+   * @example T-1234-5678
+   */
+  tourismTaxRegistrationNumber?: string
+  /**
+   * Supplier's email address. Max 320 chars.
+   */
+  email?: string
   /** Supplier's address. */
   address: Address
   /** Supplier's contact number (E.164 standard). Max 20 chars.
@@ -101,6 +117,16 @@ export interface Buyer {
    * @example W10-1909-32000060
    */
   sstRegistrationNumber?: string
+  /**
+   * Buyer's Tourism Tax registration number. Max 17 chars.
+   * Serialised as 'NA' when absent.
+   * @example T-9999-0000
+   */
+  tourismTaxRegistrationNumber?: string
+  /**
+   * Buyer's email address. Max 320 chars.
+   */
+  email?: string
   /** Buyer's address. */
   address: Address
   /** Buyer's contact number (E.164 standard). Max 20 chars.
