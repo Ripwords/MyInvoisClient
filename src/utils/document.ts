@@ -346,8 +346,13 @@ export const generateCleanInvoiceObject = (
 
     // === DELIVERY / SHIPPING RECIPIENT ===
     // registrationNumber is intentionally not serialised: see
-    // ShippingRecipient in src/types/documents.d.ts for why.
-    ...(invoice.shippingRecipient
+    // ShippingRecipient in src/types/documents.d.ts for why. It is also
+    // deliberately excluded from this guard — every field on
+    // ShippingRecipient is optional, so a recipient carrying only a
+    // registration number must not emit an otherwise-empty DeliveryParty.
+    ...(invoice.shippingRecipient?.name ||
+    invoice.shippingRecipient?.tin ||
+    invoice.shippingRecipient?.address
       ? {
           Delivery: [
             {

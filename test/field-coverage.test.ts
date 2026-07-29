@@ -111,7 +111,11 @@ describe('address optional fields', () => {
       },
     }
     const address = supplierAddress(invoice)
-    expect(address.AddressLine).toHaveLength(3)
+    const lines = address.AddressLine as Array<{ Line: Array<{ _: string }> }>
+    expect(lines).toHaveLength(3)
+    expect(lines[0].Line).toEqual([{ _: '123 Test Street' }])
+    expect(lines[1].Line).toEqual([{ _: 'Bangunan Merdeka' }])
+    expect(lines[2].Line).toEqual([{ _: 'Persiaran Jaya' }])
   })
 
   it('emits PostalZone when supplied', () => {
@@ -176,9 +180,23 @@ describe('line item trade fields', () => {
     }
     const item = firstLineItem(invoice)
     const classifications = item.CommodityClassification as Array<{
-      ItemClassificationCode: Array<{ listID: string }>
+      ItemClassificationCode: Array<{ _: string; listID: string }>
     }>
     expect(classifications).toHaveLength(2)
+    const classEntry = classifications.find(
+      entry => entry.ItemClassificationCode[0].listID === 'CLASS',
+    )
+    expect(classEntry?.ItemClassificationCode[0]).toEqual({
+      _: baseInvoice.invoiceLineItems[0].itemClassificationCode,
+      listID: 'CLASS',
+    })
+    const ptcEntry = classifications.find(
+      entry => entry.ItemClassificationCode[0].listID === 'PTC',
+    )
+    expect(ptcEntry?.ItemClassificationCode[0]).toEqual({
+      _: '9800.00.0010',
+      listID: 'PTC',
+    })
   })
 })
 
@@ -269,6 +287,44 @@ describe('document level optional fields', () => {
     }>
     expect(identification[0].ID).toEqual([{ _: 'C12345678901', schemeID: 'TIN' }])
     expect(party.PostalAddress).toBeDefined()
+  })
+
+  it('omits delivery block when shippingRecipient has no meaningful field set', () => {
+    const invoice = {
+      ...baseInvoice,
+      shippingRecipient: {},
+    }
+    const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
+    expect(clean.Delivery).toBeUndefined()
+  })
+
+  it('emits delivery block with only name when just name is set', () => {
+    const invoice = {
+      ...baseInvoice,
+      shippingRecipient: { name: 'Recipient Sdn Bhd' },
+    }
+    const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
+    const delivery = (clean.Delivery as Array<Record<string, unknown>>)[0]
+    const party = (delivery.DeliveryParty as Array<Record<string, unknown>>)[0]
+    const legalEntity = (party.PartyLegalEntity as Array<Record<string, unknown>>)[0]
+    expect(legalEntity.RegistrationName).toEqual([{ _: 'Recipient Sdn Bhd' }])
+    expect(party.PartyIdentification).toBeUndefined()
+    expect(party.PostalAddress).toBeUndefined()
+  })
+
+  it('omits payment terms when not supplied', () => {
+    const clean = generateCleanInvoiceObject(baseInvoice) as Record<string, unknown>
+    expect(clean.PaymentTerms).toBeUndefined()
+  })
+
+  it('emits payment terms when supplied', () => {
+    const invoice = {
+      ...baseInvoice,
+      paymentInformation: { paymentTerms: 'Payment method is cash' },
+    }
+    const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
+    const terms = (clean.PaymentTerms as Array<Record<string, unknown>>)[0]
+    expect(terms.Note).toEqual([{ _: 'Payment method is cash' }])
   })
 
   it('omits tax currency code when not supplied', () => {
