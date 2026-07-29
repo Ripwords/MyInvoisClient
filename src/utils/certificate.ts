@@ -1,4 +1,4 @@
-import crypto from 'crypto'
+import crypto from 'node:crypto'
 import * as forge from 'node-forge'
 import fs from 'fs'
 

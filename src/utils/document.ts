@@ -1,4 +1,4 @@
-import crypto, { X509Certificate } from 'crypto'
+import crypto, { X509Certificate } from 'node:crypto'
 import {
   InvoiceSubmission,
   AllDocumentsV1_1,

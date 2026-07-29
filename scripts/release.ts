@@ -106,9 +106,36 @@ step(`Setting version to ${target}`)
 await $`npm pkg set version=${target}`
 
 step('Generating changelog')
-// changelogen writes the section for the version already in package.json.
-// It is NOT trusted to choose the bump — that was defect 4 above.
-await $`bunx changelogen --no-authors`.nothrow()
+// Two flags are load-bearing, and omitting either fails silently:
+//
+//   --output   Without it changelogen prints the changelog to stdout and never
+//              writes the file, so the commit below would carry an unchanged
+//              CHANGELOG.md. The bare flag resolves to CHANGELOG.md.
+//   -r         Sets the version used for the heading. Without it changelogen
+//              has no idea what version this is — it does NOT read it from
+//              package.json — and emits a heading like `## v0.5.0...master`.
+//              Unlike --release, -r does not bump anything, which is what we
+//              want: the bump is computed above and is deterministic.
+const changelog = await $`bunx changelogen --output -r ${target} --no-authors`.nothrow()
+if (changelog.exitCode !== 0) {
+  console.error(
+    `\nchangelogen failed (exit ${changelog.exitCode}). CHANGELOG.md may be ` +
+      `incomplete. Nothing has been committed, tagged, or published — the only ` +
+      `change on disk is the version in package.json. Revert it with:\n` +
+      `  git checkout package.json`,
+  )
+  process.exit(1)
+}
+
+const changelogText = readFileSync('CHANGELOG.md', 'utf8')
+if (!changelogText.includes(`v${target}`)) {
+  console.error(
+    `\nCHANGELOG.md has no section for v${target} after running changelogen. ` +
+      `Refusing to publish a release with no changelog entry.\n` +
+      `Revert with: git checkout package.json CHANGELOG.md`,
+  )
+  process.exit(1)
+}
 
 step('Committing and tagging')
 await $`git add package.json CHANGELOG.md`

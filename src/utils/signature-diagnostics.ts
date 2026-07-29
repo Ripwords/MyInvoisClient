@@ -1,4 +1,4 @@
-import crypto from 'crypto'
+import crypto from 'node:crypto'
 import type { InvoiceV1_1 } from '../types'
 import {
   extractCertificateInfo,

@@ -76,7 +76,7 @@ export interface Supplier {
    *
    * Serialisation deferred: the UBL path is `cac:Party / cac:Contact /
    * cbc:ElectronicMail`, but this field is not yet written to the document
-   * pending verification against the official sample. See task-9-report.md.
+   * pending verification against the official sample.
    */
   email?: string
   /** Supplier's address. */
@@ -139,7 +139,7 @@ export interface Buyer {
    *
    * Serialisation deferred: the UBL path is `cac:Party / cac:Contact /
    * cbc:ElectronicMail`, but this field is not yet written to the document
-   * pending verification against the official sample. See task-9-report.md.
+   * pending verification against the official sample.
    */
   email?: string
   /** Buyer's address. */
@@ -326,7 +326,7 @@ export interface ShippingRecipient {
    * depends on a registration *type* this interface does not carry (unlike
    * `Supplier`/`Buyer`, which have `registrationType`). Without it, the
    * correct `schemeID` attribute cannot be determined, so this field is
-   * not yet written to the document. See task-9-report.md.
+   * not yet written to the document.
    */
   registrationNumber?: string
 }
@@ -341,8 +341,7 @@ export interface ShippingRecipient {
  * whether a subset of fields shifts those indices. In addition,
  * `certifiedExporterAuthorisationNumber` maps to a different node entirely
  * (`cac:AccountingSupplierParty / cbc:AdditionalAccountID
- * [@schemeAgencyName='CertEx']`), not `AdditionalDocumentReference`. See
- * task-9-report.md.
+ * [@schemeAgencyName='CertEx']`), not `AdditionalDocumentReference`.
  */
 export interface TradeInformation {
   /** Customs Form No. 1 / 9 reference. Max 1000 chars. */
@@ -408,7 +407,7 @@ export interface CommonDocumentOptionalFields {
    * synthetic entry into the dynamic TaxSubtotal grouping logic in
    * `generateCleanInvoiceObject`, and the exact document-level node this
    * maps to is not pinned down. This field is NOT currently serialised —
-   * setting it has no effect on the output. See task-9-report.md.
+   * setting it has no effect on the output.
    */
   taxExemptionAmount?: number
   /**
@@ -417,8 +416,7 @@ export interface CommonDocumentOptionalFields {
    * Serialisation deferred for the same reason as `taxExemptionAmount`:
    * it would require splicing a synthetic entry into the dynamic
    * TaxSubtotal grouping logic, and the exact document-level node is not
-   * pinned down. This field is NOT currently serialised. See
-   * task-9-report.md.
+   * pinned down. This field is NOT currently serialised.
    */
   taxExemptionDescription?: string
 }
