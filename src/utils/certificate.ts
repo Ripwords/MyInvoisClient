@@ -32,8 +32,9 @@ export const validateKeyPair = (
     const verifier = crypto.createVerify('RSA-SHA256')
     verifier.update(testData)
     return verifier.verify(publicKey, signature)
-  } catch (error) {
-    console.error('Key pair validation failed:', error)
+  } catch {
+    // A key that cannot even be parsed is a failed validation, not a crash.
+    // No logging here — libraries must not write to the console unconditionally.
     return false
   }
 }

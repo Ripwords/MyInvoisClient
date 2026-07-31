@@ -8,12 +8,3 @@ export type UnitTypeCode_ZX =
   | 'ZP' // page
   | 'ZZ' // mutually defined
 
-/**
- * Enum representing unit type codes starting with 'Z'.
- */
-export enum UnitTypeCodeEnum_ZX {
-  HangingContainer = 'Z11',
-  Nanomole = 'Z9',
-  Page = 'ZP',
-  MutuallyDefined = 'ZZ',
-}

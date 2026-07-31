@@ -1,4 +1,4 @@
-import { formatIdValue } from 'src/utils/formatIdValue'
+import { formatIdValue } from '../utils/formatIdValue'
 import type {
   Fetch,
   RegistrationType,

@@ -29,34 +29,3 @@ export type UnitTypeCode_2X =
   | '2Y'
   | '2Z'
 
-/**
- * Enum representing unit type codes starting with '2'.
- */
-export enum UnitTypeCodeEnum_2X {
-  TwentyFootContainer = '20',
-  FortyFootContainer = '21',
-  DecilitrePerGram = '22',
-  GramPerCubicCentimetre = '23',
-  TheoreticalPound = '24',
-  GramPerSquareCentimetre = '25',
-  TheoreticalTon = '27',
-  KilogramPerSquareMetre = '28',
-  RadianPerSecond = '2A',
-  RadianPerSecondSquared = '2B',
-  Roentgen = '2C',
-  VoltAC = '2G',
-  VoltDC = '2H',
-  BritishThermalUnitInternationalTablePerHour = '2I',
-  CubicCentimetrePerSecond = '2J',
-  CubicFootPerHour = '2K',
-  CubicFootPerMinute = '2L',
-  CentimetrePerSecond = '2M',
-  Decibel = '2N',
-  Kilobyte = '2P',
-  Kilobecquerel = '2Q',
-  Kilocurie = '2R',
-  Megagram = '2U',
-  MetrePerMinute = '2X',
-  Milliroentgen = '2Y',
-  Millivolt = '2Z',
-}

@@ -15,20 +15,3 @@ export type UnitTypeCode_WX =
   | 'WSD'
   | 'WTT'
 
-/**
- * Enum representing unit type codes starting with 'W'.
- */
-export enum UnitTypeCodeEnum_WX {
-  WetKilo = 'W2',
-  WattPerKilogram = 'WA',
-  WetPound = 'WB',
-  Cord = 'WCD',
-  WetTon = 'WE',
-  Weber = 'WEB',
-  Week = 'WEE',
-  WineGallon = 'WG',
-  WattHour = 'WHR',
-  WorkingMonth = 'WM',
-  Standard = 'WSD',
-  Watt = 'WTT',
-}

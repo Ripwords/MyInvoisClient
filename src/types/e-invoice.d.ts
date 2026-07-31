@@ -21,21 +21,3 @@ export interface EInvoiceType {
   description: string
 }
 
-/**
- * Enum representing the allowed codes for e-Invoice types with descriptive names.
- * Provides a more readable way to reference e-Invoice types compared to using raw codes.
- *
- * @example
- * const invoiceCode = EInvoiceTypeCodeEnum.Invoice;
- * console.log(invoiceCode); // Output: "01"
- */
-export enum EInvoiceTypeCodeEnum {
-  Invoice = '01',
-  CreditNote = '02',
-  DebitNote = '03',
-  RefundNote = '04',
-  SelfBilledInvoice = '11',
-  SelfBilledCreditNote = '12',
-  SelfBilledDebitNote = '13',
-  SelfBilledRefundNote = '14',
-}

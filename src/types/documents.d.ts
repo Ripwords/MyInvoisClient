@@ -818,6 +818,8 @@ export interface GetSubmissionResponse {
 }
 
 export interface ResponseDocument {
+  /** Present on accepted documents; use it to poll / fetch the document. */
+  uuid?: string
   invoiceCodeNumber: string
   error?: StandardError
 }

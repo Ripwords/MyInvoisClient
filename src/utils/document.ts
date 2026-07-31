@@ -151,6 +151,14 @@ export const generateCleanInvoiceObject = (
     { taxable: number; tax: number; exemptionReason?: string }
   >()
   for (const item of lineItems) {
+    // Runtime guard for plain-JS callers (TypeScript already requires the
+    // field): a missing or non-positive quantity would serialise as an empty
+    // InvoicedQuantity, which the portal renders as 0.00 units.
+    if (typeof item.quantity !== 'number' || item.quantity <= 0) {
+      throw new RangeError(
+        `Line item "${item.itemDescription}" must have a quantity greater than 0`,
+      )
+    }
     const category = item.taxType
     if (!taxByCategory.has(category)) {
       taxByCategory.set(category, { taxable: 0, tax: 0 })

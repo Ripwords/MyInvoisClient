@@ -50,62 +50,6 @@ export type ClassificationCode =
   | '045' // Self-billed - Non-monetary payment to agents, dealers or distributors
 
 /**
- * Enum representing the allowed classification codes with descriptive names.
- * Provides a more readable way to reference classification codes.
- *
- * @example
- * const code = ClassificationCodeEnum.ComputerSmartphoneOrTablet;
- * console.log(code); // Output: "003"
- */
-export enum ClassificationCodeEnum {
-  BreastfeedingEquipment = '001',
-  ChildCareCentresAndKindergartensFees = '002',
-  ComputerSmartphoneOrTablet = '003',
-  ConsolidatedEInvoice = '004',
-  ConstructionMaterials = '005',
-  Disbursement = '006',
-  Donation = '007',
-  ECommerceEInvoiceToBuyer = '008',
-  ECommerceSelfBilledToSellerLogistics = '009',
-  EducationFees = '010',
-  GoodsOnConsignmentConsignor = '011',
-  GoodsOnConsignmentConsignee = '012',
-  GymMembership = '013',
-  InsuranceEducationMedicalBenefits = '014',
-  InsuranceTakafulLife = '015',
-  InterestFinancingExpenses = '016',
-  InternetSubscription = '017',
-  LandAndBuilding = '018',
-  MedicalExamLearningDisabilities = '019',
-  MedicalExamVaccination = '020',
-  MedicalExpensesSeriousDiseases = '021',
-  Others = '022',
-  PetroleumOperations = '023',
-  PrivateRetirementSchemeDeferredAnnuity = '024',
-  MotorVehicle = '025',
-  SubscriptionBooksJournalsEtc = '026',
-  Reimbursement = '027',
-  RentalOfMotorVehicle = '028',
-  EVChargingFacilities = '029',
-  RepairAndMaintenance = '030',
-  ResearchAndDevelopment = '031',
-  ForeignIncome = '032',
-  SelfBilledBettingGaming = '033',
-  SelfBilledImportationGoods = '034',
-  SelfBilledImportationServices = '035',
-  SelfBilledOthers = '036',
-  SelfBilledMonetaryPaymentToAgents = '037',
-  SportsEquipmentRentalFeesEtc = '038',
-  SupportingEquipmentDisabledPerson = '039',
-  VoluntaryContributionProvidentFund = '040',
-  DentalExamTreatment = '041',
-  FertilityTreatment = '042',
-  TreatmentHomeCareNursingEtc = '043',
-  VouchersGiftCardsLoyaltyPoints = '044',
-  SelfBilledNonMonetaryPaymentToAgents = '045',
-}
-
-/**
  * Interface representing a classification code entry.
  * Contains the code and its corresponding description.
  */

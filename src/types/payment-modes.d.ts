@@ -13,25 +13,6 @@ export type PaymentModeCode =
   | '08' // Others
 
 /**
- * Enum representing the allowed payment mode codes with descriptive names.
- * Provides a more readable way to reference payment modes.
- *
- * @example
- * const mode = PaymentModeCodeEnum.Cash;
- * console.log(mode); // Output: "01"
- */
-export enum PaymentModeCodeEnum {
-  Cash = '01',
-  Cheque = '02',
-  BankTransfer = '03',
-  CreditCard = '04',
-  DebitCard = '05',
-  EWalletDigitalWallet = '06',
-  DigitalBank = '07',
-  Others = '08',
-}
-
-/**
  * Interface representing a payment mode entry.
  * Contains the code and its corresponding description.
  */

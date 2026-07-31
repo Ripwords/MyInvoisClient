@@ -183,6 +183,20 @@ describe('invoiced quantity', () => {
     expect(out.InvoiceLine[0]!.InvoicedQuantity[0]!._).toBe(1)
   })
 
+  // TypeScript enforces the required field at compile time; this guard is for
+  // plain-JS callers, who would otherwise emit an empty InvoicedQuantity that
+  // the portal renders as 0.00.
+  it('throws at runtime when quantity is missing or non-positive', () => {
+    const noQuantity = line({})
+    delete (noQuantity as Partial<InvoiceLineItem>).quantity
+    expect(() => generateCleanInvoiceObject(baseInvoice([noQuantity]))).toThrow(
+      /quantity/,
+    )
+    expect(() =>
+      generateCleanInvoiceObject(baseInvoice([line({ quantity: 0 })])),
+    ).toThrow(/quantity/)
+  })
+
   it('keeps an explicit quantity and unit code', () => {
     const out = generateCleanInvoiceObject(
       baseInvoice([line({ quantity: 4, measurement: 'H87' })]),

@@ -12,17 +12,3 @@ export type UnitTypeCode_RX =
   | 'RPS'
   | 'RT'
 
-/**
- * Enum representing unit type codes starting with 'R'.
- */
-export enum UnitTypeCodeEnum_RX {
-  Pica = 'R1',
-  ThousandCubicMetre = 'R9',
-  OperatingHour = 'RH',
-  Ream = 'RM',
-  Room = 'ROM',
-  PoundPerReam = 'RP',
-  RevolutionsPerMinute = 'RPM',
-  RevolutionsPerSecond = 'RPS',
-  RevenueTonMile = 'RT',
-}

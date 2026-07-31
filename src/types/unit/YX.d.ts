@@ -7,11 +7,3 @@ export type UnitTypeCode_YX =
   | 'YDQ' // cubic yard
   | 'YRD' // yard
 
-/**
- * Enum representing unit type codes starting with 'Y'.
- */
-export enum UnitTypeCodeEnum_YX {
-  SquareYard = 'YDK',
-  CubicYard = 'YDQ',
-  Yard = 'YRD',
-}
