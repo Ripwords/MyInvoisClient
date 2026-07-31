@@ -25,7 +25,7 @@
  */
 
 import { $ } from 'bun'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 
 type Bump = 'patch' | 'minor' | 'major'
 
@@ -112,7 +112,15 @@ await $`bun run verify-dist`
 
 if (dryRun) {
   step('Dry run: publish preview')
-  await $`npm publish --access public --dry-run`
+  // npm validates "cannot publish over an existing version" even with
+  // --dry-run, so the preview must run under the target version. Restore the
+  // real version afterwards — a dry run must leave the tree untouched.
+  await $`npm pkg set version=${target}`
+  try {
+    await $`npm publish --access public --dry-run`
+  } finally {
+    await $`npm pkg set version=${current}`
+  }
   console.log(`\nDry run complete. Would have released ${target}.`)
   process.exit(0)
 }
