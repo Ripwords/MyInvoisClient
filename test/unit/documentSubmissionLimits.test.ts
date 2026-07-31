@@ -5,7 +5,7 @@ import type { AllDocumentsV1_1, SigningCredentials, Fetch } from '../../src/type
 // ---- Mock generateCompleteDocument to control output size without heavy crypto ops ----
 let mockSize = 1024 // default 1 KB
 
-vi.mock('../src/utils/document', async () => {
+vi.mock('../../src/utils/document', async () => {
   return {
     generateCompleteDocument: (_docs: AllDocumentsV1_1[]) => ({
       data: 'x'.repeat(mockSize),

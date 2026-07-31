@@ -10,44 +10,43 @@ bun install
 
 ## Environment Variables
 
-Create a `.env` file in the project root with your MyInvois credentials:
+Configuration lives in a git-ignored `.env` file — copy `.env.example` and
+fill it in. The PKCS#12 bundle is the single source of the signing
+certificate and private key.
 
 ```bash
-# MyInvois API Credentials (from MyInvois portal)
-CLIENT_ID=your_client_id_here
-CLIENT_SECRET=your_client_secret_here
+# MyInvois API credentials (from the MyInvois portal)
+MYINVOIS_CLIENT_ID=your_client_id
+MYINVOIS_CLIENT_SECRET=your_client_secret
 
-# Your Certificate and Private Key (PEM format)
-TEST_CERTIFICATE="-----BEGIN CERTIFICATE-----
-your_certificate_content_here
------END CERTIFICATE-----"
+# PKCS#12 signing certificate
+MYINVOIS_P12_PATH=path/to/certificate.p12
+MYINVOIS_P12_PASSPHRASE=your_passphrase
 
-TEST_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----
-your_private_key_content_here
------END PRIVATE KEY-----"
-
-# Your MyInvois TIN (Tax Identification Number)
-TIN_VALUE=IG12345678901
-
-# Your NRIC/Business Registration Number
-NRIC_VALUE=123456789012
-
-# Additional test TINs for comprehensive testing
-TEST_TIN_1=C12345678901
-TEST_TIN_2=C98765432109
-TEST_TIN_3=IG98765432109
-
-# Test buyer information
-BUYER_TIN_VALUE=IG00000000000
-BUYER_NRIC_VALUE=000000000000
+# Supplier identity (must match the certificate holder)
+MYINVOIS_SUPPLIER_NAME=My Company Sdn Bhd
+MYINVOIS_SUPPLIER_TIN=C12345678900
+MYINVOIS_SUPPLIER_ID_TYPE=BRN   # BRN for companies, NRIC for individuals
+MYINVOIS_SUPPLIER_ID_VALUE=202301234567
 ```
 
-⚠️ **Important**: Never commit your actual TIN, NRIC, certificates, or API credentials to version control.
+⚠️ **Important**: Never commit your actual TIN, certificates, or API credentials to version control.
 
 ## Testing
 
+Unit tests are deterministic and need no environment — certificates are
+generated on the fly:
+
 ```bash
-bun test
+bun run test:run          # unit tests (test/unit)
+```
+
+The live sandbox integration suite (`test/integration`) signs and submits a
+real invoice to the LHDN preprod API. It requires the `.env` variables above
+and is gated behind an explicit flag:
+
+```bash
+bun run test:integration  # sets RUN_INTEGRATION=true
 ```
 
 ## Generating Test Certificates for Development

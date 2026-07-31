@@ -201,12 +201,15 @@ describe('apiQueue Rate Limiter', () => {
       }),
     )
 
+    // Attach settlement handlers before advancing timers so rejections are
+    // never left dangling (vitest reports those as unhandled errors).
+    const settled = Promise.allSettled(promises)
+
     await vi.runAllTicks()
     await vi.advanceTimersByTimeAsync(60_000)
     await vi.runAllTicks()
 
-    // Wait for all promises to settle (including rejections)
-    const results = await Promise.allSettled(promises)
+    const results = await settled
 
     // All requests should have been executed (including failed ones)
     expect(executionTimestamps.length).toBe(10)

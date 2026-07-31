@@ -10,6 +10,7 @@
     "lint": "oxlint",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:integration": "RUN_INTEGRATION=true vitest run test/integration",
     "release": "bun run scripts/release.ts patch",
     "release:minor": "bun run scripts/release.ts minor",
     "release:major": "bun run scripts/release.ts major"
