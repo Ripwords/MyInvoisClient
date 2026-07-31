@@ -17,11 +17,14 @@
  *     deterministic.
  *
  * Usage:
- *   bun run scripts/release.ts <patch|minor|major> [--otp=123456] [--dry-run]
+ *   bun run scripts/release.ts <patch|minor|major> [--dry-run]
  *
- * npm requires a one-time password when two-factor authentication is enabled.
- * Pass it with --otp; codes expire quickly, so generate it immediately before
- * running.
+ * This script does NOT publish. It gates, bumps, writes the changelog,
+ * commits, tags and pushes — the tag push triggers
+ * .github/workflows/publish.yml, which publishes to npm via Trusted
+ * Publishing (OIDC; no token, no OTP) and creates the GitHub Release from
+ * the CHANGELOG section. If a publish run fails, fix the cause and re-run
+ * the workflow (workflow_dispatch republishes package.json's version).
  */
 
 import { $ } from 'bun'
@@ -31,11 +34,10 @@ type Bump = 'patch' | 'minor' | 'major'
 
 const args = process.argv.slice(2)
 const bump = args.find(a => !a.startsWith('--')) as Bump | undefined
-const otp = args.find(a => a.startsWith('--otp='))?.split('=')[1]
 const dryRun = args.includes('--dry-run')
 
 if (!bump || !['patch', 'minor', 'major'].includes(bump)) {
-  console.error('Usage: bun run scripts/release.ts <patch|minor|major> [--otp=code] [--dry-run]')
+  console.error('Usage: bun run scripts/release.ts <patch|minor|major> [--dry-run]')
   process.exit(1)
 }
 
@@ -50,21 +52,6 @@ const nextVersion = (current: string, kind: Bump): string => {
 
 const readVersion = (): string =>
   JSON.parse(readFileSync('package.json', 'utf8')).version
-
-/**
- * Pulls the body of a version's section out of CHANGELOG.md, for use as the
- * GitHub release notes. Returns null when the section is absent.
- */
-const extractChangelogSection = (version: string): string | null => {
-  const text = readFileSync('CHANGELOG.md', 'utf8')
-  const start = text.indexOf(`## v${version}`)
-  if (start === -1) return null
-  const rest = text.slice(start)
-  const nextHeading = rest.indexOf('\n## ', 1)
-  const section = nextHeading === -1 ? rest : rest.slice(0, nextHeading)
-  // Drop the heading itself — GitHub shows the tag name as the release title.
-  return section.split('\n').slice(1).join('\n').trim() || null
-}
 
 const step = (label: string) => console.log(`\n▶ ${label}`)
 
@@ -165,46 +152,12 @@ await $`git add package.json CHANGELOG.md`
 await $`git commit -m ${`chore(release): v${target}`}`
 await $`git tag -a v${target} -m ${`v${target}`}`
 
-step('Publishing to npm')
-try {
-  if (otp) {
-    await $`npm publish --access public --otp=${otp}`
-  } else {
-    await $`npm publish --access public`
-  }
-} catch {
-  console.error(
-    `\nPublish failed. The version commit and tag v${target} exist locally but ` +
-      `have NOT been pushed.\n` +
-      `If this was a missing one-time password, re-run just the publish:\n` +
-      `  npm publish --access public --otp=<code>\n` +
-      `  git push origin master --follow-tags\n` +
-      `To abandon the release instead:\n` +
-      `  git tag -d v${target} && git reset --hard HEAD~1`,
-  )
-  process.exit(1)
-}
-
-step('Pushing commit and tags')
+step('Pushing commit and tag — CI publishes from here')
 await $`git push origin master --follow-tags`
 
-step('Creating the GitHub release')
-// The old scripts pushed the tag but never created a release, so v0.4.2 and
-// v0.5.0 existed on npm and as git tags with nothing on the releases page.
-// A tag is not a release: it carries no notes and does not notify watchers.
-const notes = extractChangelogSection(target)
-if (notes) {
-  const gh = await $`gh release create v${target} --title ${`v${target}`} --notes ${notes} --latest`.nothrow()
-  if (gh.exitCode !== 0) {
-    console.warn(
-      `\n! The GitHub release could not be created (exit ${gh.exitCode}). ` +
-        `npm and the git tag are already published, so this is the only step ` +
-        `left. Create it by hand:\n` +
-        `  gh release create v${target} --title v${target} --notes-file <notes>`,
-    )
-  }
-} else {
-  console.warn(`\n! No CHANGELOG section found for v${target}; skipped the GitHub release.`)
-}
-
-console.log(`\n✔ Released ${target}, pushed v${target}, and created the GitHub release.`)
+console.log(
+  `\n✔ v${target} tagged and pushed. The publish workflow now takes over:\n` +
+    `  npm publish (Trusted Publishing + provenance) and the GitHub Release.\n` +
+    `  Watch it: gh run watch --exit-status\n` +
+    `  If it fails, nothing manual is lost — fix and re-run the workflow.`,
+)
