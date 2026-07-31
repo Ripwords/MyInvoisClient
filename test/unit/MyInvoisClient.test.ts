@@ -37,7 +37,7 @@ describe('MyInvoisClient', () => {
         undefined,
         true,
       )
-      expect((sandboxClient as any).baseUrl).toBe(
+      expect((sandboxClient as unknown as { baseUrl: string }).baseUrl).toBe(
         'https://preprod-api.myinvois.hasil.gov.my',
       )
     })
@@ -52,7 +52,7 @@ describe('MyInvoisClient', () => {
         undefined,
         true,
       )
-      expect((prodClient as any).baseUrl).toBe(
+      expect((prodClient as unknown as { baseUrl: string }).baseUrl).toBe(
         'https://api.myinvois.hasil.gov.my',
       )
     })

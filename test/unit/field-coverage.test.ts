@@ -10,24 +10,33 @@ import type {
 } from '../../src/types'
 import { legacyInvoice as baseInvoice } from '../fixtures/legacy-invoice'
 
+/**
+ * These tests assert on the raw serialised shape, so they intentionally
+ * inspect the output as an untyped record rather than InvoiceSubmission.
+ */
+const generateClean = (
+  document: Parameters<typeof generateCleanInvoiceObject>[0],
+): Record<string, unknown> =>
+  generateCleanInvoiceObject(document) as unknown as Record<string, unknown>
+
 const supplierIdentifications = (invoice: InvoiceV1_1) => {
-  const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
-  const supplierParty = (clean.AccountingSupplierParty as Array<Record<string, unknown>>)[0]
-  const party = (supplierParty.Party as Array<Record<string, unknown>>)[0]
+  const clean = generateClean(invoice)
+  const supplierParty = (clean.AccountingSupplierParty as Array<Record<string, unknown>>)[0]!
+  const party = (supplierParty.Party as Array<Record<string, unknown>>)[0]!
   return party.PartyIdentification as Array<{ ID: Array<{ _: string; schemeID: string }> }>
 }
 
 const buyerIdentifications = (invoice: InvoiceV1_1) => {
-  const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
-  const buyerParty = (clean.AccountingCustomerParty as Array<Record<string, unknown>>)[0]
-  const party = (buyerParty.Party as Array<Record<string, unknown>>)[0]
+  const clean = generateClean(invoice)
+  const buyerParty = (clean.AccountingCustomerParty as Array<Record<string, unknown>>)[0]!
+  const party = (buyerParty.Party as Array<Record<string, unknown>>)[0]!
   return party.PartyIdentification as Array<{ ID: Array<{ _: string; schemeID: string }> }>
 }
 
 describe('party tax registrations', () => {
   it('emits four supplier identifications matching the official sample', () => {
     const schemes = supplierIdentifications(baseInvoice).map(
-      entry => entry.ID[0].schemeID,
+      entry => entry.ID[0]!.schemeID,
     )
     expect(schemes).toContain('TIN')
     expect(schemes).toContain('SST')
@@ -37,14 +46,14 @@ describe('party tax registrations', () => {
 
   it('emits NA for supplier SST when not supplied', () => {
     const ids = supplierIdentifications(baseInvoice)
-    const sst = ids.find(entry => entry.ID[0].schemeID === 'SST')
-    expect(sst?.ID[0]._).toBe('NA')
+    const sst = ids.find(entry => entry.ID[0]!.schemeID === 'SST')
+    expect(sst?.ID[0]?._).toBe('NA')
   })
 
   it('emits NA for supplier TTX when not supplied', () => {
     const ids = supplierIdentifications(baseInvoice)
-    const ttx = ids.find(entry => entry.ID[0].schemeID === 'TTX')
-    expect(ttx?.ID[0]._).toBe('NA')
+    const ttx = ids.find(entry => entry.ID[0]!.schemeID === 'TTX')
+    expect(ttx?.ID[0]?._).toBe('NA')
   })
 
   it('emits the supplier SST number when supplied', () => {
@@ -53,8 +62,8 @@ describe('party tax registrations', () => {
       supplier: { ...baseInvoice.supplier, sstRegistrationNumber: 'A01-2345-67891012' },
     }
     const ids = supplierIdentifications(invoice)
-    const sst = ids.find(entry => entry.ID[0].schemeID === 'SST')
-    expect(sst?.ID[0]._).toBe('A01-2345-67891012')
+    const sst = ids.find(entry => entry.ID[0]!.schemeID === 'SST')
+    expect(sst?.ID[0]?._).toBe('A01-2345-67891012')
   })
 
   it('emits the supplier tourism tax number when supplied', () => {
@@ -63,13 +72,13 @@ describe('party tax registrations', () => {
       supplier: { ...baseInvoice.supplier, tourismTaxRegistrationNumber: 'T-1234-5678' },
     }
     const ids = supplierIdentifications(invoice)
-    const ttx = ids.find(entry => entry.ID[0].schemeID === 'TTX')
-    expect(ttx?.ID[0]._).toBe('T-1234-5678')
+    const ttx = ids.find(entry => entry.ID[0]!.schemeID === 'TTX')
+    expect(ttx?.ID[0]?._).toBe('T-1234-5678')
   })
 
   it('emits four buyer identifications including TTX', () => {
     const schemes = buyerIdentifications(baseInvoice).map(
-      entry => entry.ID[0].schemeID,
+      entry => entry.ID[0]!.schemeID,
     )
     expect(schemes).toContain('SST')
     expect(schemes).toContain('TTX')
@@ -82,16 +91,16 @@ describe('party tax registrations', () => {
       buyer: { ...baseInvoice.buyer, tourismTaxRegistrationNumber: 'T-9999-0000' },
     }
     const ids = buyerIdentifications(invoice)
-    const ttx = ids.find(entry => entry.ID[0].schemeID === 'TTX')
-    expect(ttx?.ID[0]._).toBe('T-9999-0000')
+    const ttx = ids.find(entry => entry.ID[0]!.schemeID === 'TTX')
+    expect(ttx?.ID[0]?._).toBe('T-9999-0000')
   })
 })
 
 const supplierAddress = (invoice: InvoiceV1_1) => {
-  const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
-  const supplierParty = (clean.AccountingSupplierParty as Array<Record<string, unknown>>)[0]
-  const party = (supplierParty.Party as Array<Record<string, unknown>>)[0]
-  return (party.PostalAddress as Array<Record<string, unknown>>)[0]
+  const clean = generateClean(invoice)
+  const supplierParty = (clean.AccountingSupplierParty as Array<Record<string, unknown>>)[0]!
+  const party = (supplierParty.Party as Array<Record<string, unknown>>)[0]!
+  return (party.PostalAddress as Array<Record<string, unknown>>)[0]!
 }
 
 describe('address optional fields', () => {
@@ -120,9 +129,9 @@ describe('address optional fields', () => {
     const address = supplierAddress(invoice)
     const lines = address.AddressLine as Array<{ Line: Array<{ _: string }> }>
     expect(lines).toHaveLength(3)
-    expect(lines[0].Line).toEqual([{ _: '123 Test Street' }])
-    expect(lines[1].Line).toEqual([{ _: 'Bangunan Merdeka' }])
-    expect(lines[2].Line).toEqual([{ _: 'Persiaran Jaya' }])
+    expect(lines[0]!.Line).toEqual([{ _: '123 Test Street' }])
+    expect(lines[1]!.Line).toEqual([{ _: 'Bangunan Merdeka' }])
+    expect(lines[2]!.Line).toEqual([{ _: 'Persiaran Jaya' }])
   })
 
   it('emits PostalZone when supplied', () => {
@@ -139,9 +148,9 @@ describe('address optional fields', () => {
 })
 
 const firstLineItem = (invoice: InvoiceV1_1) => {
-  const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
+  const clean = generateClean(invoice)
   const lines = clean.InvoiceLine as Array<Record<string, unknown>>
-  return (lines[0].Item as Array<Record<string, unknown>>)[0]
+  return (lines[0]!.Item as Array<Record<string, unknown>>)[0]!
 }
 
 describe('line item trade fields', () => {
@@ -153,19 +162,19 @@ describe('line item trade fields', () => {
     const invoice = {
       ...baseInvoice,
       invoiceLineItems: [
-        { ...baseInvoice.invoiceLineItems[0], countryOfOrigin: 'GBR' as const },
+        { ...baseInvoice.invoiceLineItems[0]!, countryOfOrigin: 'GBR' as const },
       ],
     }
     const item = firstLineItem(invoice)
     const origin = item.OriginCountry as Array<Record<string, unknown>>
-    expect(origin[0].IdentificationCode).toEqual([{ _: 'GBR' }])
+    expect(origin[0]!.IdentificationCode).toEqual([{ _: 'GBR' }])
   })
 
   it('emits the tariff code as an additional PTC classification', () => {
     const invoice = {
       ...baseInvoice,
       invoiceLineItems: [
-        { ...baseInvoice.invoiceLineItems[0], productTariffCode: '9800.00.0010' },
+        { ...baseInvoice.invoiceLineItems[0]!, productTariffCode: '9800.00.0010' },
       ],
     }
     const item = firstLineItem(invoice)
@@ -173,16 +182,16 @@ describe('line item trade fields', () => {
       ItemClassificationCode: Array<{ _: string; listID: string }>
     }>
     const ptc = classifications.find(
-      entry => entry.ItemClassificationCode[0].listID === 'PTC',
+      entry => entry.ItemClassificationCode[0]!.listID === 'PTC',
     )
-    expect(ptc?.ItemClassificationCode[0]._).toBe('9800.00.0010')
+    expect(ptc?.ItemClassificationCode[0]?._).toBe('9800.00.0010')
   })
 
   it('keeps the original CLASS classification alongside PTC', () => {
     const invoice = {
       ...baseInvoice,
       invoiceLineItems: [
-        { ...baseInvoice.invoiceLineItems[0], productTariffCode: '9800.00.0010' },
+        { ...baseInvoice.invoiceLineItems[0]!, productTariffCode: '9800.00.0010' },
       ],
     }
     const item = firstLineItem(invoice)
@@ -191,14 +200,14 @@ describe('line item trade fields', () => {
     }>
     expect(classifications).toHaveLength(2)
     const classEntry = classifications.find(
-      entry => entry.ItemClassificationCode[0].listID === 'CLASS',
+      entry => entry.ItemClassificationCode[0]!.listID === 'CLASS',
     )
     expect(classEntry?.ItemClassificationCode[0]).toEqual({
-      _: baseInvoice.invoiceLineItems[0].itemClassificationCode,
+      _: baseInvoice.invoiceLineItems[0]!.itemClassificationCode,
       listID: 'CLASS',
     })
     const ptcEntry = classifications.find(
-      entry => entry.ItemClassificationCode[0].listID === 'PTC',
+      entry => entry.ItemClassificationCode[0]!.listID === 'PTC',
     )
     expect(ptcEntry?.ItemClassificationCode[0]).toEqual({
       _: '9800.00.0010',
@@ -225,19 +234,19 @@ describe('self-billed debit note', () => {
       taxTotal: baseInvoice.taxTotal,
     }
 
-    const clean = generateCleanInvoiceObject(note) as Record<string, unknown>
+    const clean = generateClean(note)
     const lines = clean.InvoiceLine as Array<Record<string, unknown>>
     expect(lines).toHaveLength(baseInvoice.invoiceLineItems.length)
 
-    const firstItem = (lines[0].Item as Array<Record<string, unknown>>)[0]
-    const description = (firstItem.Description as Array<{ _: string }>)[0]._
-    expect(description).toBe(baseInvoice.invoiceLineItems[0].itemDescription)
+    const firstItem = (lines[0]!.Item as Array<Record<string, unknown>>)[0]!
+    const description = (firstItem.Description as Array<{ _: string }>)[0]!._
+    expect(description).toBe(baseInvoice.invoiceLineItems[0]!.itemDescription)
   })
 })
 
 describe('document level optional fields', () => {
   it('omits billing period when not supplied', () => {
-    const clean = generateCleanInvoiceObject(baseInvoice) as Record<string, unknown>
+    const clean = generateClean(baseInvoice)
     expect(clean.InvoicePeriod).toBeUndefined()
   })
 
@@ -248,15 +257,15 @@ describe('document level optional fields', () => {
       billingPeriodStartDate: '2026-07-01',
       billingPeriodEndDate: '2026-07-31',
     }
-    const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
-    const period = (clean.InvoicePeriod as Array<Record<string, unknown>>)[0]
+    const clean = generateClean(invoice)
+    const period = (clean.InvoicePeriod as Array<Record<string, unknown>>)[0]!
     expect(period.StartDate).toEqual([{ _: '2026-07-01' }])
     expect(period.EndDate).toEqual([{ _: '2026-07-31' }])
     expect(period.Description).toEqual([{ _: 'Monthly' }])
   })
 
   it('omits delivery block when no shipping recipient is supplied', () => {
-    const clean = generateCleanInvoiceObject(baseInvoice) as Record<string, unknown>
+    const clean = generateClean(baseInvoice)
     expect(clean.Delivery).toBeUndefined()
   })
 
@@ -265,13 +274,13 @@ describe('document level optional fields', () => {
       ...baseInvoice,
       paymentInformation: { paymentMode: '01' as const },
     }
-    const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
-    const means = (clean.PaymentMeans as Array<Record<string, unknown>>)[0]
+    const clean = generateClean(invoice)
+    const means = (clean.PaymentMeans as Array<Record<string, unknown>>)[0]!
     expect(means.PaymentMeansCode).toEqual([{ _: '01' }])
   })
 
   it('omits payment means when no payment information is supplied', () => {
-    const clean = generateCleanInvoiceObject(baseInvoice) as Record<string, unknown>
+    const clean = generateClean(baseInvoice)
     expect(clean.PaymentMeans).toBeUndefined()
   })
 
@@ -284,15 +293,15 @@ describe('document level optional fields', () => {
         address: baseInvoice.buyer.address,
       },
     }
-    const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
-    const delivery = (clean.Delivery as Array<Record<string, unknown>>)[0]
-    const party = (delivery.DeliveryParty as Array<Record<string, unknown>>)[0]
-    const legalEntity = (party.PartyLegalEntity as Array<Record<string, unknown>>)[0]
+    const clean = generateClean(invoice)
+    const delivery = (clean.Delivery as Array<Record<string, unknown>>)[0]!
+    const party = (delivery.DeliveryParty as Array<Record<string, unknown>>)[0]!
+    const legalEntity = (party.PartyLegalEntity as Array<Record<string, unknown>>)[0]!
     expect(legalEntity.RegistrationName).toEqual([{ _: 'Recipient Sdn Bhd' }])
     const identification = party.PartyIdentification as Array<{
       ID: Array<{ _: string; schemeID: string }>
     }>
-    expect(identification[0].ID).toEqual([{ _: 'C12345678901', schemeID: 'TIN' }])
+    expect(identification[0]!.ID).toEqual([{ _: 'C12345678901', schemeID: 'TIN' }])
     expect(party.PostalAddress).toBeDefined()
   })
 
@@ -301,7 +310,7 @@ describe('document level optional fields', () => {
       ...baseInvoice,
       shippingRecipient: {},
     }
-    const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
+    const clean = generateClean(invoice)
     expect(clean.Delivery).toBeUndefined()
   })
 
@@ -310,17 +319,17 @@ describe('document level optional fields', () => {
       ...baseInvoice,
       shippingRecipient: { name: 'Recipient Sdn Bhd' },
     }
-    const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
-    const delivery = (clean.Delivery as Array<Record<string, unknown>>)[0]
-    const party = (delivery.DeliveryParty as Array<Record<string, unknown>>)[0]
-    const legalEntity = (party.PartyLegalEntity as Array<Record<string, unknown>>)[0]
+    const clean = generateClean(invoice)
+    const delivery = (clean.Delivery as Array<Record<string, unknown>>)[0]!
+    const party = (delivery.DeliveryParty as Array<Record<string, unknown>>)[0]!
+    const legalEntity = (party.PartyLegalEntity as Array<Record<string, unknown>>)[0]!
     expect(legalEntity.RegistrationName).toEqual([{ _: 'Recipient Sdn Bhd' }])
     expect(party.PartyIdentification).toBeUndefined()
     expect(party.PostalAddress).toBeUndefined()
   })
 
   it('omits payment terms when not supplied', () => {
-    const clean = generateCleanInvoiceObject(baseInvoice) as Record<string, unknown>
+    const clean = generateClean(baseInvoice)
     expect(clean.PaymentTerms).toBeUndefined()
   })
 
@@ -329,24 +338,24 @@ describe('document level optional fields', () => {
       ...baseInvoice,
       paymentInformation: { paymentTerms: 'Payment method is cash' },
     }
-    const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
-    const terms = (clean.PaymentTerms as Array<Record<string, unknown>>)[0]
+    const clean = generateClean(invoice)
+    const terms = (clean.PaymentTerms as Array<Record<string, unknown>>)[0]!
     expect(terms.Note).toEqual([{ _: 'Payment method is cash' }])
   })
 
   it('omits tax currency code when not supplied', () => {
-    const clean = generateCleanInvoiceObject(baseInvoice) as Record<string, unknown>
+    const clean = generateClean(baseInvoice)
     expect(clean.TaxCurrencyCode).toBeUndefined()
   })
 
   it('emits tax currency code when supplied', () => {
     const invoice = { ...baseInvoice, taxCurrencyCode: 'USD' as const }
-    const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
+    const clean = generateClean(invoice)
     expect(clean.TaxCurrencyCode).toEqual([{ _: 'USD' }])
   })
 
   it('omits prepaid payment when no prepayment fields are supplied', () => {
-    const clean = generateCleanInvoiceObject(baseInvoice) as Record<string, unknown>
+    const clean = generateClean(baseInvoice)
     expect(clean.PrepaidPayment).toBeUndefined()
   })
 
@@ -360,8 +369,8 @@ describe('document level optional fields', () => {
         prepaymentReferenceNumber: 'E12345678912',
       },
     }
-    const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
-    const prepaid = (clean.PrepaidPayment as Array<Record<string, unknown>>)[0]
+    const clean = generateClean(invoice)
+    const prepaid = (clean.PrepaidPayment as Array<Record<string, unknown>>)[0]!
     expect(prepaid.ID).toEqual([{ _: 'E12345678912' }])
     expect(prepaid.PaidAmount).toEqual([{ _: 1, currencyID: baseInvoice.invoiceCurrencyCode }])
     expect(prepaid.PaidDate).toEqual([{ _: '2026-07-23' }])
@@ -369,7 +378,7 @@ describe('document level optional fields', () => {
   })
 
   it('omits bill reference number when not supplied', () => {
-    const clean = generateCleanInvoiceObject(baseInvoice) as Record<string, unknown>
+    const clean = generateClean(baseInvoice)
     expect(clean.BillingReference).toBeUndefined()
   })
 
@@ -378,13 +387,13 @@ describe('document level optional fields', () => {
       ...baseInvoice,
       paymentInformation: { billReferenceNumber: 'E12345678912' },
     }
-    const clean = generateCleanInvoiceObject(invoice) as Record<string, unknown>
-    const billingReference = (clean.BillingReference as Array<Record<string, unknown>>)[0]
+    const clean = generateClean(invoice)
+    const billingReference = (clean.BillingReference as Array<Record<string, unknown>>)[0]!
     expect(billingReference.InvoiceDocumentReference).toBeUndefined()
     const additionalDocRef = billingReference.AdditionalDocumentReference as Array<{
       ID: Array<{ _: string }>
     }>
-    expect(additionalDocRef[0].ID).toEqual([{ _: 'E12345678912' }])
+    expect(additionalDocRef[0]!.ID).toEqual([{ _: 'E12345678912' }])
   })
 })
 
@@ -413,14 +422,14 @@ describe('BillingReference original-document link', () => {
       taxTotal: baseInvoice.taxTotal,
     }
 
-    const clean = generateCleanInvoiceObject(creditNote) as Record<string, unknown>
-    const billingReference = (clean.BillingReference as Array<Record<string, unknown>>)[0]
+    const clean = generateClean(creditNote)
+    const billingReference = (clean.BillingReference as Array<Record<string, unknown>>)[0]!
     const invoiceDocRef = (
       billingReference.InvoiceDocumentReference as Array<{
         UUID: Array<{ _: string }>
         ID: Array<{ _: string }>
       }>
-    )[0]
+    )[0]!
     expect(invoiceDocRef.UUID).toEqual([{ _: 'F9D425P6DS7D8IU' }])
     expect(invoiceDocRef.ID).toEqual([{ _: 'INV-001' }])
   })
@@ -442,14 +451,14 @@ describe('BillingReference original-document link', () => {
       taxTotal: baseInvoice.taxTotal,
     }
 
-    const clean = generateCleanInvoiceObject(refundNote) as Record<string, unknown>
-    const billingReference = (clean.BillingReference as Array<Record<string, unknown>>)[0]
+    const clean = generateClean(refundNote)
+    const billingReference = (clean.BillingReference as Array<Record<string, unknown>>)[0]!
     const invoiceDocRef = (
       billingReference.InvoiceDocumentReference as Array<{
         UUID: Array<{ _: string }>
         ID: Array<{ _: string }>
       }>
-    )[0]
+    )[0]!
     expect(invoiceDocRef.UUID).toEqual([{ _: 'F9D425P6DS7D8IU' }])
     expect(invoiceDocRef.ID).toEqual([{ _: 'INV-001' }])
   })
@@ -471,14 +480,14 @@ describe('BillingReference original-document link', () => {
       taxTotal: baseInvoice.taxTotal,
     }
 
-    const clean = generateCleanInvoiceObject(selfBilledCreditNote) as Record<string, unknown>
-    const billingReference = (clean.BillingReference as Array<Record<string, unknown>>)[0]
+    const clean = generateClean(selfBilledCreditNote)
+    const billingReference = (clean.BillingReference as Array<Record<string, unknown>>)[0]!
     const invoiceDocRef = (
       billingReference.InvoiceDocumentReference as Array<{
         UUID: Array<{ _: string }>
         ID: Array<{ _: string }>
       }>
-    )[0]
+    )[0]!
     expect(invoiceDocRef.UUID).toEqual([{ _: 'F9D425P6DS7D8IU' }])
     expect(invoiceDocRef.ID).toEqual([{ _: 'SBINV-001' }])
   })
@@ -500,14 +509,14 @@ describe('BillingReference original-document link', () => {
       taxTotal: baseInvoice.taxTotal,
     }
 
-    const clean = generateCleanInvoiceObject(selfBilledRefundNote) as Record<string, unknown>
-    const billingReference = (clean.BillingReference as Array<Record<string, unknown>>)[0]
+    const clean = generateClean(selfBilledRefundNote)
+    const billingReference = (clean.BillingReference as Array<Record<string, unknown>>)[0]!
     const invoiceDocRef = (
       billingReference.InvoiceDocumentReference as Array<{
         UUID: Array<{ _: string }>
         ID: Array<{ _: string }>
       }>
-    )[0]
+    )[0]!
     expect(invoiceDocRef.UUID).toEqual([{ _: 'F9D425P6DS7D8IU' }])
     expect(invoiceDocRef.ID).toEqual([{ _: 'SBINV-001' }])
   })

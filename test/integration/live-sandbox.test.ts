@@ -77,6 +77,7 @@ const buildMinimalInvoice = (): InvoiceV1_1 => {
         itemClassificationCode: '004' as ClassificationCode,
         itemDescription: 'Test Product',
         unitPrice: 100,
+        quantity: 1,
         taxType: '01' as TaxTypeCode,
         taxRate: 6,
         discountAmount: 10,
@@ -148,7 +149,8 @@ describe('MyInvois live sandbox (PKCS#12)', () => {
         /^https:\/\/preprod\.myinvois\.hasil\.gov\.my\//,
       )
       console.log(
-        await QRCode.toString(qrCodeUrl, { type: 'terminal', small: true }),
+        // The toMatch assertion above guarantees qrCodeUrl is a non-null URL.
+        await QRCode.toString(qrCodeUrl!, { type: 'terminal', small: true }),
       )
     },
   )

@@ -58,22 +58,21 @@ export const getPemFromP12 = (
     // Parse the PKCS#12 using the provided passphrase
     const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, passphrase)
 
-    const certBags = p12.getBags({ bagType: forge.pki.oids.certBag })[
-      forge.pki.oids.certBag
-    ]
+    // The oids table is typed with an index signature, but these three
+    // well-known bag-type OIDs are always present.
+    const certBagOid = forge.pki.oids.certBag!
+    const shroudedKeyBagOid = forge.pki.oids.pkcs8ShroudedKeyBag!
+    const keyBagOid = forge.pki.oids.keyBag!
+
+    const certBags = p12.getBags({ bagType: certBagOid })[certBagOid]
     if (!certBags || certBags.length === 0)
       throw new Error('No certificate found in PKCS#12 bundle')
 
     // The key may live in an encrypted (pkcs8ShroudedKeyBag) or plain
     // (keyBag) bag depending on how the P12 was exported.
     const keyBags =
-      p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag })[
-        forge.pki.oids.pkcs8ShroudedKeyBag
-      ] ?? []
-    const plainKeyBags =
-      p12.getBags({ bagType: forge.pki.oids.keyBag })[
-        forge.pki.oids.keyBag
-      ] ?? []
+      p12.getBags({ bagType: shroudedKeyBagOid })[shroudedKeyBagOid] ?? []
+    const plainKeyBags = p12.getBags({ bagType: keyBagOid })[keyBagOid] ?? []
     const key = keyBags[0]?.key ?? plainKeyBags[0]?.key
     if (!key) throw new Error('No private key found in PKCS#12 bundle')
     const privateKeyPem = forge.pki.privateKeyToPem(key)
@@ -81,13 +80,13 @@ export const getPemFromP12 = (
     // The bundle may carry the whole chain in any order; pick the cert whose
     // public key matches the private key, not blindly the first bag.
     const rsaKey = key as forge.pki.rsa.PrivateKey
-    const matchingBag = certBags.find(bag => {
+    const matchingBag = certBags.find((bag: forge.pkcs12.Bag) => {
       const publicKey = bag.cert?.publicKey as
         | forge.pki.rsa.PublicKey
         | undefined
       return publicKey?.n != null && publicKey.n.compareTo(rsaKey.n) === 0
     })
-    const cert = (matchingBag ?? certBags[0]).cert
+    const cert = (matchingBag ?? certBags[0])?.cert
     if (!cert) throw new Error('No certificate found in PKCS#12 bundle')
     const certificatePem = forge.pki.certificateToPem(cert)
 

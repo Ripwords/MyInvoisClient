@@ -634,13 +634,9 @@ export const generateCleanInvoiceObject = (
     InvoiceLine: lineItems.map((item, index) => ({
       ID: [{ _: (index + 1).toString() }],
 
-      // Always emitted: the MyInvois portal renders a missing
-      // InvoicedQuantity as 0.00, which reads as "zero units sold".
-      // A line without an explicit quantity is one unit (?? 1, matching
-      // the default used throughout).
       InvoicedQuantity: [
         {
-          _: item.quantity ?? 1,
+          _: item.quantity,
           ...(item.measurement !== undefined
             ? { unitCode: item.measurement }
             : {}),
@@ -1424,7 +1420,7 @@ export const createPercentageTaxLineItem = (params: {
   itemClassificationCode: ClassificationCode
   itemDescription: string
   unitPrice: number
-  quantity?: number
+  quantity: number
   measurement?: string
   taxType: TaxTypeCode
   taxRate: number
@@ -1432,11 +1428,10 @@ export const createPercentageTaxLineItem = (params: {
   discountAmount?: number
   discountRate?: number
 }): InvoiceLineItem => {
+  if (params.quantity <= 0) {
+    throw new RangeError('quantity must be greater than 0')
+  }
   const quantity = params.quantity
-    ? params.quantity <= 0
-      ? 1
-      : (params.quantity ?? 1)
-    : 1
   // Compute pre-discount from unit price and quantity only to avoid double-discounting
   const preDiscountAmount = params.unitPrice * quantity
   const hasDiscount =
@@ -1461,7 +1456,7 @@ export const createPercentageTaxLineItem = (params: {
     unitPrice: params.unitPrice,
     taxType: params.taxType,
     taxRate: params.taxRate,
-    ...(params.quantity !== undefined ? { quantity: params.quantity } : {}),
+    quantity,
     ...(params.measurement !== undefined
       ? { measurement: params.measurement }
       : {}),
@@ -1482,7 +1477,7 @@ export const createFixedRateTaxLineItem = (params: {
   itemClassificationCode: ClassificationCode
   itemDescription: string
   unitPrice: number
-  quantity?: number
+  quantity: number
   measurement?: string
   taxType: TaxTypeCode
   taxPerUnitAmount: number
@@ -1492,7 +1487,10 @@ export const createFixedRateTaxLineItem = (params: {
   discountAmount?: number
   discountRate?: number
 }): InvoiceLineItem => {
-  const quantity = params.quantity || 1
+  if (params.quantity <= 0) {
+    throw new RangeError('quantity must be greater than 0')
+  }
+  const quantity = params.quantity
   // Compute pre-discount from unit price and quantity only to avoid double-discounting
   const preDiscountAmount = params.unitPrice * quantity
   const hasDiscount =
@@ -1519,7 +1517,7 @@ export const createFixedRateTaxLineItem = (params: {
     taxPerUnitAmount: params.taxPerUnitAmount,
     baseUnitMeasure: params.baseUnitMeasure,
     baseUnitMeasureCode: params.baseUnitMeasureCode,
-    ...(params.quantity !== undefined ? { quantity: params.quantity } : {}),
+    quantity,
     ...(params.measurement !== undefined
       ? { measurement: params.measurement }
       : {}),

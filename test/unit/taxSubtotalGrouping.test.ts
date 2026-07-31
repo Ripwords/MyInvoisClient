@@ -30,10 +30,10 @@ const mixedInvoice: InvoiceV1_1 = {
   supplier: party as InvoiceV1_1['supplier'],
   buyer: party as InvoiceV1_1['buyer'],
   invoiceLineItems: [
-    { itemClassificationCode: '022', itemDescription: 'Room (SST 8%)', unitPrice: 100, taxType: '02', taxRate: 8, taxAmount: 8, totalTaxableAmountPerLine: 100, totalAmountPerLine: 108 },
-    { itemClassificationCode: '022', itemDescription: 'F&B (SST 6%)', unitPrice: 50, taxType: '02', taxRate: 6, taxAmount: 3, totalTaxableAmountPerLine: 50, totalAmountPerLine: 53 },
-    { itemClassificationCode: '022', itemDescription: 'Tourism Tax', unitPrice: 0, taxType: '03', taxAmount: 10, totalTaxableAmountPerLine: 0, totalAmountPerLine: 10 },
-    { itemClassificationCode: '022', itemDescription: 'Deposit (exempt)', unitPrice: 200, taxType: '06', taxRate: 0, taxAmount: 0, totalTaxableAmountPerLine: 200, totalAmountPerLine: 200 },
+    { itemClassificationCode: '022', itemDescription: 'Room (SST 8%)', unitPrice: 100, quantity: 1, taxType: '02', taxRate: 8, taxAmount: 8, totalTaxableAmountPerLine: 100, totalAmountPerLine: 108 },
+    { itemClassificationCode: '022', itemDescription: 'F&B (SST 6%)', unitPrice: 50, quantity: 1, taxType: '02', taxRate: 6, taxAmount: 3, totalTaxableAmountPerLine: 50, totalAmountPerLine: 53 },
+    { itemClassificationCode: '022', itemDescription: 'Tourism Tax', unitPrice: 0, quantity: 1, taxType: '03', taxAmount: 10, totalTaxableAmountPerLine: 0, totalAmountPerLine: 10 },
+    { itemClassificationCode: '022', itemDescription: 'Deposit (exempt)', unitPrice: 200, quantity: 1, taxType: '06', taxRate: 0, taxAmount: 0, totalTaxableAmountPerLine: 200, totalAmountPerLine: 200 },
   ],
   legalMonetaryTotal: { taxExclusiveAmount: 350, taxInclusiveAmount: 371, payableRoundingAmount: 0, payableAmount: 371 },
   taxTotal: { taxAmount: 21 },
@@ -42,12 +42,12 @@ const mixedInvoice: InvoiceV1_1 = {
 describe('document-level TaxSubtotal grouping', () => {
   it('emits one TaxSubtotal per distinct tax category', () => {
     const out = generateCleanInvoiceObject(mixedInvoice)
-    const subs = out.TaxTotal[0].TaxSubtotal
+    const subs = out.TaxTotal[0]!.TaxSubtotal
 
     const byCategory = Object.fromEntries(
       subs.map(s => [
-        String(s.TaxCategory[0].ID[0]._),
-        { taxable: s.TaxableAmount[0]._, tax: s.TaxAmount[0]._ },
+        String(s.TaxCategory[0]!.ID[0]!._),
+        { taxable: s.TaxableAmount[0]!._, tax: s.TaxAmount[0]!._ },
       ]),
     )
 
@@ -60,13 +60,13 @@ describe('document-level TaxSubtotal grouping', () => {
 
   it('keeps the subtotal totals reconciled with the document totals', () => {
     const out = generateCleanInvoiceObject(mixedInvoice)
-    const subs = out.TaxTotal[0].TaxSubtotal
-    const sumTax = subs.reduce((a, s) => a + Number(s.TaxAmount[0]._), 0)
-    const sumTaxable = subs.reduce((a, s) => a + Number(s.TaxableAmount[0]._), 0)
+    const subs = out.TaxTotal[0]!.TaxSubtotal
+    const sumTax = subs.reduce((a, s) => a + Number(s.TaxAmount[0]!._), 0)
+    const sumTaxable = subs.reduce((a, s) => a + Number(s.TaxableAmount[0]!._), 0)
 
-    expect(sumTax).toBeCloseTo(out.TaxTotal[0].TaxAmount[0]._ as number, 2)
+    expect(sumTax).toBeCloseTo(out.TaxTotal[0]!.TaxAmount[0]!._ as number, 2)
     expect(sumTaxable).toBeCloseTo(
-      out.LegalMonetaryTotal[0].TaxExclusiveAmount[0]._ as number,
+      out.LegalMonetaryTotal[0]!.TaxExclusiveAmount[0]!._ as number,
       2,
     )
   })
@@ -79,7 +79,7 @@ describe('document-level TaxSubtotal grouping', () => {
       taxTotal: { taxAmount: 8 },
     }
     const out = generateCleanInvoiceObject(single)
-    expect(out.TaxTotal[0].TaxSubtotal).toHaveLength(1)
-    expect(out.TaxTotal[0].TaxSubtotal[0].TaxCategory[0].ID[0]._).toBe('02')
+    expect(out.TaxTotal[0]!.TaxSubtotal).toHaveLength(1)
+    expect(out.TaxTotal[0]!.TaxSubtotal[0]!.TaxCategory[0]!.ID[0]!._).toBe('02')
   })
 })

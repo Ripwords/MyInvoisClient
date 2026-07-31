@@ -68,6 +68,7 @@ describe('Signature Consistency Tests', () => {
       legalMonetaryTotal: {
         taxExclusiveAmount: 1000,
         taxInclusiveAmount: 1020,
+        payableRoundingAmount: 0,
         payableAmount: 1020,
       },
       taxTotal: {
@@ -78,6 +79,7 @@ describe('Signature Consistency Tests', () => {
           itemClassificationCode: '022' as any, // Others
           itemDescription: 'Test Item',
           unitPrice: 1000,
+          quantity: 1,
           taxType: '01',
           taxRate: 2,
           taxAmount: 20,

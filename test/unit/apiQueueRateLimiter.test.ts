@@ -82,7 +82,7 @@ describe('apiQueue Rate Limiter', () => {
     // Verify no requests were executed simultaneously (within 1ms of each other)
     executionTimestamps.sort((a, b) => a - b)
     for (let i = 1; i < executionTimestamps.length; i++) {
-      const diff = executionTimestamps[i] - executionTimestamps[i - 1]
+      const diff = executionTimestamps[i]! - executionTimestamps[i - 1]!
       expect(diff).toBeGreaterThanOrEqual(0) // Should be at least 0ms apart
     }
   })
@@ -119,7 +119,7 @@ describe('apiQueue Rate Limiter', () => {
       // Verify requests were spaced appropriately
       executionTimestamps.sort((a, b) => a - b)
       for (let i = 1; i < executionTimestamps.length; i++) {
-        const diff = executionTimestamps[i] - executionTimestamps[i - 1]
+        const diff = executionTimestamps[i]! - executionTimestamps[i - 1]!
         expect(diff).toBeGreaterThanOrEqual(0)
       }
     }

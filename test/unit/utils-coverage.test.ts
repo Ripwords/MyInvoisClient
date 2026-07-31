@@ -39,6 +39,7 @@ describe('createFixedRateTaxLineItem', () => {
       itemClassificationCode: '003' as ClassificationCode,
       itemDescription: 'Hotel Stay',
       unitPrice: 100,
+      quantity: 1,
       taxType: '03' as TaxTypeCode,
       taxPerUnitAmount: 0.1,
       baseUnitMeasure: 3,
@@ -58,6 +59,7 @@ describe('calculateInvoiceTotals', () => {
         itemClassificationCode: '004' as ClassificationCode,
         itemDescription: 'A',
         unitPrice: 1.1,
+        quantity: 1,
         taxType: '01' as TaxTypeCode,
         taxRate: 6,
         taxAmount: 0.07,
@@ -68,6 +70,7 @@ describe('calculateInvoiceTotals', () => {
         itemClassificationCode: '004' as ClassificationCode,
         itemDescription: 'B',
         unitPrice: 2.2,
+        quantity: 1,
         taxType: '01' as TaxTypeCode,
         taxRate: 6,
         taxAmount: 0.13,
@@ -100,6 +103,6 @@ describe('searchDocuments', () => {
     })
 
     expect(documents).toHaveLength(1)
-    expect(documents[0].longId).toBe('LONG-2')
+    expect(documents[0]!.longId).toBe('LONG-2')
   })
 })

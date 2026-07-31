@@ -257,10 +257,11 @@ export interface InvoiceLineItem {
   /**
    * Number of units of a particular product or service in a commercial transaction.
    * UBL mapping: / ubl:Invoice / cac:InvoiceLine / cbc:InvoicedQuantity
-   * Optional. Recommended: Up to 5 decimal places.
+   * Required — the MyInvois portal renders a missing quantity as 0.00, so
+   * every line must state its unit count explicitly. Up to 5 decimal places.
    * @example 1.00
    */
-  quantity?: number
+  quantity: number
   /**
    * Standard unit or system used to measure the product or service.
    * This value should be represented in actual decimal value like 0.15.
@@ -985,6 +986,10 @@ export interface InvoiceSubmission {
         ID: {
           _: string
         }[]
+        /** Emitted when a line in this category carries taxExemptionReasonCode. */
+        TaxExemptionReason?: {
+          _: string
+        }[]
         TaxScheme: {
           ID: {
             _: string
@@ -1029,6 +1034,11 @@ export interface InvoiceSubmission {
   InvoiceLine: {
     ID: {
       _: string
+    }[]
+    /** Always emitted — the portal renders a missing quantity as 0.00. */
+    InvoicedQuantity: {
+      _: number
+      unitCode?: string
     }[]
     Item: {
       CommodityClassification: {
@@ -1106,6 +1116,10 @@ export interface InvoiceSubmission {
         }[]
         TaxCategory: {
           ID: {
+            _: string
+          }[]
+          /** Emitted when the line carries taxExemptionReasonCode. */
+          TaxExemptionReason?: {
             _: string
           }[]
           TaxScheme: {

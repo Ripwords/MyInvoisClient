@@ -60,6 +60,7 @@ const buildMinimalInvoice = (): InvoiceV1_1 => ({
       itemClassificationCode: '004' as ClassificationCode,
       itemDescription: 'Test Product',
       unitPrice: 100,
+      quantity: 1,
       taxType: '01' as TaxTypeCode,
       taxRate: 6,
       discountAmount: 10,

@@ -63,6 +63,7 @@ export const legacyInvoice: InvoiceV1_1 = {
       itemClassificationCode: '001', // General goods
       itemDescription: 'Test Product (Percentage Tax)',
       unitPrice: 100.0,
+      quantity: 1,
       taxType: '01', // SST
       taxRate: 6.0, // 6% SST
       taxAmount: 6.0, // 6% of 100
@@ -74,6 +75,7 @@ export const legacyInvoice: InvoiceV1_1 = {
       itemClassificationCode: '003', // Tourism Tax example
       itemDescription: 'Hotel Stay (Fixed Rate Tax)',
       unitPrice: 200.0,
+      quantity: 1,
       taxType: '03', // Tourism Tax
       taxPerUnitAmount: 10.0, // RM 10 per night
       baseUnitMeasure: 2, // 2 nights

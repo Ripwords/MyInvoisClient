@@ -13,7 +13,7 @@ describe('getRecentDocuments', () => {
     await getRecentDocuments(context, {})
 
     const calledWith = (context.fetch as unknown as { mock: { calls: string[][] } })
-      .mock.calls[0][0]
+      .mock.calls[0]![0]!
     expect(calledWith).toContain('/api/v1.0/documents/recent')
   })
 
@@ -27,7 +27,7 @@ describe('getRecentDocuments', () => {
     })
 
     const calledWith = (context.fetch as unknown as { mock: { calls: string[][] } })
-      .mock.calls[0][0]
+      .mock.calls[0]![0]!
     expect(calledWith).toContain('pageNo=2')
     expect(calledWith).toContain('pageSize=50')
     expect(calledWith).toContain('InvoiceDirection=Sent')
@@ -41,7 +41,7 @@ describe('getRecentDocuments', () => {
     })
 
     const calledWith = (context.fetch as unknown as { mock: { calls: string[][] } })
-      .mock.calls[0][0]
+      .mock.calls[0]![0]!
     expect(calledWith).toContain('InvoiceDirection=Sent')
     expect(calledWith).not.toContain('invoiceDirection=')
   })
@@ -55,7 +55,7 @@ describe('getRecentDocuments', () => {
     })
 
     const calledWith = (context.fetch as unknown as { mock: { calls: string[][] } })
-      .mock.calls[0][0]
+      .mock.calls[0]![0]!
     expect(calledWith).toContain('issuerIdType=BRN')
     expect(calledWith).toContain('issuerId=123456789')
     expect(calledWith).toContain('receiverTin=987654321')
@@ -66,7 +66,7 @@ describe('getRecentDocuments', () => {
       result: [{ uuid: 'abc', longID: 'LONG-1' }],
     })
     const documents = await getRecentDocuments(context, {})
-    expect(documents[0].longId).toBe('LONG-1')
+    expect(documents[0]!.longId).toBe('LONG-1')
   })
 
   it('accepts a bare array response', async () => {

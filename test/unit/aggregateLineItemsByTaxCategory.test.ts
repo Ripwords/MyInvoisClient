@@ -2,10 +2,14 @@ import { describe, it, expect } from 'vitest'
 import { aggregateLineItemsByTaxCategory } from '../../src/utils/lineItems'
 import type { InvoiceLineItem } from '../../src/types'
 
-const item = (over: Partial<InvoiceLineItem>): InvoiceLineItem => ({
+const item = ({
+  quantity = 1,
+  ...over
+}: Partial<InvoiceLineItem>): InvoiceLineItem => ({
   itemClassificationCode: '022',
   itemDescription: 'x',
   unitPrice: 0,
+  quantity,
   taxType: '02',
   taxAmount: 0,
   totalTaxableAmountPerLine: 0,

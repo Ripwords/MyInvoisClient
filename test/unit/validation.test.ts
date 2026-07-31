@@ -15,10 +15,14 @@ import type {
   UnitTypeCode,
 } from '../../src/types'
 
-const line = (overrides: Partial<InvoiceLineItem>): InvoiceLineItem => ({
+const line = ({
+  quantity = 1,
+  ...overrides
+}: Partial<InvoiceLineItem>): InvoiceLineItem => ({
   itemClassificationCode: '004' as ClassificationCode,
   itemDescription: 'Item',
   unitPrice: 100,
+  quantity,
   taxType: '01' as TaxTypeCode,
   taxRate: 6,
   taxAmount: 6,

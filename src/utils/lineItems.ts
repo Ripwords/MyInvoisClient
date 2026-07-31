@@ -62,12 +62,7 @@ export const aggregateLineItemsByTaxCategory = (
     )
     const tax = group.reduce((sum, i) => sum + (i.taxAmount ?? 0), 0)
     const total = group.reduce((sum, i) => sum + (i.totalAmountPerLine ?? 0), 0)
-    const hasQuantity = group.some(i => i.quantity !== undefined)
-    // A line without a quantity is a single unit (document generation treats
-    // missing quantity as 1), not zero units.
-    const quantity = hasQuantity
-      ? group.reduce((sum, i) => sum + (i.quantity ?? 1), 0)
-      : undefined
+    const quantity = group.reduce((sum, i) => sum + i.quantity, 0)
     const hasBaseUnitMeasure = group.some(i => i.baseUnitMeasure !== undefined)
     const baseUnitMeasure = hasBaseUnitMeasure
       ? group.reduce((sum, i) => sum + (i.baseUnitMeasure ?? 0), 0)
@@ -75,7 +70,7 @@ export const aggregateLineItemsByTaxCategory = (
 
     const roundedTaxable = round2(taxable)
     const unitPrice =
-      quantity && quantity > 0 ? round2(roundedTaxable / quantity) : first.unitPrice
+      quantity > 0 ? round2(roundedTaxable / quantity) : first.unitPrice
 
     return {
       itemClassificationCode: first.itemClassificationCode,
@@ -90,7 +85,7 @@ export const aggregateLineItemsByTaxCategory = (
       ...(first.baseUnitMeasureCode !== undefined
         ? { baseUnitMeasureCode: first.baseUnitMeasureCode }
         : {}),
-      ...(quantity !== undefined ? { quantity } : {}),
+      quantity,
       taxAmount: round2(tax),
       totalTaxableAmountPerLine: roundedTaxable,
       totalAmountPerLine: round2(total),

@@ -12,13 +12,14 @@ import type {
   ClassificationCode,
   TaxTypeCode,
   SigningCredentials,
+  Supplier,
 } from '../../src/types'
 import { extractCertificateInfo } from '../../src/utils/certificate'
 
-const party = {
+const party: Supplier = {
   name: 'Test Co',
   tin: 'C26135266000',
-  registrationType: 'BRN' as const,
+  registrationType: 'BRN',
   registrationNumber: '201901030382',
   contactNumber: '+60123456789',
   address: {
@@ -50,10 +51,14 @@ const baseInvoice = (lineItems: InvoiceLineItem[]): InvoiceV1_1 => ({
   taxTotal: { taxAmount: 6 },
 })
 
-const line = (overrides: Partial<InvoiceLineItem>): InvoiceLineItem => ({
+const line = ({
+  quantity = 1,
+  ...overrides
+}: Partial<InvoiceLineItem>): InvoiceLineItem => ({
   itemClassificationCode: '004' as ClassificationCode,
   itemDescription: 'Item',
   unitPrice: 100,
+  quantity,
   taxType: '01' as TaxTypeCode,
   taxRate: 6,
   taxAmount: 6,
@@ -110,11 +115,11 @@ describe('monetary rounding in generated documents', () => {
           totalAmountPerLine: 1.17,
         }),
       ]),
-    ) as any
+    )
 
-    const invoiceLine = out.InvoiceLine[0]
-    expect(invoiceLine.ItemPriceExtension[0].Amount[0]._).toBe(3.3)
-    expect(invoiceLine.AllowanceCharge[0].BaseAmount[0]._).toBe(3.3)
+    const invoiceLine = out.InvoiceLine[0]!
+    expect(invoiceLine.ItemPriceExtension[0]!.Amount[0]!._).toBe(3.3)
+    expect(invoiceLine.AllowanceCharge?.[0]?.BaseAmount?.[0]?._).toBe(3.3)
   })
 
   it('createPercentageTaxLineItem rounds all monetary outputs', () => {
@@ -157,10 +162,10 @@ describe('aggregateLineItemsByTaxCategory soundness', () => {
     expect(result).toHaveLength(2)
   })
 
-  it('treats missing quantity as 1 when other lines in the group have one', () => {
+  it('sums quantities across merged lines', () => {
     const result = aggregateLineItemsByTaxCategory([
       line({ quantity: 2 }),
-      line({}), // no quantity — a single unit, not zero units
+      line({ quantity: 1 }),
     ])
 
     expect(result).toHaveLength(1)
@@ -170,22 +175,21 @@ describe('aggregateLineItemsByTaxCategory soundness', () => {
 
 describe('invoiced quantity', () => {
   // The MyInvois portal renders a missing InvoicedQuantity element as 0.00,
-  // which reads as "zero units sold". A line without an explicit quantity is
-  // one unit (matching the ?? 1 default used throughout), so the element must
-  // always be emitted.
-  it('emits InvoicedQuantity 1 when the line has no quantity or measurement', () => {
-    const out = generateCleanInvoiceObject(baseInvoice([line({})])) as any
+  // which reads as "zero units sold" — so the element is always emitted and
+  // the quantity field is required on every line item.
+  it('always emits InvoicedQuantity', () => {
+    const out = generateCleanInvoiceObject(baseInvoice([line({})]))
 
-    expect(out.InvoiceLine[0].InvoicedQuantity?.[0]?._).toBe(1)
+    expect(out.InvoiceLine[0]!.InvoicedQuantity[0]!._).toBe(1)
   })
 
   it('keeps an explicit quantity and unit code', () => {
     const out = generateCleanInvoiceObject(
       baseInvoice([line({ quantity: 4, measurement: 'H87' })]),
-    ) as any
+    )
 
-    expect(out.InvoiceLine[0].InvoicedQuantity[0]._).toBe(4)
-    expect(out.InvoiceLine[0].InvoicedQuantity[0].unitCode).toBe('H87')
+    expect(out.InvoiceLine[0]!.InvoicedQuantity[0]!._).toBe(4)
+    expect(out.InvoiceLine[0]!.InvoicedQuantity[0]!.unitCode).toBe('H87')
   })
 })
 
@@ -202,16 +206,18 @@ describe('tax exemption serialization', () => {
           totalAmountPerLine: 100,
         }),
       ]),
-    ) as any
+    )
 
     const lineTaxCategory =
-      out.InvoiceLine[0].TaxTotal[0].TaxSubtotal[0].TaxCategory[0]
+      out.InvoiceLine[0]!.TaxTotal[0]!.TaxSubtotal[0]!.TaxCategory[0]!
     expect(lineTaxCategory.TaxExemptionReason?.[0]?._).toBe('02')
 
-    const docSubtotals = out.TaxTotal[0].TaxSubtotal
+    const docSubtotals = out.TaxTotal[0]!.TaxSubtotal
     const exemptSubtotal = docSubtotals.find(
-      (s: any) => s.TaxCategory[0].ID[0]._ === 'E',
+      s => s.TaxCategory[0]!.ID[0]!._ === 'E',
     )
-    expect(exemptSubtotal.TaxCategory[0].TaxExemptionReason?.[0]?._).toBe('02')
+    expect(exemptSubtotal?.TaxCategory[0]!.TaxExemptionReason?.[0]?._).toBe(
+      '02',
+    )
   })
 })
