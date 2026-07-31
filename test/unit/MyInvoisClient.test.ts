@@ -302,6 +302,31 @@ describe('MyInvoisClient', () => {
     })
   })
 
+  describe('getTaxpayerQRCode', () => {
+    // The documented route is /api/v1.0/taxpayers/qrcodeinfo/ (plural).
+    // The singular form returns a generic 404 "Resource not found".
+    it('should call the plural taxpayers qrcodeinfo route', async () => {
+      const mockToken = { access_token: 'test-token', expires_in: 3600 }
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(mockToken),
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ tin: 'C123', name: 'Test' }),
+        } as Response)
+
+      await client.getTaxpayerQRCode('some-qr-text')
+
+      const qrCall = mockFetch.mock.calls.find(c =>
+        String(c[0]).includes('qrcodeinfo'),
+      )
+      expect(qrCall).toBeDefined()
+      expect(String(qrCall![0])).toContain('/api/v1.0/taxpayers/qrcodeinfo/')
+    })
+  })
+
   describe('searchDocuments extra', () => {
     it('should return an empty array when no documents match', async () => {
       const mockToken = { access_token: 'test-token', expires_in: 3600 }

@@ -128,7 +128,10 @@ export async function taxpayerQRCode(
   const base64EncodedQRCodeText = Buffer.from(qrCodeText).toString('base64')
 
   const response = await fetch(
-    `/api/v1.0/taxpayer/qrcodeinfo/${base64EncodedQRCodeText}`,
+    // Plural `taxpayers` is correct here (unlike validate/search which use
+    // singular `taxpayer`) — the singular route does not exist and returns a
+    // generic 404 "Resource not found".
+    `/api/v1.0/taxpayers/qrcodeinfo/${base64EncodedQRCodeText}`,
   )
 
   return response.json()
