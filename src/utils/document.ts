@@ -634,19 +634,18 @@ export const generateCleanInvoiceObject = (
     InvoiceLine: lineItems.map((item, index) => ({
       ID: [{ _: (index + 1).toString() }],
 
-      // Quantity and Measurement (optional)
-      ...(item.quantity !== undefined || item.measurement !== undefined
-        ? {
-            InvoicedQuantity: [
-              {
-                _: item.quantity ?? 1,
-                ...(item.measurement !== undefined
-                  ? { unitCode: item.measurement }
-                  : {}),
-              },
-            ],
-          }
-        : {}),
+      // Always emitted: the MyInvois portal renders a missing
+      // InvoicedQuantity as 0.00, which reads as "zero units sold".
+      // A line without an explicit quantity is one unit (?? 1, matching
+      // the default used throughout).
+      InvoicedQuantity: [
+        {
+          _: item.quantity ?? 1,
+          ...(item.measurement !== undefined
+            ? { unitCode: item.measurement }
+            : {}),
+        },
+      ],
 
       // Item Information
       Item: [

@@ -168,6 +168,27 @@ describe('aggregateLineItemsByTaxCategory soundness', () => {
   })
 })
 
+describe('invoiced quantity', () => {
+  // The MyInvois portal renders a missing InvoicedQuantity element as 0.00,
+  // which reads as "zero units sold". A line without an explicit quantity is
+  // one unit (matching the ?? 1 default used throughout), so the element must
+  // always be emitted.
+  it('emits InvoicedQuantity 1 when the line has no quantity or measurement', () => {
+    const out = generateCleanInvoiceObject(baseInvoice([line({})])) as any
+
+    expect(out.InvoiceLine[0].InvoicedQuantity?.[0]?._).toBe(1)
+  })
+
+  it('keeps an explicit quantity and unit code', () => {
+    const out = generateCleanInvoiceObject(
+      baseInvoice([line({ quantity: 4, measurement: 'H87' })]),
+    ) as any
+
+    expect(out.InvoiceLine[0].InvoicedQuantity[0]._).toBe(4)
+    expect(out.InvoiceLine[0].InvoicedQuantity[0].unitCode).toBe('H87')
+  })
+})
+
 describe('tax exemption serialization', () => {
   it('emits TaxExemptionReason for exempt line items', () => {
     const out = generateCleanInvoiceObject(
