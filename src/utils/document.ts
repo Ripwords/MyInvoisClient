@@ -146,7 +146,10 @@ export const generateCleanInvoiceObject = (
   // TaxSubtotal per distinct tax type (derived entirely from the line items).
   const round2 = (n: number) => Math.round(n * 100) / 100
   const taxCategoryOrder: string[] = []
-  const taxByCategory = new Map<string, { taxable: number; tax: number }>()
+  const taxByCategory = new Map<
+    string,
+    { taxable: number; tax: number; exemptionReason?: string }
+  >()
   for (const item of lineItems) {
     const category = item.taxType
     if (!taxByCategory.has(category)) {
@@ -156,6 +159,12 @@ export const generateCleanInvoiceObject = (
     const bucket = taxByCategory.get(category)!
     bucket.taxable += item.totalTaxableAmountPerLine ?? 0
     bucket.tax += item.taxAmount ?? 0
+    if (
+      bucket.exemptionReason === undefined &&
+      item.taxExemptionReasonCode !== undefined
+    ) {
+      bucket.exemptionReason = item.taxExemptionReasonCode
+    }
   }
   // Fallback for the (invalid) no-line-items case: keep prior single-subtotal shape.
   if (taxCategoryOrder.length === 0) {
@@ -546,7 +555,8 @@ export const generateCleanInvoiceObject = (
         ],
         // One TaxSubtotal per distinct tax category, derived from line items.
         TaxSubtotal: taxCategoryOrder.map(category => {
-          const { taxable, tax } = taxByCategory.get(category)!
+          const { taxable, tax, exemptionReason } =
+            taxByCategory.get(category)!
           return {
             TaxableAmount: [
               {
@@ -563,6 +573,9 @@ export const generateCleanInvoiceObject = (
             TaxCategory: [
               {
                 ID: [{ _: category }],
+                ...(exemptionReason !== undefined
+                  ? { TaxExemptionReason: [{ _: exemptionReason }] }
+                  : {}),
                 TaxScheme: [
                   {
                     ID: [
@@ -677,9 +690,10 @@ export const generateCleanInvoiceObject = (
         {
           Amount: [
             {
-              _:
+              _: round2(
                 (item.totalTaxableAmountPerLine ?? 0) +
-                (item.discountAmount ?? 0),
+                  (item.discountAmount ?? 0),
+              ),
               currencyID: invoice.invoiceCurrencyCode,
             },
           ],
@@ -722,9 +736,10 @@ export const generateCleanInvoiceObject = (
                       MultiplierFactorNumeric: [{ _: item.discountRate }],
                       BaseAmount: [
                         {
-                          _:
+                          _: round2(
                             (item.totalTaxableAmountPerLine ?? 0) +
-                            (item.discountAmount ?? 0),
+                              (item.discountAmount ?? 0),
+                          ),
                           currencyID: invoice.invoiceCurrencyCode,
                         },
                       ],
@@ -785,6 +800,13 @@ export const generateCleanInvoiceObject = (
               TaxCategory: [
                 {
                   ID: [{ _: item.taxType }],
+                  ...(item.taxExemptionReasonCode !== undefined
+                    ? {
+                        TaxExemptionReason: [
+                          { _: item.taxExemptionReasonCode },
+                        ],
+                      }
+                    : {}),
                   TaxScheme: [
                     {
                       ID: [
@@ -1207,22 +1229,10 @@ export const generateCompleteDocument = (
       signingCredentials.privateKeyPem,
     )
 
-    // Generate signing time in proper ISO format matching PowerShell exactly
-    // PowerShell: Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ"
-    const now = new Date()
-    const signingTime =
-      now.getFullYear() +
-      '-' +
-      String(now.getMonth() + 1).padStart(2, '0') +
-      '-' +
-      String(now.getDate()).padStart(2, '0') +
-      'T' +
-      String(now.getHours()).padStart(2, '0') +
-      ':' +
-      String(now.getMinutes()).padStart(2, '0') +
-      ':' +
-      String(now.getSeconds()).padStart(2, '0') +
-      'Z'
+    // XAdES SigningTime must be the actual UTC instant. Building it from
+    // local date components with a 'Z' suffix shifts it by the host timezone
+    // offset (+8h on Malaysian servers), dating signatures in the future.
+    const signingTime = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
 
     // Extract certificate information (enhanced)
     const certInfo = extractCertificateInfo(signingCredentials.certificatePem)
@@ -1461,8 +1471,8 @@ export const createPercentageTaxLineItem = (params: {
       ? { discountRate: params.discountRate }
       : {}),
     taxAmount: Math.round(taxAmount * 100) / 100, // Round to 2 decimal places
-    totalTaxableAmountPerLine: totalTaxableAmount,
-    totalAmountPerLine: totalTaxableAmount + taxAmount,
+    totalTaxableAmountPerLine: Math.round(totalTaxableAmount * 100) / 100,
+    totalAmountPerLine: Math.round((totalTaxableAmount + taxAmount) * 100) / 100,
   }
 }
 
@@ -1519,8 +1529,8 @@ export const createFixedRateTaxLineItem = (params: {
       ? { discountRate: params.discountRate }
       : {}),
     taxAmount: Math.round(taxAmount * 100) / 100, // Round to 2 decimal places
-    totalTaxableAmountPerLine: totalTaxableAmount,
-    totalAmountPerLine: totalTaxableAmount + taxAmount,
+    totalTaxableAmountPerLine: Math.round(totalTaxableAmount * 100) / 100,
+    totalAmountPerLine: Math.round((totalTaxableAmount + taxAmount) * 100) / 100,
   }
 }
 

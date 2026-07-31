@@ -327,6 +327,33 @@ describe('MyInvoisClient', () => {
     })
   })
 
+  describe('searchTin', () => {
+    // The documented query param for name-based search is `taxpayerName`;
+    // `idName` gets HTTP 400 "Invalid request parameters" (verified live).
+    it('should send the name as the taxpayerName query param', async () => {
+      const mockToken = { access_token: 'test-token', expires_in: 3600 }
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(mockToken),
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ tin: 'C26135266000' }),
+        } as Response)
+
+      await client.searchTin({ taxpayerName: 'INNHOUSE SDN BHD' })
+
+      const searchCall = mockFetch.mock.calls.find(c =>
+        String(c[0]).includes('/taxpayer/search/tin'),
+      )
+      expect(searchCall).toBeDefined()
+      const url = String(searchCall![0])
+      expect(url).toContain('taxpayerName=INNHOUSE+SDN+BHD')
+      expect(url).not.toContain('idName=')
+    })
+  })
+
   describe('searchDocuments extra', () => {
     it('should return an empty array when no documents match', async () => {
       const mockToken = { access_token: 'test-token', expires_in: 3600 }

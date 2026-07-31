@@ -18,7 +18,10 @@ export interface AggregateByTaxCategoryOptions {
 const round2 = (n: number): number => Math.round(n * 100) / 100
 
 const defaultKeyFor = (item: InvoiceLineItem): string =>
-  `${item.taxType}|${item.taxRate ?? ''}|${item.baseUnitMeasureCode ?? ''}`
+  // taxPerUnitAmount is part of the key: fixed-rate lines with different
+  // per-unit amounts must not merge, or the aggregated line breaks the
+  // invariant taxAmount = taxPerUnitAmount × baseUnitMeasure.
+  `${item.taxType}|${item.taxRate ?? ''}|${item.taxPerUnitAmount ?? ''}|${item.baseUnitMeasureCode ?? ''}`
 
 /**
  * Aggregates line items by tax category, producing one line item per distinct
@@ -60,8 +63,10 @@ export const aggregateLineItemsByTaxCategory = (
     const tax = group.reduce((sum, i) => sum + (i.taxAmount ?? 0), 0)
     const total = group.reduce((sum, i) => sum + (i.totalAmountPerLine ?? 0), 0)
     const hasQuantity = group.some(i => i.quantity !== undefined)
+    // A line without a quantity is a single unit (document generation treats
+    // missing quantity as 1), not zero units.
     const quantity = hasQuantity
-      ? group.reduce((sum, i) => sum + (i.quantity ?? 0), 0)
+      ? group.reduce((sum, i) => sum + (i.quantity ?? 1), 0)
       : undefined
     const hasBaseUnitMeasure = group.some(i => i.baseUnitMeasure !== undefined)
     const baseUnitMeasure = hasBaseUnitMeasure

@@ -61,7 +61,9 @@ export async function tinSearch(
   }
 
   if (taxpayerName) {
-    queryParams.append('idName', taxpayerName)
+    // The API rejects `idName` with 400 "Invalid request parameters";
+    // the accepted param is `taxpayerName` (verified against preprod).
+    queryParams.append('taxpayerName', taxpayerName)
   }
 
   const queryString = queryParams.toString()
