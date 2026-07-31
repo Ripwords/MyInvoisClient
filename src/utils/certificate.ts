@@ -58,21 +58,38 @@ export const getPemFromP12 = (
     // Parse the PKCS#12 using the provided passphrase
     const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, passphrase)
 
-    // Extract the first certificate (assumes it is the signing cert)
     const certBags = p12.getBags({ bagType: forge.pki.oids.certBag })[
       forge.pki.oids.certBag
     ]
     if (!certBags || certBags.length === 0)
       throw new Error('No certificate found in PKCS#12 bundle')
-    const certificatePem = forge.pki.certificateToPem(certBags[0].cert)
 
-    // Extract the first private key
-    const keyBags = p12.getBags({
-      bagType: forge.pki.oids.pkcs8ShroudedKeyBag,
-    })[forge.pki.oids.pkcs8ShroudedKeyBag]
-    if (!keyBags || keyBags.length === 0)
-      throw new Error('No private key found in PKCS#12 bundle')
-    const privateKeyPem = forge.pki.privateKeyToPem(keyBags[0].key)
+    // The key may live in an encrypted (pkcs8ShroudedKeyBag) or plain
+    // (keyBag) bag depending on how the P12 was exported.
+    const keyBags =
+      p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag })[
+        forge.pki.oids.pkcs8ShroudedKeyBag
+      ] ?? []
+    const plainKeyBags =
+      p12.getBags({ bagType: forge.pki.oids.keyBag })[
+        forge.pki.oids.keyBag
+      ] ?? []
+    const key = keyBags[0]?.key ?? plainKeyBags[0]?.key
+    if (!key) throw new Error('No private key found in PKCS#12 bundle')
+    const privateKeyPem = forge.pki.privateKeyToPem(key)
+
+    // The bundle may carry the whole chain in any order; pick the cert whose
+    // public key matches the private key, not blindly the first bag.
+    const rsaKey = key as forge.pki.rsa.PrivateKey
+    const matchingBag = certBags.find(bag => {
+      const publicKey = bag.cert?.publicKey as
+        | forge.pki.rsa.PublicKey
+        | undefined
+      return publicKey?.n != null && publicKey.n.compareTo(rsaKey.n) === 0
+    })
+    const cert = (matchingBag ?? certBags[0]).cert
+    if (!cert) throw new Error('No certificate found in PKCS#12 bundle')
+    const certificatePem = forge.pki.certificateToPem(cert)
 
     return { certificatePem, privateKeyPem }
   } catch (error) {
