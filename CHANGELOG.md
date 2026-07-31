@@ -1,6 +1,47 @@
 # Changelog
 
 
+## v0.6.0
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.5.0...v0.6.0)
+
+### 🚀 Enhancements
+
+- ⚠️  Require quantity on every invoice line item ([ef40e5f](https://github.com/Ripwords/MyInvoisClient/commit/ef40e5f))
+
+### 🩹 Fixes
+
+- **release:** Make the release scripts deterministic and complete ([73246b8](https://github.com/Ripwords/MyInvoisClient/commit/73246b8))
+- Drop the crypto placeholder dependency and complete package metadata ([f72528b](https://github.com/Ripwords/MyInvoisClient/commit/f72528b))
+- Use the documented plural taxpayers route for QR code info ([1ca24c3](https://github.com/Ripwords/MyInvoisClient/commit/1ca24c3))
+- Correct signing time, monetary rounding, exemption output and aggregation ([9701d59](https://github.com/Ripwords/MyInvoisClient/commit/9701d59))
+- Select the key-matching cert from P12 bundles and accept plain key bags ([6d5dbf7](https://github.com/Ripwords/MyInvoisClient/commit/6d5dbf7))
+- Always emit InvoicedQuantity, defaulting to one unit ([b2386dd](https://github.com/Ripwords/MyInvoisClient/commit/b2386dd))
+- Remove phantom enums, add runtime quantity guard, small correctness fixes ([b1306cc](https://github.com/Ripwords/MyInvoisClient/commit/b1306cc))
+- **release:** Run the dry-run publish preview under the target version ([64d146a](https://github.com/Ripwords/MyInvoisClient/commit/64d146a))
+
+### 📖 Documentation
+
+- Add test suite and .env cleanup design spec ([435f110](https://github.com/Ripwords/MyInvoisClient/commit/435f110))
+
+### 🏡 Chore
+
+- Ignore .superpowers agent scratch directory ([840a50b](https://github.com/Ripwords/MyInvoisClient/commit/840a50b))
+- **release:** Create the GitHub release as part of the release ([58b6086](https://github.com/Ripwords/MyInvoisClient/commit/58b6086))
+
+### ✅ Tests
+
+- Restructure into deterministic unit suite and gated live integration suite ([5a07f2c](https://github.com/Ripwords/MyInvoisClient/commit/5a07f2c))
+- Cover previously untested API surface, validators and utils ([209192b](https://github.com/Ripwords/MyInvoisClient/commit/209192b))
+
+#### ⚠️ Breaking Changes
+
+- ⚠️  Require quantity on every invoice line item ([ef40e5f](https://github.com/Ripwords/MyInvoisClient/commit/ef40e5f))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.5.0
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.4.2...v0.5.0)

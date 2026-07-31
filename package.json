@@ -1,6 +1,6 @@
 {
   "name": "@ripwords/myinvois-client",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "TypeScript client for Malaysia's MyInvois (LHDN) e-invoicing API — document building, XAdES signing, submission and rate limiting.",
   "license": "MIT",
   "scripts": {
