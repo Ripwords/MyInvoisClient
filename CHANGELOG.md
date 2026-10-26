@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.9.0
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.8.1...v0.9.0)
+
+### 🚀 Enhancements
+
+- GetTaxpayerIdentity, read whose MyInvois credentials they are ([d75961c](https://github.com/Ripwords/MyInvoisClient/commit/d75961c))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.8.1
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.8.0...v0.8.1)
