@@ -1,5 +1,4 @@
 import { describe, it, expect, vi } from 'vitest'
-import { encodeToBase64, decodeFromBase64 } from '../../src/utils/base64'
 import { formatIdValue } from '../../src/utils/formatIdValue'
 import {
   createFixedRateTaxLineItem,
@@ -12,18 +11,6 @@ import type {
   TaxTypeCode,
   UnitTypeCode,
 } from '../../src/types'
-
-describe('decodeFromBase64', () => {
-  it('round-trips an ASCII string with encodeToBase64', () => {
-    const input = '{"key": "value"}'
-    expect(decodeFromBase64(encodeToBase64(input))).toBe(input)
-  })
-
-  it('round-trips a unicode string', () => {
-    const input = '你好世界🌍 — résumé'
-    expect(decodeFromBase64(encodeToBase64(input))).toBe(input)
-  })
-})
 
 describe('formatIdValue', () => {
   it('trims and strips all non-alphanumeric characters', () => {

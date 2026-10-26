@@ -56,6 +56,20 @@ describe('categorizeRequest', () => {
     expect(categorizeRequest('/api/v1.0/taxpayer/qrcodeinfo/xyz')).toBe(
       'taxpayerQr',
     )
+    // The live route the client actually calls is the plural form
+    expect(categorizeRequest('/api/v1.0/taxpayers/qrcodeinfo/xyz')).toBe(
+      'taxpayerQr',
+    )
+  })
+
+  it('maps platform endpoints (document types, notifications)', () => {
+    expect(categorizeRequest('/api/v1.0/documenttypes')).toBe('platform')
+    expect(categorizeRequest('/api/v1.0/documenttypes/5/versions/2')).toBe(
+      'platform',
+    )
+    expect(categorizeRequest('/api/v1.0/notifications/taxpayer?pageNo=0')).toBe(
+      'platform',
+    )
   })
 
   it('maps login endpoint', () => {

@@ -7,7 +7,7 @@ import type { InvoiceV1_1 } from '../../src/types'
  * that existed before Phase 2 added optional coverage (SST, TTX, email,
  * postal zone, tariff code, billing period, payment information, shipping
  * recipient, trade information, etc.). It backs the serialisation-stability
- * snapshot in `test/serialization-stability.test.ts`, which guarantees that
+ * snapshot in `test/unit/serialization-stability.test.ts`, which guarantees that
  * adding those optional fields later does not change the serialised UBL
  * output for a document that does not use them.
  *

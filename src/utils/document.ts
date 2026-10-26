@@ -894,23 +894,21 @@ export const transformDocumentForHashing = (
   }
 
   // Convert to JSON string first
-  const jsonString = JSON.stringify(documentForTransform)
-
-  // Apply the exact same regex-based minification as PowerShell script
-  // This regex preserves whitespace within quoted strings but removes all other whitespace
-  const minifiedJson = jsonString.replace(
-    /("(?:\\.|[^"\\])*")|\s+/g,
-    (match, quotedString) => {
-      if (quotedString) {
-        return quotedString // Keep string content exactly as-is
-      } else {
-        return '' // Remove all other whitespace
-      }
-    },
-  )
-
-  return minifiedJson
+  return minifyJsonString(JSON.stringify(documentForTransform))
 }
+
+/**
+ * Regex-based minification matching the official PowerShell reference script:
+ * preserves whitespace inside quoted strings, strips all other whitespace.
+ */
+export const minifyJsonString = (jsonString: string): string =>
+  jsonString.replace(/("(?:\\.|[^"\\])*")|\s+/g, (match, quotedString) => {
+    if (quotedString) {
+      return quotedString // Keep string content exactly as-is
+    } else {
+      return '' // Remove all other whitespace
+    }
+  })
 
 /**
  * Step 2: Calculate Document Digest
@@ -1128,74 +1126,6 @@ export const calculateSignedPropertiesDigest = (
 }
 
 /**
- * Step 3: Create SignedInfo and calculate signature
- * Enhanced with better structure and signature generation
- */
-export const createSignedInfoAndSign = (
-  docDigest: string,
-  propsDigest: string,
-  privateKeyPem: string,
-): { signedInfo: SignedInfoObject; signatureValue: string } => {
-  // Create SignedInfo structure following specification exactly
-  const signedInfo: SignedInfoObject = {
-    CanonicalizationMethod: [
-      {
-        _: '',
-        Algorithm: 'http://www.w3.org/2006/12/xml-c14n11',
-      },
-    ],
-    SignatureMethod: [
-      {
-        _: '',
-        Algorithm: 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256',
-      },
-    ],
-    Reference: [
-      {
-        Id: 'id-doc-signed-data',
-        Type: '',
-        URI: '',
-        DigestMethod: [
-          {
-            _: '',
-            Algorithm: 'http://www.w3.org/2001/04/xmlenc#sha256',
-          },
-        ],
-        DigestValue: [{ _: docDigest }],
-      },
-      {
-        Id: 'id-xades-signed-props',
-        Type: 'http://uri.etsi.org/01903/v1.3.2#SignedProperties',
-        URI: '#id-xades-signed-props',
-        DigestMethod: [
-          {
-            _: '',
-            Algorithm: 'http://www.w3.org/2001/04/xmlenc#sha256',
-          },
-        ],
-        DigestValue: [{ _: propsDigest }],
-      },
-    ],
-  }
-
-  // Serialize the SignedInfo exactly as it will be embedded (no reordering)
-  const signedInfoRaw = JSON.stringify(signedInfo)
-
-  try {
-    const signer = crypto.createSign('RSA-SHA256')
-    signer.update(signedInfoRaw, 'utf8')
-    const signatureValue = signer.sign(privateKeyPem, 'base64')
-
-    // Reuse the original object so ordering is preserved
-    return { signedInfo, signatureValue }
-  } catch (error) {
-    throw new Error(
-      `Signature generation failed: ${error instanceof Error ? error.message : String(error)}`,
-    )
-  }
-}
-
-/**
  * Signs the minified document string using the provided private key PEM
  * Returns the signature as a base64 string
  * FIXED: Match PowerShell script exactly - first compute hash, then sign the hash
@@ -1219,12 +1149,24 @@ export const generateCompleteDocument = (
   signingCredentials: SigningCredentials,
 ): CompleteInvoice => {
   try {
-    // Step 1: Generate clean document (done in calculateDocumentDigest)
-    // Step 2: Calculate document digest
-    const docDigest = calculateDocumentDigest(invoices)
+    // Step 1: Generate the clean UBL invoices ONCE — the same objects feed the
+    // digest, the signature and the final signed document, so what is hashed
+    // is byte-for-byte what is submitted (minus UBLExtensions/Signature).
+    const cleanInvoices = invoices.map(generateCleanInvoiceObject)
+    const documentString = minifyJsonString(
+      JSON.stringify({
+        _D: 'urn:oasis:names:specification:ubl:schema:xsd:Invoice-2',
+        _A: 'urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2',
+        _B: 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2',
+        Invoice: cleanInvoices,
+      }),
+    )
 
-    // Get the minified, cleaned JSON string for signing
-    const documentString = transformDocumentForHashing(invoices)
+    // Step 2: Calculate document digest (SHA-256, Base64)
+    const docDigest = crypto
+      .createHash('sha256')
+      .update(documentString, 'utf8')
+      .digest('base64')
 
     // Step 3: Sign the minified document string (not the digest)
     const docSignature = signDocumentString(
@@ -1302,10 +1244,9 @@ export const generateCompleteDocument = (
     const cert = new X509Certificate(signingCredentials.certificatePem)
     const certificate = cert.raw.toString('base64')
 
-    // Step 7: Create final signed document
-    const signedInvoices = invoices.map(invoice => {
-      const cleanInvoice = generateCleanInvoiceObject(invoice)
-
+    // Step 7: Create final signed document from the SAME clean invoices that
+    // were hashed above
+    const signedInvoices = cleanInvoices.map(cleanInvoice => {
       return {
         ...cleanInvoice,
 
