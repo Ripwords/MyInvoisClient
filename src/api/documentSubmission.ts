@@ -157,7 +157,9 @@ export async function submitDocument(
 export async function getSubmissionStatus(
   context: Pick<SubmissionContext, 'fetch' | 'debug'>,
   submissionUid: string,
-  pollInterval: number = 1000,
+  // Official guidance: poll every 3-5 seconds.
+  // https://sdk.myinvois.hasil.gov.my/einvoicingapi/06-get-submission/
+  pollInterval: number = 3000,
   maxRetries: number = 10,
   pageNo: number = 1,
   pageSize: number = 10,
@@ -179,7 +181,7 @@ export async function getSubmissionStatus(
 
   try {
     const response = await fetch(
-      `/api/v1.0/documentsubmissions/${submissionUid}?pageNo=${pageNo}&pageSize=${pageSize}`,
+      `/api/v1.0/documentsubmissions/${encodeURIComponent(submissionUid)}?pageNo=${pageNo}&pageSize=${pageSize}`,
     )
 
     const data = (await response.json()) as GetSubmissionResponse
@@ -191,16 +193,17 @@ export async function getSubmissionStatus(
       }
     }
 
-    // If we have a successful response and status is completed, return success
-    if (data.overallStatus === 'Valid') {
+    // Terminal statuses per the official docs: Valid, PartiallyValid and
+    // Invalid all mean processing has finished — only "in progress" warrants
+    // another poll.
+    // https://sdk.myinvois.hasil.gov.my/einvoicingapi/06-get-submission/
+    if (
+      data.overallStatus === 'Valid' ||
+      data.overallStatus === 'PartiallyValid' ||
+      data.overallStatus === 'Invalid'
+    ) {
       return {
         status: data.overallStatus,
-        documentSummary: data.documentSummary,
-      }
-    }
-    if (data.overallStatus === 'Invalid') {
-      return {
-        status: 'Invalid',
         documentSummary: data.documentSummary,
       }
     }
@@ -269,7 +272,7 @@ export async function performDocumentAction(
 ): Promise<{
   uuid: string
   status: string
-  error: StandardError
+  error?: StandardError
 }> {
   if (reason.length > 300) {
     throw new Error('Reason must not exceed 300 characters')
@@ -277,7 +280,7 @@ export async function performDocumentAction(
 
   const { fetch } = context
   const response = await fetch(
-    `/api/v1.0/documents/state/${documentUid}/state`,
+    `/api/v1.0/documents/state/${encodeURIComponent(documentUid)}/state`,
     {
       method: 'PUT',
       headers: {
@@ -293,7 +296,7 @@ export async function performDocumentAction(
   const data = (await response.json()) as {
     uuid: string
     status: string
-    error: StandardError
+    error?: StandardError
   }
 
   return data
