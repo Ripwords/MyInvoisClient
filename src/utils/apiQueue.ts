@@ -169,7 +169,7 @@ export function queueRequest<T>(
             // Re-queue and let the scheduled timer retry when a slot frees up
             queue.queue.push({ run, addedAt: Date.now() })
             scheduleRetry(queue, acquired.retryAfterMs, () =>
-              processQueue(key, debug, category, store),
+              processQueue(key, debug, category),
             )
             return
           }
@@ -182,7 +182,7 @@ export function queueRequest<T>(
           }
 
           // The window may still have capacity for queued requests
-          processQueue(key, debug, category, store)
+          processQueue(key, debug, category)
 
           task()
             .then(resolve)
@@ -194,7 +194,7 @@ export function queueRequest<T>(
                   `[apiQueue] ✅ Request completed (${category}). Running: ${queue.running}. Queue size: ${queue.queue.length}`,
                 )
               }
-              processQueue(key, debug, category, store)
+              processQueue(key, debug, category)
             })
         })
         .catch(reject)
@@ -208,7 +208,7 @@ export function queueRequest<T>(
           `[apiQueue] ⏳ Queued request (${category}). Queue size: ${queue.queue.length}`,
         )
       }
-      processQueue(key, debug, category, store)
+      processQueue(key, debug, category)
     } else {
       run()
     }
@@ -228,12 +228,7 @@ function scheduleRetry(queue: Queue, delayMs: number, retry: () => void) {
   )
 }
 
-function processQueue(
-  key: string,
-  debug: boolean,
-  category: ApiCategory,
-  store: RateLimitStore,
-) {
+function processQueue(key: string, debug: boolean, category: ApiCategory) {
   const queue = queues[key]
   if (!queue || queue.queue.length === 0) return
   // A retry timer is pending; let it drain the queue when it fires so we
