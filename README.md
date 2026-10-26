@@ -6,6 +6,9 @@ A TypeScript client for **Malaysia's MyInvois (LHDN) e-invoicing API**: UBL
 document building, XAdES (JSON profile) digital signing, submission, polling,
 cancellation/rejection, taxpayer validation and built-in rate limiting.
 
+> **Docs:** full guide and per-endpoint API reference at
+> https://ripwords.github.io/MyInvoisClient/ (agents: [/llms.txt](https://ripwords.github.io/MyInvoisClient/llms.txt)).
+
 > **Scope:** Malaysia MyInvois only. Singapore's InvoiceNow / Peppol e-invoicing
 > is a different system and out of scope for this library.
 
