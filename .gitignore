@@ -38,3 +38,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 *.p12
 # agent scratch (plans/ledgers/diffs) — never commit
 .superpowers
+
+# integration run reports
+test/integration/.artifacts
