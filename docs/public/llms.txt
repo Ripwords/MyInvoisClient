@@ -1,0 +1,38 @@
+# @ripwords/myinvois-client
+
+> TypeScript client for Malaysia's MyInvois (LHDN) e-invoicing API: UBL document building, XAdES (JSON profile) digital signing, submission, polling, cancellation/rejection, taxpayer validation, runtime code lists, and built-in per-clientId rate limiting with automatic 429 Retry-After back-off. Node.js runtime (also runs on Bun). Malaysia MyInvois only — Singapore InvoiceNow/Peppol is out of scope.
+
+Install: `npm install @ripwords/myinvois-client`. Root export: `MyInvoisClient` (create via `MyInvoisClient.create({ clientId, clientSecret, environment: 'sandbox' | 'production', certificatePem, privateKeyPem, onBehalfOf?, rateLimitStore?, tokenStore?, retryOn429? })` or `MyInvoisClient.fromP12(clientId, clientSecret, environment, p12PathOrBuffer, passphrase)`). Login is lazy and automatic (OAuth2 client credentials, token cached per represented taxpayer with 60s refresh margin, single-flight). Signing helpers `buildSignedDocument`/`client.buildSignedDocuments` return `{ format: 'JSON', document (base64 wire bytes), documentHash (sha256 hex), codeNumber, signedDocument }` for the store-then-submit pattern; `submitDocument` accepts plain documents or these prebuilt payloads byte-for-byte. Taxpayer endpoints throw `MyInvoisApiError` (an `Error` subclass with `.status` and `.body`); `verifyTin` returns false only on HTTP 404 and throws on other failures. Runtime code tables (TAX_TYPES, CLASSIFICATION_CODES, STATE_CODES, COUNTRY_CODES, CURRENCY_CODES, E_INVOICE_TYPES, PAYMENT_MODES, UNIT_TYPES, MSIC_CODES) are a separate subpath: `@ripwords/myinvois-client/codes`.
+
+Client methods → endpoints: submitDocument → POST /api/v1.0/documentsubmissions; getSubmissionStatus(submissionUid, pollInterval=3000, maxRetries=10) polls GET /api/v1.0/documentsubmissions/{uid} (Valid/PartiallyValid/Invalid all terminal); cancelDocument/rejectDocument(uuid, reason) → PUT /api/v1.0/documents/state/{uuid}/state; getDocument(uuid) → GET .../documents/{uuid}/raw; getDocumentDetails(uuid) → GET .../documents/{uuid}/details (validation steps); searchDocuments(params) → GET .../documents/search (needs complete date window); getRecentDocuments → GET .../documents/recent; getDocumentQrCode(uuid, longId?) → share URL; verifyTin(tin, idType, idValue) → GET .../taxpayer/validate/{tin}; searchTin({taxpayerName?, idType?, idValue?}) → GET .../taxpayer/search/tin; getTaxpayerQRCode(qrText) → GET .../taxpayers/qrcodeinfo/{token}; getDocumentTypes/getDocumentType(id)/getDocumentTypeVersion(id, vid) → GET .../documenttypes...; getNotifications(params) → GET .../notifications/taxpayer returning { result, metadata }; updateOnBehalfOf(tinOrTinColonRob) switches the represented taxpayer.
+
+## Docs
+
+- [Getting Started](/guide/getting-started.md): install, client creation, environments, first submission
+- [Signing & Submission](/guide/signing.md): XAdES JSON signing, build-store-submit pattern, polling, low-level helpers
+- [Rate Limiting & Stores](/guide/rate-limiting.md): official limits table, 429 back-off, injectable RateLimitStore/TokenStore for multi-process deployments
+- [Intermediaries](/guide/intermediaries.md): onBehalfOf with TIN or TIN:ROB, runtime switching
+- [Runtime Code Lists](/guide/codes.md): the nine official code tables under the /codes subpath
+- [Error Handling](/guide/errors.md): MyInvoisApiError (status/body), verifyTin semantics, submission errors
+- [Certificates](/guide/certificates.md): approved CAs, required fields (organizationIdentifier, SERIALNUMBER, Document Signing EKU), dev certs
+- [API Reference overview](/api/index.md): full method-to-endpoint coverage map with official-doc links
+- [Client & Authentication](/api/client.md): create/fromP12/constructor options, token behaviour, buildSignedDocuments
+- [Document Submission](/api/document-submission.md): submitDocument, getSubmissionStatus
+- [Document Management](/api/document-management.md): cancel, reject, get, details, search, recent, QR URL
+- [Taxpayer Validation](/api/taxpayer-validation.md): verifyTin, searchTin, getTaxpayerQRCode
+- [Document Types & Notifications](/api/platform.md): getDocumentTypes, getDocumentType, getDocumentTypeVersion, getNotifications
+
+## Official LHDN references
+
+- [MyInvois SDK home](https://sdk.myinvois.hasil.gov.my/): authoritative API documentation
+- [e-Invoice API index](https://sdk.myinvois.hasil.gov.my/einvoicingapi/): submit, cancel, reject, get, search, TIN, QR endpoints
+- [Platform API index](https://sdk.myinvois.hasil.gov.my/api/): login, document types, notifications
+- [Invoice v1.1 structure](https://sdk.myinvois.hasil.gov.my/documents/invoice-v1-1/): document field reference
+- [Signature creation (JSON)](https://sdk.myinvois.hasil.gov.my/signature-creation-json/): the signing profile this library implements
+- [Code tables](https://sdk.myinvois.hasil.gov.my/codes/): tax types, MSIC, UOM, currencies, states, countries
+- [Integration practices](https://sdk.myinvois.hasil.gov.my/integration-practices/): rate limits and polling guidance
+
+## Optional
+
+- [npm package](https://www.npmjs.com/package/@ripwords/myinvois-client)
+- [GitHub repository](https://github.com/Ripwords/MyInvoisClient): source, issues, CHANGELOG

@@ -14,7 +14,10 @@
     "test:integration": "RUN_INTEGRATION=true vitest run test/integration",
     "release": "bun run scripts/release.ts patch",
     "release:minor": "bun run scripts/release.ts minor",
-    "release:major": "bun run scripts/release.ts major"
+    "release:major": "bun run scripts/release.ts major",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -57,6 +60,7 @@
     "prettier": "^3.5.3",
     "qrcode": "^1.5.4",
     "tsdown": "^0.12.6",
+    "vitepress": "^1.6.4",
     "vitest": "^3.1.1"
   },
   "peerDependencies": {

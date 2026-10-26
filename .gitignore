@@ -41,3 +41,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # integration run reports
 test/integration/.artifacts
+
+# VitePress
+docs/.vitepress/cache
+docs/.vitepress/dist
