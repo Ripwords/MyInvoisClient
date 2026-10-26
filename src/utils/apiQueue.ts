@@ -20,6 +20,11 @@ Get Recent Documents             : 12
 Search Documents                 : 12
 Search Taxpayer's TIN            : 60
 Taxpayer's QR Code               : 60
+
+The docs state no limit for Get Document Types / Get Document Type /
+Get Document Type Version / Get Notifications; those use the
+`platform` category below with a conservative 60/min.
+Source: https://sdk.myinvois.hasil.gov.my/integration-practices/
 */
 
 export type ApiCategory =
@@ -35,6 +40,7 @@ export type ApiCategory =
   | 'searchDocuments'
   | 'searchTin'
   | 'taxpayerQr'
+  | 'platform'
   | 'default'
 
 type Task<T> = () => Promise<T>
@@ -62,7 +68,8 @@ const LIMITS: Record<ApiCategory, { max: number; perMs: number }> = {
   searchDocuments: { max: 12, perMs: 60000 }, // 12 req/60s
   searchTin: { max: 60, perMs: 60000 }, // 60 req/60s
   taxpayerQr: { max: 60, perMs: 60000 }, // 60 req/60s
-  default: { max: 12, perMs: 60000 }, // 12 req/60s (minimum limit)
+  platform: { max: 60, perMs: 60000 }, // document types & notifications — no official limit, conservative 60/60s
+  default: { max: 12, perMs: 60000 }, // 12 req/60s — most conservative bucket for unrecognised paths
 }
 
 /**
@@ -297,8 +304,9 @@ export function clearQueue(clientId: string, category?: ApiCategory): void {
 }
 
 /**
- * Very naive path-based category detection. If no matcher fits, the `default` category
- * (effectively unlimited) is returned. Adjust these heuristics as your API surface evolves.
+ * Very naive path-based category detection. If no matcher fits, the
+ * conservative `default` category (12 requests/minute) is returned.
+ * Adjust these heuristics as your API surface evolves.
  */
 export function categorizeRequest(
   path: string,
@@ -347,8 +355,13 @@ export function categorizeRequest(
   if (cleanPath.includes('/taxpayer/search/tin')) return 'searchTin'
   if (cleanPath.includes('/taxpayer/validate/')) return 'searchTin'
 
-  // Taxpayer QR code info
+  // Taxpayer QR code info — the live route is plural `/taxpayers/qrcodeinfo`
+  if (cleanPath.includes('/taxpayers/qrcodeinfo')) return 'taxpayerQr'
   if (cleanPath.includes('/taxpayer/qrcode')) return 'taxpayerQr'
+
+  // Platform APIs (document types, notifications) — no documented limit
+  if (cleanPath.includes('/documenttypes')) return 'platform'
+  if (cleanPath.includes('/notifications/')) return 'platform'
 
   // Legacy matchers (kept for backward compatibility)
   if (cleanPath.includes('/searchtin')) return 'searchTin'

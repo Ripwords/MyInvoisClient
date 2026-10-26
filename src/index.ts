@@ -1,12 +1,11 @@
 import {
-  DocumentStatus,
+  DocumentSearchResult,
   DocumentSummary,
   DocumentTypeResponse,
   DocumentTypesResponse,
   DocumentTypeVersionResponse,
   DocumentValidationResult,
   DocumentValidationStepResult,
-  EInvoiceTypeCode,
   NotificationResponse,
   NotificationSearchParams,
   RegistrationType,
@@ -74,6 +73,10 @@ export class MyInvoisClient {
   private token = ''
   private tokenExpiration: Date | undefined = undefined
   private requestCount = 0
+  /** Single-flight guard: concurrent calls share one in-flight login. */
+  private tokenRefreshPromise: Promise<void> | null = null
+  /** Refresh this long before actual expiry so a token never dies mid-request. */
+  private static readonly TOKEN_EXPIRY_MARGIN_MS = 60_000
 
   constructor(
     clientId: string,
@@ -87,7 +90,7 @@ export class MyInvoisClient {
     // Check if basic signing credentials are available
     if (!privateKeyPem || !certificatePem) {
       throw new Error(
-        'Missing required environment variables: PRIVATE_KEY and CERTIFICATE',
+        'Missing signing credentials: certificatePem and privateKeyPem are required',
       )
     }
 
@@ -121,27 +124,39 @@ export class MyInvoisClient {
   }
 
   private async refreshToken() {
-    const tokenResponse = await platformLogin({
-      clientId: this.clientId,
-      clientSecret: this.clientSecret,
-      baseUrl: this.baseUrl,
-      onBehalfOf: this.onBehalfOf,
-      debug: this.debug,
-    })
-
-    this.token = tokenResponse.token
-    this.tokenExpiration = tokenResponse.tokenExpiration
+    // Share a single in-flight login between concurrent callers, and route it
+    // through the rate limiter (the official limit is 12 logins/min/clientId).
+    if (!this.tokenRefreshPromise) {
+      const category = this.onBehalfOf ? 'loginIntermediary' : 'loginTaxpayer'
+      this.tokenRefreshPromise = queueRequest(this.clientId, category, () =>
+        platformLogin({
+          clientId: this.clientId,
+          clientSecret: this.clientSecret,
+          baseUrl: this.baseUrl,
+          onBehalfOf: this.onBehalfOf,
+          debug: this.debug,
+        }),
+      )
+        .then(tokenResponse => {
+          this.token = tokenResponse.token
+          this.tokenExpiration = tokenResponse.tokenExpiration
+        })
+        .finally(() => {
+          this.tokenRefreshPromise = null
+        })
+    }
+    return this.tokenRefreshPromise
   }
 
   private async getToken() {
-    if (
+    const expiresSoon =
       !this.tokenExpiration ||
-      this.tokenExpiration < new Date() ||
-      isNaN(this.tokenExpiration.getTime())
-    ) {
+      isNaN(this.tokenExpiration.getTime()) ||
+      this.tokenExpiration.getTime() - Date.now() <
+        MyInvoisClient.TOKEN_EXPIRY_MARGIN_MS
+    if (expiresSoon) {
       if (this.debug) {
-        console.log('Token expired')
-        console.log('Refreshing token')
+        console.log('Token missing or expiring soon — refreshing')
       }
       await this.refreshToken()
     }
@@ -156,8 +171,8 @@ export class MyInvoisClient {
     const token = await this.getToken()
 
     // Dynamically categorise the request and enqueue it so we never exceed the
-    // vendor-specified rate-limits. If the path isn't recognised it will fall
-    // back to the `default` category which has a very high allowance.
+    // vendor-specified rate-limits. Unrecognised paths fall back to the
+    // conservative `default` bucket (12 requests/minute).
 
     const category = categorizeRequest(
       path,
@@ -247,9 +262,9 @@ export class MyInvoisClient {
    *
    * @remarks
    * - Either taxpayerName or both idType and idValue must be provided
-   * - Returns StandardError object if search criteria are invalid or inconclusive
+   * - Throws if the search criteria are invalid or the API returns an error
+   *   (e.g. 400 "Search criteria is not conclusive" when multiple taxpayers match)
    * - Debug mode provides detailed error logging for troubleshooting
-   * - Search results are not guaranteed to be unique
    */
   async searchTin(params: TinSearchParams): Promise<TinSearchResponse> {
     return TaxpayerValidationAPI.tinSearch(
@@ -261,11 +276,13 @@ export class MyInvoisClient {
   /**
    * Retrieves taxpayer information from a QR code.
    *
-   * This method decodes a QR code containing taxpayer information and returns
-   * detailed taxpayer data including TIN, name, contact details, and business information.
+   * This method looks up the taxpayer behind a scanned MyInvois QR code and
+   * returns detailed taxpayer data including TIN, name, contact details, and
+   * business information.
    *
-   * @param qrCodeText - The QR code text to decode
-   * @returns Promise resolving to taxpayer QR code response or standard error
+   * @param qrCodeText - The scanned QR content. Pass either the raw Base64
+   *   string from the QR code or its decoded value — both are handled.
+   * @returns Promise resolving to the taxpayer QR code response
    *
    * @example
    * ```typescript
@@ -280,8 +297,7 @@ export class MyInvoisClient {
    *
    * @remarks
    * - QR code must be in the correct format specified by MyInvois
-   * - Returns StandardError if QR code is invalid or cannot be decoded
-   * - Debug mode provides detailed error logging
+   * - Throws if the QR code is unknown (HTTP 404 NotFound) or the request fails
    */
   async getTaxpayerQRCode(qrCodeText: string): Promise<TaxpayerQRCodeResponse> {
     return TaxpayerValidationAPI.taxpayerQRCode(
@@ -332,7 +348,7 @@ export class MyInvoisClient {
   ): Promise<{
     uuid: string
     status: string
-    error: StandardError
+    error?: StandardError
   }> {
     return DocumentSubmissionAPI.performDocumentAction(
       { fetch: this.fetch.bind(this) },
@@ -419,7 +435,8 @@ export class MyInvoisClient {
    *
    * @param documents - Array of InvoiceV1_1 documents to be submitted
    * @returns Promise resolving to submission response containing the submission data and HTTP status
-   * @throws {Error} If PRIVATE_KEY or CERTIFICATE environment variables are missing
+   * @throws {Error} If a submission limit is exceeded (max 100 documents,
+   *   300KB per document, 5MB total payload)
    * @throws {Error} If document signing, encoding, or API submission fails
    *
    * @example
@@ -436,11 +453,12 @@ export class MyInvoisClient {
    * ```
    *
    * @remarks
-   * - Requires PRIVATE_KEY and CERTIFICATE environment variables for document signing
-   * - Each document is digitally signed with XML-DSIG before submission
+   * - Each document is digitally signed (MyInvois JSON XAdES profile) with the
+   *   credentials supplied to the constructor before submission
    * - Documents are base64-encoded for transmission
-   * - API limits: Max 100 documents per submission, 5MB total payload, 300KB per document
-   * - Debug mode provides detailed logging of payload sizes and validation warnings
+   * - API limits are enforced locally and THROW when exceeded: max 100
+   *   documents per submission, 5MB total payload, 300KB per document
+   * - Debug mode provides detailed logging of payload sizes
    * - Returns HTTP 202 for successful submissions that require processing
    */
   async submitDocument(documents: AllDocumentsV1_1[]): Promise<{
@@ -465,7 +483,8 @@ export class MyInvoisClient {
    * asynchronous nature of document processing on the MyInvois platform.
    *
    * @param submissionUid - The unique identifier of the submission to check
-   * @param pollInterval - Time in milliseconds between status checks (default: 1000ms)
+   * @param pollInterval - Time in milliseconds between status checks
+   *   (default: 3000ms — the official docs recommend polling every 3-5s)
    * @param maxRetries - Maximum number of retry attempts (default: 10)
    * @returns Promise resolving to submission status object with document summary and any errors
    *
@@ -487,14 +506,15 @@ export class MyInvoisClient {
    * ```
    *
    * @remarks
+   * - Terminal statuses: 'Valid', 'PartiallyValid' and 'Invalid'
    * - Automatically retries on network errors until maxRetries is reached
-   * - Returns 'Invalid' status with timeout error if submission processing takes too long
+   * - Returns 'TimedOut' status with a timeout error if processing takes too long
    * - Debug mode provides detailed logging of polling attempts and responses
-   * - Use reasonable poll intervals to avoid overwhelming the API
+   * - Use reasonable poll intervals to avoid overwhelming the API (300 requests/min limit)
    */
   async getSubmissionStatus(
     submissionUid: string,
-    pollInterval: number = 1000,
+    pollInterval: number = 3000,
     maxRetries: number = 10,
     pageNo: number = 1,
     pageSize: number = 10,
@@ -555,7 +575,7 @@ export class MyInvoisClient {
    * @example
    * ```typescript
    * const details = await client.getDocumentDetails('doc-uuid-123');
-   * console.log(details.validationResults.status); // 'Valid' | 'Invalid' | 'Processing'
+   * console.log(details.validationResults.status); // 'Submitted' | 'Valid' | 'Invalid'
    * console.log(details.validationResults.validationSteps); // Array of validation step results
    * ```
    */
@@ -578,77 +598,49 @@ export class MyInvoisClient {
    *
    * @param params - Search parameters object
    * @param params.uuid - Optional specific document UUID to search for
-   * @param params.submissionDateFrom - Required start date for submission date range (ISO date string)
-   * @param params.submissionDateTo - Optional end date for submission date range (ISO date string)
-   * @param params.pageSize - Optional number of results per page (default handled by API)
-   * @param params.pageNo - Optional page number for pagination (0-based)
-   * @param params.issueDateFrom - Optional start date for issue date range (ISO date string)
-   * @param params.issueDateTo - Optional end date for issue date range (ISO date string)
+   * @param params.submissionDateFrom - Start of the submission date window (UTC ISO 8601, e.g. '2024-01-01T00:00:00Z')
+   * @param params.submissionDateTo - End of the submission date window (UTC ISO 8601)
+   * @param params.pageSize - Optional number of results per page (max 100)
+   * @param params.pageNo - Optional page number for pagination
+   * @param params.issueDateFrom - Start of the issue date window (UTC ISO 8601)
+   * @param params.issueDateTo - End of the issue date window (UTC ISO 8601)
    * @param params.invoiceDirection - Optional filter by invoice direction ('Sent' or 'Received')
    * @param params.status - Optional filter by document status
    * @param params.documentType - Optional filter by e-invoice type code
    * @param params.searchQuery - Optional text search across uuid, buyerTIN, supplierTIN, buyerName, supplierName, internalID, total
-   * @returns Promise resolving to array of document summaries matching the search criteria
-   * @throws {Error} If the search request fails
+   * @param params.classificationCode - Optional comma-separated classification codes
+   * @returns Promise resolving to array of search results matching the criteria
+   * @throws {Error} If no complete date window (or uuid) is given, or the request fails
    *
    * @example
    * ```typescript
-   * // Search for documents submitted in the last 30 days
+   * // Search within a submission-date window (max 31 days)
    * const documents = await client.searchDocuments({
-   *   submissionDateFrom: '2024-01-01',
-   *   submissionDateTo: '2024-01-31',
+   *   submissionDateFrom: '2024-01-01T00:00:00Z',
+   *   submissionDateTo: '2024-01-31T23:59:59Z',
    *   status: 'Valid',
    *   pageSize: 10
    * });
    *
-   * // Search by supplier name
+   * // Search by supplier name within an issue-date window
    * const supplierDocs = await client.searchDocuments({
-   *   submissionDateFrom: '2024-01-01',
+   *   issueDateFrom: '2024-01-01T00:00:00Z',
+   *   issueDateTo: '2024-01-31T23:59:59Z',
    *   searchQuery: 'ACME Corp',
    *   invoiceDirection: 'Received'
    * });
    * ```
+   *
+   * @remarks
+   * - The API requires EITHER both submission dates OR both issue dates
+   *   (each window at most 31 days), unless searching by uuid
    */
-  async searchDocuments({
-    uuid,
-    submissionDateFrom,
-    submissionDateTo,
-    pageSize,
-    pageNo,
-    issueDateFrom,
-    issueDateTo,
-    invoiceDirection,
-    status,
-    documentType,
-    searchQuery,
-  }: {
-    uuid?: string
-    submissionDateFrom: string
-    submissionDateTo?: string
-    pageSize?: number
-    pageNo?: number
-    issueDateFrom?: string
-    issueDateTo?: string
-    invoiceDirection?: 'Sent' | 'Received'
-    status?: DocumentStatus
-    documentType?: EInvoiceTypeCode
-    searchQuery?: string // Search by uuid, buyerTIN, supplierTIN, buyerName, supplierName, internalID, total
-  }): Promise<DocumentSummary[]> {
+  async searchDocuments(
+    params: DocumentManagementAPI.SearchDocumentsParams,
+  ): Promise<DocumentSearchResult[]> {
     return DocumentManagementAPI.searchDocuments(
       { fetch: this.fetch.bind(this) },
-      {
-        uuid,
-        submissionDateFrom,
-        submissionDateTo,
-        pageSize,
-        pageNo,
-        issueDateFrom,
-        issueDateTo,
-        invoiceDirection,
-        status,
-        documentType,
-        searchQuery,
-      },
+      params,
     )
   }
 
@@ -668,7 +660,7 @@ export class MyInvoisClient {
    */
   async getRecentDocuments(
     params: Parameters<typeof DocumentManagementAPI.getRecentDocuments>[1] = {},
-  ): Promise<DocumentSummary[]> {
+  ): Promise<DocumentSearchResult[]> {
     return DocumentManagementAPI.getRecentDocuments(
       { fetch: this.fetch.bind(this) },
       params,
@@ -683,43 +675,34 @@ export class MyInvoisClient {
    * or account-related information.
    *
    * @param params - Search parameters object for filtering notifications
-   * @param params.dateFrom - Optional start date for notification date range (ISO date string)
-   * @param params.dateTo - Optional end date for notification date range (ISO date string)
+   * @param params.dateFrom - Optional start of the date range (UTC ISO 8601, e.g. '2024-01-01T00:00:00Z')
+   * @param params.dateTo - Optional end of the date range (UTC ISO 8601)
    * @param params.type - Optional notification type filter
-   * @param params.language - Optional language preference for notifications
-   * @param params.status - Optional notification status filter
-   * @param params.pageNo - Optional page number for pagination (0-based)
-   * @param params.pageSize - Optional number of results per page
-   * @returns Promise resolving to notification response object or standard error
+   * @param params.language - Optional language preference ('ms' or 'en')
+   * @param params.status - Optional delivery status filter (1-5)
+   * @param params.pageNo - Optional page number for pagination
+   * @param params.pageSize - Optional number of results per page (max 100)
+   * @returns Promise resolving to `{ result, metadata }` — notifications live in `result`
    *
    * @example
    * ```typescript
-   * // Get all notifications from the last 7 days
-   * const notifications = await client.getNotifications({
-   *   dateFrom: '2024-01-01',
-   *   dateTo: '2024-01-07',
+   * // Get notifications from the first week of January
+   * const { result, metadata } = await client.getNotifications({
+   *   dateFrom: '2024-01-01T00:00:00Z',
+   *   dateTo: '2024-01-07T23:59:59Z',
    *   pageSize: 20
    * });
-   *
-   * // Get unread notifications only
-   * const unreadNotifications = await client.getNotifications({
-   *   status: 0, // Assuming 0 = unread
-   *   language: 'en'
-   * });
-   *
-   * // Paginated notification retrieval
-   * const firstPage = await client.getNotifications({
-   *   dateFrom: '2024-01-01',
-   *   pageNo: 0,
-   *   pageSize: 10
-   * });
+   * for (const notification of result) {
+   *   console.log(notification.notificationSubject);
+   * }
+   * if (metadata.hasNext) {
+   *   // fetch the next page
+   * }
    * ```
    *
    * @remarks
    * - All parameters are optional, allowing flexible filtering
-   * - Returns paginated results when pageNo and pageSize are specified
-   * - Date parameters should be in ISO format (YYYY-MM-DD)
-   * - May return StandardError object if the request fails
+   * - The API wraps notifications in a `result` array with `metadata.hasNext`
    */
   async getNotifications({
     dateFrom,
@@ -764,24 +747,17 @@ export class MyInvoisClient {
    * ```typescript
    * // Get details for e-invoice document type
    * const invoiceType = await client.getDocumentType(1);
-   * if ('id' in invoiceType) {
-   *   console.log('Document type name:', invoiceType.name);
-   *   console.log('Available versions:', invoiceType.versionNumber);
-   *   console.log('Description:', invoiceType.description);
+   * console.log('Description:', invoiceType.description);
+   * for (const version of invoiceType.documentTypeVersions) {
+   *   console.log(version.name, version.versionNumber, version.status);
    * }
-   *
-   * // Handle potential errors
-   * const documentType = await client.getDocumentType(999);
-   * if ('error' in documentType) {
-   *   console.error('Failed to retrieve document type:', documentType.error.message);
-   * }
+   * // Workflow parameters carry e.g. the cancellation window in seconds
+   * console.log(invoiceType.workflowParameters);
    * ```
    *
    * @remarks
-   * - Returns StandardError object if the document type ID doesn't exist
-   * - Document type information includes validation schemas and business rules
+   * - The API returns a 404 error response if the document type ID doesn't exist
    * - Use this method to discover supported document formats and versions
-   * - Essential for understanding submission requirements for different document types
    */
   async getDocumentType(id: number): Promise<DocumentTypeResponse> {
     return DocumentTypeManagementAPI.getDocumentType(
@@ -818,16 +794,22 @@ export class MyInvoisClient {
     documentUid: string,
     longId?: string,
   ): Promise<string | null> {
-    const doc = await DocumentManagementAPI.getDocument(
-      { fetch: this.fetch.bind(this) },
-      documentUid,
-    )
-
     const qrCodeBaseLink = `https://${this.environment === 'sandbox' ? 'preprod.' : ''}myinvois.hasil.gov.my/`
-    if (!doc.longId && !longId) {
+
+    // Only fetch the document when the caller didn't already supply the longId.
+    const resolvedLongId =
+      longId ??
+      (
+        await DocumentManagementAPI.getDocument(
+          { fetch: this.fetch.bind(this) },
+          documentUid,
+        )
+      ).longId
+
+    if (!resolvedLongId) {
       return null
     }
-    return qrCodeBaseLink + documentUid + '/share/' + (longId ?? doc.longId)
+    return qrCodeBaseLink + documentUid + '/share/' + resolvedLongId
   }
 
   /**
@@ -845,31 +827,14 @@ export class MyInvoisClient {
    * ```typescript
    * // Get specific version details for e-invoice
    * const invoiceV1_1 = await client.getDocumentTypeVersion(1, 1);
-   * if ('id' in invoiceV1_1) {
-   *   console.log('Version number:', invoiceV1_1.versionNumber);
-   *   console.log('Schema:', invoiceV1_1.jsonSchema);
-   *   console.log('Status:', invoiceV1_1.status);
-   * }
-   *
-   * // Compare different versions
-   * const [v1_0, v1_1] = await Promise.all([
-   *   client.getDocumentTypeVersion(1, 0),
-   *   client.getDocumentTypeVersion(1, 1)
-   * ]);
-   *
-   * // Handle version not found
-   * const result = await client.getDocumentTypeVersion(1, 999);
-   * if ('error' in result) {
-   *   console.error('Version not found:', result.error.message);
-   * }
+   * console.log('Version number:', invoiceV1_1.versionNumber);
+   * console.log('Status:', invoiceV1_1.status);
    * ```
    *
    * @remarks
-   * - Returns StandardError object if document type ID or version ID doesn't exist
-   * - Version information includes JSON schema for validation
+   * - The API returns a 404 error response if the document type or version ID doesn't exist
    * - Different versions may have different validation rules and field requirements
-   * - Use this to ensure your documents conform to the specific version requirements
-   * - Version status indicates if the version is active, deprecated, or under development
+   * - Version status is 'published' or 'deactivated'
    */
   async getDocumentTypeVersion(
     id: number,
