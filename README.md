@@ -260,7 +260,7 @@ through the limiter:
 const client = MyInvoisClient.create({
   // ...credentials...
   retryOn429: { maxRetries: 2, maxDelayMs: 60_000 }, // the defaults
-  // retryOn429: false — disable and receive 429 responses raw
+  // retryOn429: false — disable; a 429 then throws MyInvoisRateLimitError at once
 })
 ```
 

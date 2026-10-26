@@ -24,6 +24,9 @@ to 100 documents.
   interchangeably.
 - A `202` status means accepted for processing; check
   `data.acceptedDocuments` / `data.rejectedDocuments`, then poll.
+- A refused request (400, 422 duplicate, 429, 5xx) throws
+  [`MyInvoisApiError`](/guide/errors) — `MyInvoisRateLimitError` for 429 —
+  instead of returning an error body as `data`.
 
 ```typescript
 const { data, status } = await client.submitDocument([invoice])
@@ -54,7 +57,10 @@ Polls the submission until a terminal status.
 - `Valid`, `PartiallyValid` and `Invalid` are all terminal.
 - Never throws on timeout — resolves with the last known status and a
   synthesized `{ code: 'Timeout' }` error, or `'TimedOut'` after repeated
-  request errors.
+  request errors (network, 404, 429, 5xx). A 404 is retried because the API
+  briefly answers `NotFound` for a submission it has just accepted.
+- Throws [`MyInvoisApiError`](/guide/errors) for any other 4xx (bad request,
+  bad token): polling again would not fix those.
 - The official polling guidance (3–5s interval) is in
   [integration practices](https://sdk.myinvois.hasil.gov.my/integration-practices/).
 
