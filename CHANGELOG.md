@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.8.1
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.8.0...v0.8.1)
+
+### 🚀 Enhancements
+
+- Export getPemFromP12 and extractCertificateInfo ([e157939](https://github.com/Ripwords/MyInvoisClient/commit/e157939))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.8.0
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.7.1...v0.8.0)
