@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { MyInvoisClient, InMemoryTokenStore } from '../../src'
+import { MyInvoisClient, MyInvoisApiError, InMemoryTokenStore } from '../../src'
 import { parseRetryAfterMs } from '../../src/utils/retryAfter'
 import { getTestCredentials } from '../fixtures/test-credentials'
 
@@ -151,20 +151,22 @@ describe('429 Retry-After back-off', () => {
       apiResponse(200), // must never be reached
     ])
 
-    // verifyTin maps a non-200 to `false`, which proves the 429 came back raw
+    // verifyTin surfaces the raw 429 as a MyInvoisApiError once retries are spent
     const promise = client.verifyTin('C26135266000', 'BRN', '201901030382')
+    promise.catch(() => {}) // settle handler before timers advance
     await vi.advanceTimersByTimeAsync(10_000)
-    await expect(promise).resolves.toBe(false)
+    await expect(promise).rejects.toThrow(MyInvoisApiError)
+    await promise.catch((err: MyInvoisApiError) => expect(err.status).toBe(429))
     expect(apiCalls(mockFetch)).toHaveLength(3) // initial + 2 retries
   })
 
-  it('retryOn429: false returns the 429 without retrying', async () => {
+  it('retryOn429: false surfaces the 429 without retrying', async () => {
     const { client } = buildClient(false)
     const mockFetch = stubFetch([apiResponse(429, '1'), apiResponse(200)])
 
-    await expect(
-      client.verifyTin('C26135266000', 'BRN', '201901030382'),
-    ).resolves.toBe(false)
+    const failure = client.verifyTin('C26135266000', 'BRN', '201901030382')
+    await expect(failure).rejects.toThrow(MyInvoisApiError)
+    await failure.catch((err: MyInvoisApiError) => expect(err.status).toBe(429))
     expect(apiCalls(mockFetch)).toHaveLength(1)
   })
 })

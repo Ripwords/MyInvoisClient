@@ -39,6 +39,7 @@ import {
 import { InMemoryTokenStore, type TokenStore } from './utils/tokenStore'
 import { parseRetryAfterMs } from './utils/retryAfter'
 
+export { MyInvoisApiError } from './errors'
 export {
   InMemoryRateLimitStore,
   type RateLimitStore,
@@ -346,9 +347,12 @@ export class MyInvoisClient {
    * ```
    *
    * @remarks
-   * - Returns false if validation fails due to network errors or invalid credentials
+   * - Returns `false` only when the API answers 404 — i.e. the TIN/ID
+   *   combination is not registered
+   * - Any other failure (network error, 400, 401, 429, 5xx) throws
+   *   {@link MyInvoisApiError} (with `status` and `body`) instead of being
+   *   misreported as an invalid TIN
    * - Debug mode provides error logging for troubleshooting validation failures
-   * - This is a non-blocking validation that won't throw exceptions on failure
    */
   async verifyTin(
     tin: string,

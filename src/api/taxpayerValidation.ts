@@ -1,3 +1,4 @@
+import { MyInvoisApiError } from '../errors'
 import { formatIdValue } from '../utils/formatIdValue'
 import type {
   Fetch,
@@ -76,8 +77,11 @@ export async function tinSearch(
       },
     )
     if (!response.ok) {
-      throw new Error(
-        `Failed to search TIN (HTTP ${response.status}): ${await response.text()}`,
+      const body = await response.text()
+      throw new MyInvoisApiError(
+        `Failed to search TIN (HTTP ${response.status}): ${body}`,
+        response.status,
+        body,
       )
     }
     return (await response.json()) as TinSearchResponse
@@ -110,20 +114,32 @@ export async function verifyTin(
     )
 
     if (!response) {
-      // Fetch was stubbed to return undefined or network error occurred
-      return false
+      throw new Error('TIN validation received no response from fetch')
     }
 
     if (response.ok || response.status === 200) {
       return true
     }
 
-    return false
+    // 404 is the API's "this TIN/ID combination is not registered" answer —
+    // the only failure that actually means "invalid". Everything else
+    // (400/401/429/5xx) is a request problem or an outage and must not be
+    // reported to callers as "TIN invalid".
+    if (response.status === 404) {
+      return false
+    }
+
+    const body = (await response.text?.()) ?? ''
+    throw new MyInvoisApiError(
+      `Failed to validate TIN (HTTP ${response.status}): ${body}`,
+      response.status,
+      body,
+    )
   } catch (error) {
     if (debug) {
       console.error(error)
     }
-    return false
+    throw error
   }
 }
 
@@ -168,8 +184,11 @@ export async function taxpayerQRCode(
   )
 
   if (!response.ok) {
-    throw new Error(
-      `Failed to fetch taxpayer QR code info (HTTP ${response.status}): ${await response.text()}`,
+    const body = await response.text()
+    throw new MyInvoisApiError(
+      `Failed to fetch taxpayer QR code info (HTTP ${response.status}): ${body}`,
+      response.status,
+      body,
     )
   }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { MyInvoisClient } from '../../src'
+import { MyInvoisClient, MyInvoisApiError } from '../../src'
 import { getTestCredentials } from '../fixtures/test-credentials'
 
 const { certificatePem, privateKeyPem } = getTestCredentials()
@@ -211,6 +211,25 @@ describe('MyInvoisClient API coverage', () => {
       expect(mockFetch).not.toHaveBeenCalled()
     })
 
+    it('throws a MyInvoisApiError carrying status 404 and the empty body (issue #6)', async () => {
+      mockFetch
+        .mockResolvedValueOnce(tokenResponse())
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          text: () => Promise.resolve(''),
+        } as Response)
+
+      const failure = client.searchTin({ idType: 'NRIC', idValue: '456' })
+      await expect(failure).rejects.toThrow(MyInvoisApiError)
+      await failure.catch((err: MyInvoisApiError) => {
+        // Callers classify structurally — no message parsing needed
+        expect(err.status).toBe(404)
+        expect(err.body).toBe('')
+        expect(err.message).toBe('Failed to search TIN (HTTP 404): ')
+      })
+    })
+
     it('sends taxpayerName (not idName) for name-only searches', async () => {
       mockFetch
         .mockResolvedValueOnce(tokenResponse())
@@ -265,14 +284,29 @@ describe('MyInvoisClient API coverage', () => {
   })
 
   describe('verifyTin', () => {
-    it('returns false when the response resolves with ok: false', async () => {
+    it('returns false only for 404 — a 400 throws a MyInvoisApiError instead', async () => {
       mockFetch
         .mockResolvedValueOnce(tokenResponse())
-        .mockResolvedValueOnce({ ok: false, status: 400 } as Response)
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          text: () => Promise.resolve(''),
+        } as Response)
 
-      const result = await client.verifyTin('123', 'NRIC', '456')
+      await expect(client.verifyTin('123', 'NRIC', '456')).resolves.toBe(false)
 
-      expect(result).toBe(false)
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        text: () => Promise.resolve("'Id Value' must not be empty."),
+      } as Response)
+
+      const failure = client.verifyTin('123', 'NRIC', '456')
+      await expect(failure).rejects.toThrow(MyInvoisApiError)
+      await failure.catch((err: MyInvoisApiError) => {
+        expect(err.status).toBe(400)
+        expect(err.body).toBe("'Id Value' must not be empty.")
+      })
     })
   })
 })

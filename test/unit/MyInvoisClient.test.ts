@@ -67,10 +67,16 @@ describe('MyInvoisClient', () => {
         expires_in: 3600,
       }
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockToken),
-      } as Response)
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(mockToken),
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(undefined),
+        } as Response)
 
       await client.verifyTin('123', 'NRIC', '456')
 
@@ -211,7 +217,7 @@ describe('MyInvoisClient', () => {
       )
     })
 
-    it('should return false when verification fails', async () => {
+    it('should return false when the API answers 404 (TIN not registered)', async () => {
       const mockToken = {
         access_token: 'test-token',
         expires_in: 3600,
@@ -222,11 +228,33 @@ describe('MyInvoisClient', () => {
           ok: true,
           json: () => Promise.resolve(mockToken),
         } as Response)
-        .mockRejectedValueOnce(new Error('Invalid TIN'))
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          text: () => Promise.resolve(''),
+        } as Response)
 
       const result = await client.verifyTin('123', 'NRIC', '456')
 
       expect(result).toBe(false)
+    })
+
+    it('should throw (not return false) when the request itself fails', async () => {
+      const mockToken = {
+        access_token: 'test-token',
+        expires_in: 3600,
+      }
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(mockToken),
+        } as Response)
+        .mockRejectedValueOnce(new Error('network down'))
+
+      await expect(client.verifyTin('123', 'NRIC', '456')).rejects.toThrow(
+        'network down',
+      )
     })
   })
 
