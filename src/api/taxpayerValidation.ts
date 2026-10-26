@@ -76,7 +76,9 @@ export async function tinSearch(
       },
     )
     if (!response.ok) {
-      throw new Error(`Failed to search TIN: ${await response.text()}`)
+      throw new Error(
+        `Failed to search TIN (HTTP ${response.status}): ${await response.text()}`,
+      )
     }
     return (await response.json()) as TinSearchResponse
   } catch (error) {

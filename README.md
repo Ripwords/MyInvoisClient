@@ -121,7 +121,8 @@ serialNumber = YOUR_BUSINESS_REGISTRATION_NUMBER
 
 [v3_req]
 keyUsage = keyEncipherment, dataEncipherment, digitalSignature, nonRepudiation
-extendedKeyUsage = clientAuth, emailProtection
+# 1.3.6.1.4.1.311.10.3.12 is the Document Signing EKU MyInvois expects
+extendedKeyUsage = 1.3.6.1.4.1.311.10.3.12, clientAuth, emailProtection
 subjectAltName = @alt_names
 
 [alt_names]
