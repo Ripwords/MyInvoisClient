@@ -100,6 +100,7 @@ describe('searchDocuments', () => {
     const context = makeContext([{ uuid: 'abc', longID: 'LONG-2' }])
     const documents = await searchDocuments(context, {
       submissionDateFrom: '2026-07-01T00:00:00Z',
+      submissionDateTo: '2026-07-31T23:59:59Z',
     })
 
     expect(documents).toHaveLength(1)

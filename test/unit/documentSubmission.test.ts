@@ -124,8 +124,8 @@ describe('performDocumentAction', () => {
     )
 
     expect(result.error).toBeDefined()
-    expect(result.error.code).toBe('InvalidOperation')
-    expect(result.error.message).toBe(
+    expect(result.error!.code).toBe('InvalidOperation')
+    expect(result.error!.message).toBe(
       'Document cannot be cancelled after 72 hours',
     )
   })

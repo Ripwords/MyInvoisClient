@@ -33,7 +33,9 @@ describe('MyInvoisClient API coverage', () => {
   let client: MyInvoisClient
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    // mockReset (not clearAllMocks) also drops queued mockResolvedValueOnce
+    // values, so responses can't leak between tests.
+    mockFetch.mockReset()
     client = new MyInvoisClient(
       'api-coverage-test-id',
       'test-secret',
@@ -112,18 +114,14 @@ describe('MyInvoisClient API coverage', () => {
       expect(url).toBeNull()
     })
 
-    it('prefers an explicitly provided longId over the fetched one', async () => {
-      mockFetch
-        .mockResolvedValueOnce(tokenResponse())
-        .mockResolvedValueOnce(
-          jsonResponse({ uuid: 'doc-qr', longID: 'FETCHED' }),
-        )
-
+    it('uses an explicitly provided longId without fetching the document', async () => {
       const url = await client.getDocumentQrCode('doc-qr', 'EXPLICIT')
 
       expect(url).toBe(
         'https://preprod.myinvois.hasil.gov.my/doc-qr/share/EXPLICIT',
       )
+      // The longId was supplied, so no API round-trip should happen at all.
+      expect(mockFetch).not.toHaveBeenCalled()
     })
   })
 

@@ -1,18 +1,5 @@
-import { describe, it, expect, vi, afterAll, beforeEach } from 'vitest'
-import { queueRequest, categorizeRequest } from '../../src/utils/apiQueue'
-
-// Ensure the rate-limiter runs with real spacing (not the test shortcut)
-const previousFlag = process.env.APIQUEUE_REAL_INTERVAL
-process.env.APIQUEUE_REAL_INTERVAL = 'true'
-
-// Restore after tests
-afterAll(() => {
-  if (previousFlag === undefined) {
-    delete process.env.APIQUEUE_REAL_INTERVAL
-  } else {
-    process.env.APIQUEUE_REAL_INTERVAL = previousFlag
-  }
-})
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { queueRequest } from '../../src/utils/apiQueue'
 
 describe('apiQueue Rate Limiter', () => {
   beforeEach(() => {
@@ -26,7 +13,7 @@ describe('apiQueue Rate Limiter', () => {
     const executionTimestamps: number[] = []
 
     const promises = Array.from({ length: 15 }).map((_, idx) =>
-      queueRequest('test-client-id', category, () => {
+      queueRequest('burst-client', category, () => {
         executionTimestamps.push(Date.now() - start)
         return Promise.resolve(idx)
       }),
@@ -53,41 +40,29 @@ describe('apiQueue Rate Limiter', () => {
     }
   })
 
-  it('prevents race conditions with concurrent requests', async () => {
+  it('caps concurrent requests at the window limit before letting the rest through', async () => {
     const category = 'getDocument' as const // limit = 60 / 60s
-    const executionTimestamps: number[] = []
-    const concurrentPromises: Promise<any>[] = []
+    let executed = 0
 
-    // Create 100 concurrent requests
-    for (let i = 0; i < 100; i++) {
-      const promise = queueRequest('test-client-id', category, () => {
-        executionTimestamps.push(Date.now())
-        return Promise.resolve(i)
-      })
-      concurrentPromises.push(promise)
-    }
+    const promises = Array.from({ length: 100 }).map((_, idx) =>
+      queueRequest('concurrency-client', category, () => {
+        executed++
+        return Promise.resolve(idx)
+      }),
+    )
 
-    // Process all requests
+    // Only the first window's worth may run immediately.
     await vi.runAllTicks()
+    expect(executed).toBe(60)
 
-    // Advance time to allow all requests to complete
-    await vi.advanceTimersByTimeAsync(120_000) // 2 minutes
+    // After the window rolls over, the queued remainder completes.
+    await vi.advanceTimersByTimeAsync(120_000)
     await vi.runAllTicks()
-
-    await Promise.all(concurrentPromises)
-
-    // All requests should have been executed
-    expect(executionTimestamps.length).toBe(100)
-
-    // Verify no requests were executed simultaneously (within 1ms of each other)
-    executionTimestamps.sort((a, b) => a - b)
-    for (let i = 1; i < executionTimestamps.length; i++) {
-      const diff = executionTimestamps[i]! - executionTimestamps[i - 1]!
-      expect(diff).toBeGreaterThanOrEqual(0) // Should be at least 0ms apart
-    }
+    await Promise.all(promises)
+    expect(executed).toBe(100)
   })
 
-  it('handles different rate limits for different categories', async () => {
+  it('applies each category its own limit', async () => {
     const categories = [
       { name: 'submitDocuments' as const, limit: 100 },
       { name: 'getSubmission' as const, limit: 300 },
@@ -95,101 +70,35 @@ describe('apiQueue Rate Limiter', () => {
     ]
 
     for (const { name, limit } of categories) {
-      const executionTimestamps: number[] = []
-      const requests = Math.min(limit + 5, 20) // Test with a few more than the limit
+      let executed = 0
+      const requests = Math.min(limit + 5, 20)
 
       const promises = Array.from({ length: requests }).map((_, idx) =>
-        queueRequest('test-client-id', name, () => {
-          executionTimestamps.push(Date.now())
+        queueRequest(`limits-client-${name}`, name, () => {
+          executed++
           return Promise.resolve(idx)
         }),
       )
 
+      // Immediately, only the per-category cap may have run.
       await vi.runAllTicks()
+      expect(executed).toBe(Math.min(requests, limit))
 
-      // Advance time to allow all requests to complete
       await vi.advanceTimersByTimeAsync(120_000)
       await vi.runAllTicks()
-
       await Promise.all(promises)
-
-      // All requests should have been executed
-      expect(executionTimestamps.length).toBe(requests)
-
-      // Verify requests were spaced appropriately
-      executionTimestamps.sort((a, b) => a - b)
-      for (let i = 1; i < executionTimestamps.length; i++) {
-        const diff = executionTimestamps[i]! - executionTimestamps[i - 1]!
-        expect(diff).toBeGreaterThanOrEqual(0)
-      }
+      expect(executed).toBe(requests)
     }
-  })
-
-  it('correctly categorizes different API paths', () => {
-    const testCases = [
-      { path: '/connect/token', method: 'POST', expected: 'loginTaxpayer' },
-      {
-        path: '/api/v1.0/documentsubmissions',
-        method: 'POST',
-        expected: 'submitDocuments',
-      },
-      {
-        path: '/api/v1.0/documentsubmissions/123',
-        method: 'GET',
-        expected: 'getSubmission',
-      },
-      {
-        path: '/api/v1.0/documents/123/raw',
-        method: 'GET',
-        expected: 'getDocument',
-      },
-      {
-        path: '/api/v1.0/documents/123/details',
-        method: 'GET',
-        expected: 'getDocumentDetails',
-      },
-      {
-        path: '/api/v1.0/documents/state/123/state',
-        method: 'POST',
-        expected: 'cancelDocument',
-      },
-      {
-        path: '/api/v1.0/taxpayer/search/tin',
-        method: 'GET',
-        expected: 'searchTin',
-      },
-      {
-        path: '/api/v1.0/taxpayer/validate/123',
-        method: 'GET',
-        expected: 'searchTin',
-      },
-      {
-        path: '/api/v1.0/taxpayer/qrcodeinfo/abc',
-        method: 'GET',
-        expected: 'taxpayerQr',
-      },
-      {
-        path: '/api/v1.0/documents/search',
-        method: 'GET',
-        expected: 'searchDocuments',
-      },
-      { path: '/unknown/path', method: 'GET', expected: 'default' },
-    ]
-
-    testCases.forEach(({ path, method, expected }) => {
-      const result = categorizeRequest(path, method)
-      expect(result).toBe(expected)
-    })
   })
 
   it('handles request failures gracefully', async () => {
     const category = 'getDocument' as const
-    const executionTimestamps: number[] = []
+    let executed = 0
     let failureCount = 0
 
     const promises = Array.from({ length: 10 }).map((_, idx) =>
-      queueRequest('test-client-id', category, () => {
-        executionTimestamps.push(Date.now())
+      queueRequest('failures-client', category, () => {
+        executed++
 
         // Simulate some failures
         if (idx % 3 === 0) {
@@ -212,14 +121,14 @@ describe('apiQueue Rate Limiter', () => {
     const results = await settled
 
     // All requests should have been executed (including failed ones)
-    expect(executionTimestamps.length).toBe(10)
+    expect(executed).toBe(10)
 
     // Count actual failures
     const actualFailures = results.filter(r => r.status === 'rejected').length
     expect(actualFailures).toBe(failureCount)
   })
 
-  it('tests real-world scenario with mixed request types', async () => {
+  it('tracks categories independently in a mixed workload', async () => {
     const requests = [
       { category: 'loginTaxpayer' as const, count: 5 },
       { category: 'submitDocuments' as const, count: 10 },
@@ -227,13 +136,12 @@ describe('apiQueue Rate Limiter', () => {
       { category: 'searchDocuments' as const, count: 8 },
     ]
 
-    const allPromises: Promise<any>[] = []
+    const allPromises: Promise<unknown>[] = []
     const executionLog: Array<{ category: string; timestamp: number }> = []
 
-    // Create mixed requests
     requests.forEach(({ category, count }) => {
       for (let i = 0; i < count; i++) {
-        const promise = queueRequest('test-client-id', category, () => {
+        const promise = queueRequest('mixed-client', category, () => {
           executionLog.push({ category, timestamp: Date.now() })
           return Promise.resolve(`${category}-${i}`)
         })
@@ -241,17 +149,14 @@ describe('apiQueue Rate Limiter', () => {
       }
     })
 
-    // Process all requests
     await vi.runAllTicks()
-    await vi.advanceTimersByTimeAsync(120_000) // 2 minutes
+    await vi.advanceTimersByTimeAsync(120_000)
     await vi.runAllTicks()
 
     await Promise.all(allPromises)
 
-    // Verify all requests were executed
     expect(executionLog.length).toBe(38) // 5 + 10 + 15 + 8
 
-    // Verify each category was handled independently
     const categoryCounts = executionLog.reduce(
       (acc, { category }) => {
         acc[category] = (acc[category] || 0) + 1

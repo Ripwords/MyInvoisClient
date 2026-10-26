@@ -14,7 +14,9 @@ describe('MyInvoisClient', () => {
   let client: MyInvoisClient
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    // mockReset (not clearAllMocks) also drops queued mockResolvedValueOnce
+    // values, so responses can't leak between tests.
+    mockFetch.mockReset()
     client = new MyInvoisClient(
       'test-id',
       'test-secret',
@@ -78,7 +80,7 @@ describe('MyInvoisClient', () => {
       )
     })
 
-    it('should get a new token when token is expired', async () => {
+    it('should request a token before the API call, then refresh once expired', async () => {
       const mockToken = {
         access_token: 'test-token',
         expires_in: 3600,
@@ -125,6 +127,25 @@ describe('MyInvoisClient', () => {
           },
         },
       )
+
+      // A later call after expiry must hit the token endpoint again.
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({ access_token: 'token-2', expires_in: 3600 }),
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(undefined),
+        } as Response)
+      vi.setSystemTime(new Date(Date.now() + 3601 * 1000))
+      await client.verifyTin('123', 'NRIC', '456')
+
+      const tokenCalls = mockFetch.mock.calls.filter(c =>
+        String(c[0]).endsWith('/connect/token'),
+      )
+      expect(tokenCalls).toHaveLength(2)
     })
 
     it('should reuse existing token if not expired', async () => {
@@ -133,10 +154,15 @@ describe('MyInvoisClient', () => {
         expires_in: 3600,
       }
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockToken),
-      } as Response)
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(mockToken),
+        } as Response)
+        .mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve(undefined),
+        } as Response)
 
       // First call to get token
       await client.verifyTin('123', 'NRIC', '456')
@@ -147,10 +173,10 @@ describe('MyInvoisClient', () => {
       await client.verifyTin('123', 'NRIC', '456')
 
       // Token endpoint should only be called once
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://preprod-api.myinvois.hasil.gov.my/connect/token',
-        expect.any(Object),
+      const tokenCalls = mockFetch.mock.calls.filter(c =>
+        String(c[0]).endsWith('/connect/token'),
       )
+      expect(tokenCalls).toHaveLength(1)
     })
   })
 
@@ -171,10 +197,9 @@ describe('MyInvoisClient', () => {
           json: () => Promise.resolve(undefined),
         } as Response)
 
-      await client.verifyTin('123', 'NRIC', '456')
-      vi.setSystemTime(new Date(Date.now() + 1000 * 8000))
-      await client.verifyTin('123', 'NRIC', '456')
+      const result = await client.verifyTin('123', 'NRIC', '456')
 
+      expect(result).toBe(true)
       expect(mockFetch).toHaveBeenCalledWith(
         `https://preprod-api.myinvois.hasil.gov.my/api/v1.0/taxpayer/validate/123?idType=NRIC&idValue=456`,
         expect.objectContaining({
@@ -231,6 +256,7 @@ describe('MyInvoisClient', () => {
 
       const result = await client.searchDocuments({
         submissionDateFrom: '2024-01-01T00:00:00Z',
+        submissionDateTo: '2024-01-31T23:59:59Z',
       })
 
       expect(Array.isArray(result)).toBe(true)
@@ -373,6 +399,7 @@ describe('MyInvoisClient', () => {
 
       const result = await client.searchDocuments({
         submissionDateFrom: '2024-01-01T00:00:00Z',
+        submissionDateTo: '2024-01-31T23:59:59Z',
       })
 
       expect(result).toEqual([])

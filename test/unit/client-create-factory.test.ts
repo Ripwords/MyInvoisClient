@@ -1,3 +1,4 @@
+import { generateKeyPairSync } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { MyInvoisClient } from '../../src/index'
 import { getTestCredentials } from '../fixtures/test-credentials'
@@ -63,13 +64,21 @@ describe('MyInvoisClient.create', () => {
   })
 
   it('still rejects a mismatched certificate and key', () => {
+    // A structurally valid key that simply doesn't match the certificate —
+    // corrupting the PEM text would make the test pass for the wrong reason
+    // (parse failure instead of key-pair mismatch).
+    const { privateKey: otherKeyPem } = generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    })
     expect(() =>
       MyInvoisClient.create({
         clientId: 'id',
         clientSecret: 'secret',
         environment: 'sandbox',
         certificatePem,
-        privateKeyPem: privateKeyPem.replace(/A/, 'B'),
+        privateKeyPem: otherKeyPem,
       }),
     ).toThrow()
   })
