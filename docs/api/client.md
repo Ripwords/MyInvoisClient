@@ -48,6 +48,24 @@ valid token.
 await client.updateOnBehalfOf('C9876543210:201901234567')
 ```
 
+## `getTaxpayerIdentity()`
+
+Returns the taxpayer the client's token acts for, `{ tin, name?, isIntermediary }`,
+read from LHDN's `TaxpayerTIN` claim. It reuses the cached token.
+
+```typescript
+const { tin } = await client.getTaxpayerIdentity()
+```
+
+## `getTaxpayerIdentity({ clientId, clientSecret, environment })`
+
+The standalone version, which needs no certificate. It logs in once as a
+taxpayer system and returns whose credentials they are. The token is not
+cached. See [Proving TIN ownership](/guide/intermediaries#proving-tin-ownership).
+
+`decodeTaxpayerIdentity(token)` does the same for a token you already hold.
+It throws when the token carries no `TaxpayerTIN`.
+
 ## `buildSignedDocuments(documents)`
 
 Signs and encodes documents locally **without submitting** — returns

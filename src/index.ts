@@ -24,6 +24,10 @@ import * as DocumentSubmissionAPI from './api/documentSubmission'
 import * as DocumentTypeManagementAPI from './api/documentTypeManagement'
 import * as NotificationManagementAPI from './api/notificationManagement'
 import { platformLogin } from './api/platformLogin'
+import {
+  decodeTaxpayerIdentity,
+  type TaxpayerIdentity,
+} from './api/taxpayerIdentity'
 import * as TaxpayerValidationAPI from './api/taxpayerValidation'
 import {
   extractCertificateInfo,
@@ -43,6 +47,12 @@ export { MyInvoisApiError, MyInvoisRateLimitError } from './errors'
 // P12 → PEM and certificate details, for apps that build the client with
 // create() (to inject stores) instead of fromP12().
 export { getPemFromP12, extractCertificateInfo } from './utils/certificate'
+// Who a set of MyInvois credentials belongs to, e.g. to prove TIN ownership.
+export {
+  decodeTaxpayerIdentity,
+  getTaxpayerIdentity,
+  type TaxpayerIdentity,
+} from './api/taxpayerIdentity'
 export {
   InMemoryRateLimitStore,
   type RateLimitStore,
@@ -207,6 +217,16 @@ export class MyInvoisClient {
     this.onBehalfOf = onBehalfOf
     await this.refreshToken()
     return
+  }
+
+  /**
+   * The taxpayer this client's access token acts for, read from LHDN's
+   * `TaxpayerTIN` claim. Reuses the cached token, logging in only when it is
+   * missing or expiring. Without `onBehalfOf` this is the taxpayer that owns
+   * the client ID.
+   */
+  async getTaxpayerIdentity(): Promise<TaxpayerIdentity> {
+    return decodeTaxpayerIdentity(await this.getToken())
   }
 
   /** Token-cache key: one entry per represented TIN for intermediaries. */
