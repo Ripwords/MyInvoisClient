@@ -37,6 +37,7 @@ import {
   type RateLimitStore,
 } from './utils/apiQueue'
 import { InMemoryTokenStore, type TokenStore } from './utils/tokenStore'
+import { parseRetryAfterMs } from './utils/retryAfter'
 
 export {
   InMemoryRateLimitStore,
@@ -97,6 +98,14 @@ export interface MyInvoisClientOptions {
    * `${clientId}:${onBehalfOf ?? ''}`. Defaults to in-memory per instance.
    */
   tokenStore?: TokenStore
+  /**
+   * Automatic back-off when the API answers 429: wait as told by the
+   * `Retry-After` header (seconds or HTTP-date; 5s when absent, capped at
+   * `maxDelayMs`) and retry up to `maxRetries` times. Defaults to
+   * `{ maxRetries: 2, maxDelayMs: 60_000 }`; pass `false` to disable and
+   * receive 429 responses raw.
+   */
+  retryOn429?: false | { maxRetries?: number; maxDelayMs?: number }
 }
 
 export class MyInvoisClient {
@@ -107,12 +116,17 @@ export class MyInvoisClient {
   private onBehalfOf?: string
   private readonly signingCredentials: SigningCredentials
   private readonly debug: boolean
-  private token = ''
   private requestCount = 0
-  /** Single-flight guard: concurrent calls share one in-flight login. */
-  private tokenRefreshPromise: Promise<void> | null = null
+  /**
+   * Single-flight guard, keyed per token key: concurrent calls for the same
+   * (clientId, onBehalfOf) share one in-flight login, and a login started
+   * before an `updateOnBehalfOf` switch can never be handed to callers (or
+   * cached) under the new TIN's key.
+   */
+  private readonly tokenRefreshPromises = new Map<string, Promise<string>>()
   private readonly rateLimitStore?: RateLimitStore
   private readonly tokenStore: TokenStore
+  private readonly retryOn429: false | { maxRetries: number; maxDelayMs: number }
   /** Refresh this long before actual expiry so a token never dies mid-request. */
   private static readonly TOKEN_EXPIRY_MARGIN_MS = 60_000
 
@@ -124,7 +138,11 @@ export class MyInvoisClient {
     privateKeyPem: string,
     onBehalfOf?: string,
     debug?: boolean,
-    stores?: { rateLimitStore?: RateLimitStore; tokenStore?: TokenStore },
+    advanced?: {
+      rateLimitStore?: RateLimitStore
+      tokenStore?: TokenStore
+      retryOn429?: false | { maxRetries?: number; maxDelayMs?: number }
+    },
   ) {
     // Check if basic signing credentials are available
     if (!privateKeyPem || !certificatePem) {
@@ -144,8 +162,15 @@ export class MyInvoisClient {
     this.environment = environment
     this.onBehalfOf = onBehalfOf
     this.debug = (debug ?? process.env.MYINVOIS_DEBUG === 'true') ? true : false
-    this.rateLimitStore = stores?.rateLimitStore
-    this.tokenStore = stores?.tokenStore ?? new InMemoryTokenStore()
+    this.rateLimitStore = advanced?.rateLimitStore
+    this.tokenStore = advanced?.tokenStore ?? new InMemoryTokenStore()
+    this.retryOn429 =
+      advanced?.retryOn429 === false
+        ? false
+        : {
+            maxRetries: advanced?.retryOn429?.maxRetries ?? 2,
+            maxDelayMs: advanced?.retryOn429?.maxDelayMs ?? 60_000,
+          }
 
     // Extract certificate information
     const { issuerName, serialNumber } = extractCertificateInfo(certificatePem)
@@ -169,12 +194,20 @@ export class MyInvoisClient {
     return `${this.clientId}:${this.onBehalfOf ?? ''}`
   }
 
-  private async refreshToken() {
-    // Share a single in-flight login between concurrent callers, and route it
-    // through the rate limiter (the official limit is 12 logins/min/clientId).
-    if (!this.tokenRefreshPromise) {
-      const category = this.onBehalfOf ? 'loginIntermediary' : 'loginTaxpayer'
-      this.tokenRefreshPromise = queueRequest(
+  private refreshToken(): Promise<string> {
+    // Capture the identity at call time so a concurrent `updateOnBehalfOf`
+    // can't make this login's result land under (or be served from) the
+    // wrong taxpayer's key.
+    const onBehalfOf = this.onBehalfOf
+    const key = `${this.clientId}:${onBehalfOf ?? ''}`
+
+    // Share a single in-flight login between concurrent callers of the same
+    // key, and route it through the rate limiter (the official limit is
+    // 12 logins/min/clientId).
+    let refresh = this.tokenRefreshPromises.get(key)
+    if (!refresh) {
+      const category = onBehalfOf ? 'loginIntermediary' : 'loginTaxpayer'
+      refresh = queueRequest(
         this.clientId,
         category,
         () =>
@@ -182,27 +215,28 @@ export class MyInvoisClient {
             clientId: this.clientId,
             clientSecret: this.clientSecret,
             baseUrl: this.baseUrl,
-            onBehalfOf: this.onBehalfOf,
+            onBehalfOf,
             debug: this.debug,
           }),
         this.debug,
         this.rateLimitStore,
       )
         .then(async tokenResponse => {
-          this.token = tokenResponse.token
           const expiresAt = tokenResponse.tokenExpiration.getTime()
           if (!isNaN(expiresAt)) {
-            await this.tokenStore.set(this.tokenKey(), {
+            await this.tokenStore.set(key, {
               token: tokenResponse.token,
               expiresAt,
             })
           }
+          return tokenResponse.token
         })
         .finally(() => {
-          this.tokenRefreshPromise = null
+          this.tokenRefreshPromises.delete(key)
         })
+      this.tokenRefreshPromises.set(key, refresh)
     }
-    return this.tokenRefreshPromise
+    return refresh
   }
 
   private async getToken() {
@@ -218,8 +252,7 @@ export class MyInvoisClient {
     if (this.debug) {
       console.log('Token missing or expiring soon — refreshing')
     }
-    await this.refreshToken()
-    return this.token
+    return this.refreshToken()
   }
 
   private async fetch(path: string, options: Parameters<typeof fetch>[1] = {}) {
@@ -237,17 +270,41 @@ export class MyInvoisClient {
       options?.method as string | undefined,
     )
 
-    return queueRequest(
-      this.clientId,
-      category,
-      () =>
-        fetch(`${this.baseUrl}${path}`, {
-          ...options,
-          headers: { ...options.headers, Authorization: `Bearer ${token}` },
-        }),
-      this.debug,
-      this.rateLimitStore,
-    )
+    const queuedFetch = () =>
+      queueRequest(
+        this.clientId,
+        category,
+        () =>
+          fetch(`${this.baseUrl}${path}`, {
+            ...options,
+            headers: { ...options.headers, Authorization: `Bearer ${token}` },
+          }),
+        this.debug,
+        this.rateLimitStore,
+      )
+
+    let response = await queuedFetch()
+
+    // Back off and re-queue on 429, as instructed by the Retry-After header.
+    if (this.retryOn429 !== false) {
+      const { maxRetries, maxDelayMs } = this.retryOn429
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        if (response.status !== 429) break
+        const delayMs = parseRetryAfterMs(
+          response.headers?.get?.('Retry-After'),
+          maxDelayMs,
+        )
+        if (this.debug) {
+          console.log(
+            `[fetch] 429 received — retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})`,
+          )
+        }
+        await new Promise(resolve => setTimeout(resolve, delayMs))
+        response = await queuedFetch()
+      }
+    }
+
+    return response
   }
 
   /**
@@ -963,7 +1020,11 @@ export class MyInvoisClient {
       options.privateKeyPem,
       options.onBehalfOf,
       options.debug,
-      { rateLimitStore: options.rateLimitStore, tokenStore: options.tokenStore },
+      {
+        rateLimitStore: options.rateLimitStore,
+        tokenStore: options.tokenStore,
+        retryOn429: options.retryOn429,
+      },
     )
   }
 
