@@ -149,6 +149,41 @@ describe('MyInvois live sandbox (PKCS#12)', () => {
       true,
     )
 
+  /**
+   * Returns 'certExpired' when a document is Invalid ONLY because of the
+   * known environment limitation (expired signing certificate → Step08
+   * DS304/DS329); fails the test for any other validation failure.
+   */
+  const classifyInvalid = async (
+    client: MyInvoisClient,
+    uuid: string,
+    label: string,
+  ): Promise<'certExpired'> => {
+    const details = await client.getDocumentDetails(uuid)
+    const failedSteps =
+      details.validationResults?.validationSteps?.filter(
+        s => s.status === 'Invalid',
+      ) ?? []
+    const certValidityCodes = new Set(['DS304', 'DS329'])
+    const onlyCertExpiry =
+      failedSteps.length === 1 &&
+      failedSteps[0]!.name.includes('Step08') &&
+      (
+        failedSteps[0]!.error as unknown as {
+          innerError?: { errorCode: string }[]
+        }
+      )?.innerError?.every(e => certValidityCodes.has(e.errorCode))
+
+    record(`${label}: invalid — cert expiry only?`, onlyCertExpiry === true, {
+      failedSteps,
+    })
+    expect(
+      onlyCertExpiry,
+      `Document invalid for reasons other than certificate expiry: ${JSON.stringify(failedSteps)}`,
+    ).toBe(true)
+    return 'certExpired'
+  }
+
   it('constructs a client from the P12 bundle', () => {
     expect(createClient()).toBeInstanceOf(MyInvoisClient)
     record('construct client from P12', true)
@@ -190,34 +225,7 @@ describe('MyInvois live sandbox (PKCS#12)', () => {
       const uuid = statusResult.documentSummary![0]!.uuid
 
       if (statusResult.status === 'Invalid') {
-        // Distinguish a genuine library bug from the known environment
-        // limitation: an expired signing certificate fails Step08 with
-        // DS304 (signing time outside cert validity) and/or DS329 (chain of
-        // trust). Every other validation failure must fail the test.
-        const details = await client.getDocumentDetails(uuid)
-        const failedSteps =
-          details.validationResults?.validationSteps?.filter(
-            s => s.status === 'Invalid',
-          ) ?? []
-        const certValidityCodes = new Set(['DS304', 'DS329'])
-        const onlyCertExpiry =
-          failedSteps.length === 1 &&
-          failedSteps[0]!.name.includes('Step08') &&
-          (
-            failedSteps[0]!.error as unknown as {
-              innerError?: { errorCode: string }[]
-            }
-          )?.innerError?.every(e => certValidityCodes.has(e.errorCode))
-
-        record(
-          'document invalid — cert expiry only?',
-          onlyCertExpiry === true,
-          { failedSteps },
-        )
-        expect(
-          onlyCertExpiry,
-          `Document invalid for reasons other than certificate expiry: ${JSON.stringify(failedSteps)}`,
-        ).toBe(true)
+        await classifyInvalid(client, uuid, 'submit flow')
         console.warn(
           '⚠️  Document failed ONLY Step08 cert-validity checks (DS304/DS329): the signing certificate has expired. ' +
             'All structural/signature-format checks passed. Renew the certificate to get a fully Valid run. ' +
@@ -257,6 +265,68 @@ describe('MyInvois live sandbox (PKCS#12)', () => {
       record('cancel document', !cancelResult.error, cancelResult)
       expect(cancelResult.error).toBeUndefined()
       expect(cancelResult.uuid).toBe(uuid)
+    },
+  )
+
+  it(
+    'builds a payload, stores it, submits the stored bytes and polls',
+    { timeout: 180_000 },
+    async () => {
+      const client = createClient()
+      const invoice = buildMinimalInvoice()
+
+      // 1. Build without submitting
+      const [built] = client.buildSignedDocuments([invoice])
+      record('build signed payload', !!built?.documentHash, {
+        codeNumber: built!.codeNumber,
+        documentHash: built!.documentHash,
+      })
+
+      // 2. "Store" it — a JSON round-trip, exactly as a DB column would
+      const stored = JSON.parse(JSON.stringify(built)) as typeof built
+
+      // 3. Submit the STORED payload (no re-signing)
+      const { data, status } = await client.submitDocument([stored!])
+      record('submit stored payload', status === 202, {
+        status,
+        submissionUid: data.submissionUid,
+        rejected: data.rejectedDocuments,
+      })
+      expect(status).toBe(202)
+      expect(data.submissionUid).toBeTruthy()
+
+      // 4. Poll until terminal
+      const statusResult = await client.getSubmissionStatus(
+        data.submissionUid,
+        10_000,
+        8,
+      )
+      record(
+        'poll stored-payload submission',
+        statusResult.status === 'Valid',
+        { status: statusResult.status, error: statusResult.error },
+      )
+      expect(statusResult.documentSummary?.length).toBeGreaterThan(0)
+      const uuid = statusResult.documentSummary![0]!.uuid
+
+      if (statusResult.status === 'Invalid') {
+        await classifyInvalid(client, uuid, 'stored-payload flow')
+        console.warn(
+          '⚠️  Stored payload failed ONLY Step08 cert-validity (expired certificate). ' +
+            'The store-then-submit flow itself was accepted end-to-end.',
+        )
+        return
+      }
+
+      expect(statusResult.status).toBe('Valid')
+
+      // 5. Clean the sandbox
+      const cancelResult = await client.cancelDocument(
+        uuid,
+        'Integration test cleanup (stored payload)',
+      )
+      record('cancel stored-payload document', !cancelResult.error, cancelResult)
+      expect(cancelResult.error).toBeUndefined()
     },
   )
 
