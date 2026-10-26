@@ -157,6 +157,13 @@ cancels the submitted invoice at the end, so the sandbox stays clean.
 Because the integration suite needs real preprod credentials, CI runs only the
 unit tests; unit coverage never touches the live LHDN API.
 
+> **Running vitest under Bun:** the suite targets the Node runtime
+> (`bun run test:run` invokes vitest on Node, which is fine). Running vitest
+> *on* Bun (`bun x --bun vitest`) does not work: the default forks pool
+> crashes (Bun's IPC channel lacks `unref`, breaking tinypool), and with
+> `--pool=threads` the two tests that rely on `vi.mock` module mocking fail.
+> The library itself runs fine on Bun — only the test tooling is Node-bound.
+
 ## Generating Test Certificates for Development
 
 For testing purposes, you can generate self-signed certificates with MyInvois-required fields:
