@@ -1,6 +1,28 @@
 # Changelog
 
 
+## v0.8.0
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.7.1...v0.8.0)
+
+### 🚀 Enhancements
+
+- ⚠️  Throw typed errors for every non-OK MyInvois response ([9dbdc73](https://github.com/Ripwords/MyInvoisClient/commit/9dbdc73))
+
+### 📖 Documentation
+
+- VitePress site with per-endpoint official-doc links and llms.txt ([65cefbb](https://github.com/Ripwords/MyInvoisClient/commit/65cefbb))
+- Link the hosted docs site and llms.txt from the README ([0e790f3](https://github.com/Ripwords/MyInvoisClient/commit/0e790f3))
+- Document MyInvoisRateLimitError and the throw-on-non-OK contract ([dc7cd24](https://github.com/Ripwords/MyInvoisClient/commit/dc7cd24))
+
+#### ⚠️ Breaking Changes
+
+- ⚠️  Throw typed errors for every non-OK MyInvois response ([9dbdc73](https://github.com/Ripwords/MyInvoisClient/commit/9dbdc73))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.7.1
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.7.0...v0.7.1)
