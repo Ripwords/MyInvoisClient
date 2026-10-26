@@ -1,17 +1,52 @@
 # MyInvois Client
 
-A comprehensive Node.js client for Malaysia's MyInvois e-invoicing system with full digital signature support.
+[![npm](https://img.shields.io/npm/v/%40ripwords%2Fmyinvois-client)](https://www.npmjs.com/package/@ripwords/myinvois-client)
+
+A TypeScript client for **Malaysia's MyInvois (LHDN) e-invoicing API**: UBL
+document building, XAdES (JSON profile) digital signing, submission, polling,
+cancellation/rejection, taxpayer validation and built-in rate limiting.
+
+> **Scope:** Malaysia MyInvois only. Singapore's InvoiceNow / Peppol e-invoicing
+> is a different system and out of scope for this library.
 
 ## Installation
 
 ```bash
-bun install
+npm install @ripwords/myinvois-client
+# or: bun add / pnpm add / yarn add @ripwords/myinvois-client
 ```
 
-## Environment Variables
+## Quick start
 
-Configuration lives in a git-ignored `.env` file — copy `.env.example` and
-fill it in. The PKCS#12 bundle is the single source of the signing
+```typescript
+import { MyInvoisClient } from '@ripwords/myinvois-client'
+
+// From a PKCS#12 bundle (recommended — single source of cert + key).
+// Credentials are per-instance, so multi-tenant apps can hold one client
+// per organisation; nothing is read from process.env.
+const client = MyInvoisClient.fromP12(
+  clientId,
+  clientSecret,
+  'sandbox', // or 'production'
+  'path/to/certificate.p12',
+  passphrase,
+)
+
+const { data, status } = await client.submitDocument([invoice])
+if (status === 202) {
+  const result = await client.getSubmissionStatus(data.submissionUid)
+  console.log(result.status) // 'Valid' | 'PartiallyValid' | 'Invalid' | ...
+}
+```
+
+Prefer PEM strings? Use `MyInvoisClient.create({ clientId, clientSecret, environment, certificatePem, privateKeyPem })`.
+
+## Environment Variables (for this repo's integration tests)
+
+The library itself takes all credentials as constructor arguments. The
+variables below are only used by this repository's live integration test
+suite. Configuration lives in a git-ignored `.env` file — copy `.env.example`
+and fill it in. The PKCS#12 bundle is the single source of the signing
 certificate and private key.
 
 ```bash
@@ -48,6 +83,18 @@ and is gated behind an explicit flag:
 ```bash
 bun run test:integration  # sets RUN_INTEGRATION=true
 ```
+
+Each run writes a step-by-step report to `test/integration/.artifacts/` and
+cancels the submitted invoice at the end, so the sandbox stays clean.
+
+> **Expired certificate:** if your signing certificate has expired, documents
+> fail only `Step08` signature validation with `DS304`/`DS329` (certificate
+> validity / chain of trust). The suite recognises that case and reports it as
+> an environment limitation rather than a library failure — renew the
+> certificate to get fully `Valid` runs.
+
+Because the integration suite needs real preprod credentials, CI runs only the
+unit tests; unit coverage never touches the live LHDN API.
 
 ## Generating Test Certificates for Development
 
@@ -146,8 +193,12 @@ Plan around them for production deployments:
   concurrency.
 - **No automatic `429` / `Retry-After` back-off.** The limiter is proactive
   only; it does not currently inspect rate-limit response headers and retry.
-- **Login is not queued.** Token requests (`/connect/token`) bypass the queue.
-  Cache and reuse the client so token refreshes stay infrequent.
+  If you see a `429`, honour its `Retry-After` header in your own retry logic.
+- **Token refreshes are queued and deduplicated.** Logins go through the
+  limiter (12/min per client ID) and concurrent requests share a single
+  in-flight refresh; tokens are reused until shortly before expiry. Still,
+  cache and reuse one client instance per credential set rather than
+  constructing clients per request.
 
 ## Production Certificates
 
