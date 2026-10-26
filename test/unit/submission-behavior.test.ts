@@ -3,6 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   submitDocument,
   getSubmissionStatus,
+  buildSignedDocument,
 } from '../../src/api/documentSubmission'
 import { platformLogin } from '../../src/api/platformLogin'
 import { extractCertificateInfo } from '../../src/utils/certificate'
@@ -139,6 +140,61 @@ describe('submitDocument', () => {
       .update(decoded, 'utf8')
       .digest('hex')
     expect(entry.documentHash).toBe(expectedHash)
+  })
+
+  it('submits a prebuilt SignedDocumentPayload byte-for-byte as stored', async () => {
+    const invoice = buildMinimalInvoice()
+    const credentials = buildSigningCredentials()
+
+    // Build + "store" the payload (simulated by a JSON round-trip, as a DB would)
+    const built = buildSignedDocument(invoice, credentials)
+    const stored = JSON.parse(JSON.stringify(built)) as typeof built
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      status: 202,
+      json: () =>
+        Promise.resolve({
+          submissionUid: 'SUB-2',
+          acceptedDocuments: [],
+          rejectedDocuments: [],
+        }),
+    } as Response)
+
+    await submitDocument(
+      { fetch: mockFetch, debug: false, signingCredentials: credentials },
+      [stored],
+    )
+
+    const [, options] = mockFetch.mock.calls[0]! as [string, RequestInit]
+    const payload = JSON.parse(String(options.body)) as {
+      documents: Record<string, unknown>[]
+    }
+    const entry = payload.documents[0]!
+
+    // Exactly the stored bytes and hash — no re-signing on resubmit
+    expect(entry.document).toBe(stored.document)
+    expect(entry.documentHash).toBe(stored.documentHash)
+    expect(entry.codeNumber).toBe(invoice.eInvoiceCodeOrNumber)
+    // The preview object must NOT leak onto the wire
+    expect(entry).not.toHaveProperty('signedDocument')
+  })
+
+  it('buildSignedDocument returns hash/base64/preview that agree with each other', () => {
+    const invoice = buildMinimalInvoice()
+    const built = buildSignedDocument(invoice, buildSigningCredentials())
+
+    const decoded = Buffer.from(built.document, 'base64').toString('utf8')
+    // The preview object serialises to exactly the encoded bytes
+    expect(JSON.stringify(built.signedDocument)).toBe(decoded)
+    // and the hash is over those bytes
+    expect(built.documentHash).toBe(
+      createHash('sha256').update(decoded, 'utf8').digest('hex'),
+    )
+    expect(built.format).toBe('JSON')
+    expect(built.codeNumber).toBe(invoice.eInvoiceCodeOrNumber)
+    // The signed document carries the signature envelope
+    expect(built.signedDocument.Invoice[0]).toHaveProperty('UBLExtensions')
+    expect(built.signedDocument.Invoice[0]).toHaveProperty('Signature')
   })
 })
 

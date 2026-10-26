@@ -1,5 +1,7 @@
+import crypto from 'node:crypto'
 import type {
   AllDocumentsV1_1,
+  CompleteInvoice,
   SubmissionResponse,
   SigningCredentials,
   SubmissionStatus,
@@ -16,9 +18,73 @@ interface SubmissionContext {
   signingCredentials: SigningCredentials
 }
 
+/**
+ * The exact wire entry `submitDocument` sends for one document, plus the
+ * parsed signed document for preview/storage. `document` (base64) and
+ * `documentHash` (SHA-256 hex of the serialized signed document) are what the
+ * MyInvois API receives — persist this object to keep a byte-exact record of
+ * what was (or will be) submitted, and pass it back to `submitDocument` to
+ * submit it unchanged.
+ */
+export interface SignedDocumentPayload {
+  format: 'JSON'
+  /** Base64 of the serialized signed document — the exact submitted bytes. */
+  document: string
+  /** SHA-256 hex digest of the serialized signed document. */
+  documentHash: string
+  /** The document's eInvoiceCodeOrNumber. */
+  codeNumber: string
+  /** The signed UBL document as an object, for preview/inspection. */
+  signedDocument: CompleteInvoice
+}
+
+/**
+ * Signs one document and builds the exact submission entry, without
+ * submitting it. Throws if the signed document exceeds the 300KB limit.
+ */
+export function buildSignedDocument(
+  doc: AllDocumentsV1_1,
+  signingCredentials: SigningCredentials,
+): SignedDocumentPayload {
+  // Sign the single document (generateCompleteDocument expects an array)
+  const signedDocument = generateCompleteDocument([doc], signingCredentials)
+
+  const docJson = JSON.stringify(signedDocument)
+
+  const documentHash = crypto
+    .createHash('sha256')
+    .update(docJson, 'utf8')
+    .digest('hex')
+
+  const docBase64 = Buffer.from(docJson, 'utf8').toString('base64')
+
+  // Enforce the 300 KB per-document limit on the decoded size
+  const rawSize = Buffer.byteLength(docBase64, 'base64')
+  if (rawSize > 300 * 1024) {
+    throw new Error(
+      `Submission rejected: Document ${doc.eInvoiceCodeOrNumber} is ${rawSize} bytes – exceeds 300KB limit`,
+    )
+  }
+
+  return {
+    format: 'JSON',
+    document: docBase64,
+    documentHash,
+    codeNumber: doc.eInvoiceCodeOrNumber,
+    signedDocument,
+  }
+}
+
+const isPrebuiltPayload = (
+  doc: AllDocumentsV1_1 | SignedDocumentPayload,
+): doc is SignedDocumentPayload =>
+  (doc as SignedDocumentPayload).format === 'JSON' &&
+  typeof (doc as SignedDocumentPayload).document === 'string' &&
+  typeof (doc as SignedDocumentPayload).documentHash === 'string'
+
 export async function submitDocument(
   context: SubmissionContext,
-  documents: AllDocumentsV1_1[],
+  documents: (AllDocumentsV1_1 | SignedDocumentPayload)[],
 ): Promise<{
   data: SubmissionResponse
   status: number
@@ -36,54 +102,25 @@ export async function submitDocument(
     console.log(`📦 Preparing to submit ${documents.length} document(s)...`)
   }
 
-  // For batch submission, each document must be signed and encoded separately
-  // Build the submission payload according to MyInvois API format
-  const crypto = await import('crypto')
-
+  // Each document is signed and encoded separately. Prebuilt payloads (from
+  // buildSignedDocument) are submitted byte-for-byte as stored; raw invoices
+  // are signed here. The wire format carries no `signedDocument` field.
   const submissionPayload = {
-    documents: await Promise.all(
-      documents.map(async doc => {
-        // 1️⃣ Sign the single document (generateCompleteDocument expects an array)
-        const signedDocument = generateCompleteDocument(
-          [doc],
-          signingCredentials,
-        )
+    documents: documents.map(doc => {
+      const { format, document, documentHash, codeNumber } = isPrebuiltPayload(
+        doc,
+      )
+        ? doc
+        : buildSignedDocument(doc, signingCredentials)
 
-        // 2️⃣ Serialize
-        const docJson = JSON.stringify(signedDocument)
+      if (debug) {
+        console.log('—'.repeat(60))
+        console.log(`📄 Prepared document: ${codeNumber}`)
+        console.log(`   • Base64 size: ${document.length} bytes`)
+      }
 
-        // 3️⃣ Hash
-        const docHash = crypto
-          .createHash('sha256')
-          .update(docJson, 'utf8')
-          .digest('hex')
-
-        // 4️⃣ Base64 encode
-        const docBase64 = Buffer.from(docJson, 'utf8').toString('base64')
-
-        // 🚨 Enforce 300 KB per-document limit
-        const rawSize = Buffer.byteLength(docBase64, 'base64')
-        if (rawSize > 300 * 1024) {
-          throw new Error(
-            `Submission rejected: Document ${doc.eInvoiceCodeOrNumber} is ${rawSize} bytes – exceeds 300KB limit`,
-          )
-        }
-
-        if (debug) {
-          console.log('—'.repeat(60))
-          console.log(`📄 Prepared document: ${doc.eInvoiceCodeOrNumber}`)
-          console.log(`   • JSON size : ${docJson.length} bytes`)
-          console.log(`   • Base64 size: ${docBase64.length} bytes`)
-        }
-
-        return {
-          format: 'JSON',
-          document: docBase64,
-          documentHash: docHash,
-          codeNumber: doc.eInvoiceCodeOrNumber,
-        }
-      }),
-    ),
+      return { format, document, documentHash, codeNumber }
+    }),
   }
 
   const payloadSize = Buffer.byteLength(JSON.stringify(submissionPayload))

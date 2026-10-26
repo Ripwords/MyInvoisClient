@@ -38,6 +38,17 @@ export {
   aggregateLineItemsByTaxCategory,
   type AggregateByTaxCategoryOptions,
 } from './utils/lineItems'
+export {
+  buildSignedDocument,
+  type SignedDocumentPayload,
+} from './api/documentSubmission'
+// Low-level signing helpers, for consumers that need to inspect or reproduce
+// the signature pipeline (e.g. storing digests alongside submissions).
+export {
+  generateCompleteDocument,
+  calculateDocumentDigest,
+  transformDocumentForHashing,
+} from './utils/document'
 
 /**
  * Options for {@link MyInvoisClient.create}.
@@ -461,7 +472,12 @@ export class MyInvoisClient {
    * - Debug mode provides detailed logging of payload sizes
    * - Returns HTTP 202 for successful submissions that require processing
    */
-  async submitDocument(documents: AllDocumentsV1_1[]): Promise<{
+  async submitDocument(
+    documents: (
+      | AllDocumentsV1_1
+      | DocumentSubmissionAPI.SignedDocumentPayload
+    )[],
+  ): Promise<{
     data: SubmissionResponse
     status: number
   }> {
@@ -472,6 +488,31 @@ export class MyInvoisClient {
         signingCredentials: this.signingCredentials,
       },
       documents,
+    )
+  }
+
+  /**
+   * Signs documents and returns the exact submission entries WITHOUT
+   * submitting them. Use this to store or preview precisely what will be
+   * sent; pass the returned payloads to {@link submitDocument} later to
+   * submit them byte-for-byte as stored.
+   *
+   * @example
+   * ```typescript
+   * const [payload] = client.buildSignedDocuments([invoice])
+   * await db.save(payload) // persist document (base64) + documentHash
+   * await client.submitDocument([payload])
+   * ```
+   *
+   * @remarks
+   * - The signature embeds the signing time, so build time = signing time
+   * - Throws if a signed document exceeds the 300KB limit
+   */
+  buildSignedDocuments(
+    documents: AllDocumentsV1_1[],
+  ): DocumentSubmissionAPI.SignedDocumentPayload[] {
+    return documents.map(doc =>
+      DocumentSubmissionAPI.buildSignedDocument(doc, this.signingCredentials),
     )
   }
 
