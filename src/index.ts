@@ -31,7 +31,23 @@ import {
   getPemFromP12,
 } from './utils/certificate'
 import { getBaseUrl } from './utils/getBaseUrl'
-import { queueRequest, categorizeRequest } from './utils/apiQueue'
+import {
+  queueRequest,
+  categorizeRequest,
+  type RateLimitStore,
+} from './utils/apiQueue'
+import { InMemoryTokenStore, type TokenStore } from './utils/tokenStore'
+
+export {
+  InMemoryRateLimitStore,
+  type RateLimitStore,
+  type ApiCategory,
+} from './utils/apiQueue'
+export {
+  InMemoryTokenStore,
+  type TokenStore,
+  type StoredToken,
+} from './utils/tokenStore'
 
 export type * from './types/index.d.ts'
 export {
@@ -71,6 +87,16 @@ export interface MyInvoisClientOptions {
   onBehalfOf?: string
   /** Enable verbose logging. Defaults to `MYINVOIS_DEBUG === 'true'`. */
   debug?: boolean
+  /**
+   * Shared rate-limit backend for multi-process deployments. Defaults to an
+   * in-process sliding window shared by all instances in this process.
+   */
+  rateLimitStore?: RateLimitStore
+  /**
+   * Shared access-token cache for multi-process deployments, keyed
+   * `${clientId}:${onBehalfOf ?? ''}`. Defaults to in-memory per instance.
+   */
+  tokenStore?: TokenStore
 }
 
 export class MyInvoisClient {
@@ -82,10 +108,11 @@ export class MyInvoisClient {
   private readonly signingCredentials: SigningCredentials
   private readonly debug: boolean
   private token = ''
-  private tokenExpiration: Date | undefined = undefined
   private requestCount = 0
   /** Single-flight guard: concurrent calls share one in-flight login. */
   private tokenRefreshPromise: Promise<void> | null = null
+  private readonly rateLimitStore?: RateLimitStore
+  private readonly tokenStore: TokenStore
   /** Refresh this long before actual expiry so a token never dies mid-request. */
   private static readonly TOKEN_EXPIRY_MARGIN_MS = 60_000
 
@@ -97,6 +124,7 @@ export class MyInvoisClient {
     privateKeyPem: string,
     onBehalfOf?: string,
     debug?: boolean,
+    stores?: { rateLimitStore?: RateLimitStore; tokenStore?: TokenStore },
   ) {
     // Check if basic signing credentials are available
     if (!privateKeyPem || !certificatePem) {
@@ -116,6 +144,8 @@ export class MyInvoisClient {
     this.environment = environment
     this.onBehalfOf = onBehalfOf
     this.debug = (debug ?? process.env.MYINVOIS_DEBUG === 'true') ? true : false
+    this.rateLimitStore = stores?.rateLimitStore
+    this.tokenStore = stores?.tokenStore ?? new InMemoryTokenStore()
 
     // Extract certificate information
     const { issuerName, serialNumber } = extractCertificateInfo(certificatePem)
@@ -134,23 +164,39 @@ export class MyInvoisClient {
     return
   }
 
+  /** Token-cache key: one entry per represented TIN for intermediaries. */
+  private tokenKey(): string {
+    return `${this.clientId}:${this.onBehalfOf ?? ''}`
+  }
+
   private async refreshToken() {
     // Share a single in-flight login between concurrent callers, and route it
     // through the rate limiter (the official limit is 12 logins/min/clientId).
     if (!this.tokenRefreshPromise) {
       const category = this.onBehalfOf ? 'loginIntermediary' : 'loginTaxpayer'
-      this.tokenRefreshPromise = queueRequest(this.clientId, category, () =>
-        platformLogin({
-          clientId: this.clientId,
-          clientSecret: this.clientSecret,
-          baseUrl: this.baseUrl,
-          onBehalfOf: this.onBehalfOf,
-          debug: this.debug,
-        }),
+      this.tokenRefreshPromise = queueRequest(
+        this.clientId,
+        category,
+        () =>
+          platformLogin({
+            clientId: this.clientId,
+            clientSecret: this.clientSecret,
+            baseUrl: this.baseUrl,
+            onBehalfOf: this.onBehalfOf,
+            debug: this.debug,
+          }),
+        this.debug,
+        this.rateLimitStore,
       )
-        .then(tokenResponse => {
+        .then(async tokenResponse => {
           this.token = tokenResponse.token
-          this.tokenExpiration = tokenResponse.tokenExpiration
+          const expiresAt = tokenResponse.tokenExpiration.getTime()
+          if (!isNaN(expiresAt)) {
+            await this.tokenStore.set(this.tokenKey(), {
+              token: tokenResponse.token,
+              expiresAt,
+            })
+          }
         })
         .finally(() => {
           this.tokenRefreshPromise = null
@@ -160,18 +206,19 @@ export class MyInvoisClient {
   }
 
   private async getToken() {
-    const expiresSoon =
-      !this.tokenExpiration ||
-      isNaN(this.tokenExpiration.getTime()) ||
-      this.tokenExpiration.getTime() - Date.now() <
-        MyInvoisClient.TOKEN_EXPIRY_MARGIN_MS
-    if (expiresSoon) {
-      if (this.debug) {
-        console.log('Token missing or expiring soon — refreshing')
-      }
-      await this.refreshToken()
+    const stored = await this.tokenStore.get(this.tokenKey())
+    const valid =
+      stored &&
+      !isNaN(stored.expiresAt) &&
+      stored.expiresAt - Date.now() >= MyInvoisClient.TOKEN_EXPIRY_MARGIN_MS
+    if (valid) {
+      return stored.token
     }
 
+    if (this.debug) {
+      console.log('Token missing or expiring soon — refreshing')
+    }
+    await this.refreshToken()
     return this.token
   }
 
@@ -199,6 +246,7 @@ export class MyInvoisClient {
           headers: { ...options.headers, Authorization: `Bearer ${token}` },
         }),
       this.debug,
+      this.rateLimitStore,
     )
   }
 
@@ -915,6 +963,7 @@ export class MyInvoisClient {
       options.privateKeyPem,
       options.onBehalfOf,
       options.debug,
+      { rateLimitStore: options.rateLimitStore, tokenStore: options.tokenStore },
     )
   }
 
