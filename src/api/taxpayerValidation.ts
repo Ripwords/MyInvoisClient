@@ -96,8 +96,12 @@ export async function verifyTin(
   const { fetch, debug } = context
 
   try {
+    const query = new URLSearchParams({
+      idType,
+      idValue: formatIdValue(idValue),
+    })
     const response = await fetch(
-      `/api/v1.0/taxpayer/validate/${tin}?idType=${idType}&idValue=${formatIdValue(idValue)}`,
+      `/api/v1.0/taxpayer/validate/${encodeURIComponent(tin)}?${query.toString()}`,
       {
         method: 'GET',
       },
@@ -121,20 +125,51 @@ export async function verifyTin(
   }
 }
 
+/**
+ * The scanned QR contains a Base64 string whose DECODED value (a UUID-like
+ * token) is what the API expects in the path:
+ * https://sdk.myinvois.hasil.gov.my/einvoicingapi/11-qr-code/
+ *
+ * Accept either form: if the input is Base64 that decodes to a printable
+ * ASCII token, use the decoded value; otherwise assume the caller already
+ * decoded it and pass it through.
+ */
+const decodeQrCodeText = (qrCodeText: string): string => {
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(qrCodeText)) return qrCodeText
+  try {
+    const decoded = Buffer.from(qrCodeText, 'base64').toString('utf8')
+    // Round-trip check (rejects non-canonical base64) + printable-ASCII check.
+    const canonical = Buffer.from(decoded, 'utf8').toString('base64')
+    if (
+      canonical.replace(/=+$/, '') === qrCodeText.replace(/=+$/, '') &&
+      /^[\x21-\x7e]+$/.test(decoded)
+    ) {
+      return decoded
+    }
+  } catch {
+    // fall through — treat the input as already decoded
+  }
+  return qrCodeText
+}
+
 export async function taxpayerQRCode(
   context: TaxpayerContext,
   qrCodeText: string,
 ): Promise<TaxpayerQRCodeResponse> {
   const { fetch } = context
 
-  const base64EncodedQRCodeText = Buffer.from(qrCodeText).toString('base64')
-
   const response = await fetch(
     // Plural `taxpayers` is correct here (unlike validate/search which use
     // singular `taxpayer`) — the singular route does not exist and returns a
     // generic 404 "Resource not found".
-    `/api/v1.0/taxpayers/qrcodeinfo/${base64EncodedQRCodeText}`,
+    `/api/v1.0/taxpayers/qrcodeinfo/${encodeURIComponent(decodeQrCodeText(qrCodeText))}`,
   )
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch taxpayer QR code info (HTTP ${response.status}): ${await response.text()}`,
+    )
+  }
 
   return response.json()
 }
