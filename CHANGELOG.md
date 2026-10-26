@@ -5,6 +5,20 @@
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.6.0...v0.7.0)
 
+### ⚠️ Breaking changes
+
+Aligning with the official API docs changed some contracts from 0.6.0:
+
+- `searchDocuments` now returns `DocumentSearchResult[]` (official search
+  contract) and requires a complete submission-date window
+  (`submissionDateFrom` **and** `submissionDateTo`).
+- Notification queries return the official `{ result }` envelope.
+- `getSubmissionStatus` treats `Valid`, `PartiallyValid` **and** `Invalid` as
+  terminal, and the default poll interval is now 3000 ms.
+- Document validation statuses follow the official enum.
+- `getDocumentQrCode(uuid, longId?)` decodes QR input per the official spec
+  and skips the extra fetch when `longId` is provided.
+
 ### 🚀 Enhancements
 
 - Export buildSignedDocument; submitDocument accepts prebuilt payloads ([b747fb7](https://github.com/Ripwords/MyInvoisClient/commit/b747fb7))
