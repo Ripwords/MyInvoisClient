@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { generateKeyPairSync } from 'node:crypto'
 import forge from 'node-forge'
 import { getPemFromP12 } from '../../src/utils/certificate'
-import { MyInvoisClient } from '../../src/index'
+import * as publicApi from '../../src/index'
+import { MyInvoisClient, InMemoryTokenStore } from '../../src/index'
 import { getTestCredentials } from '../fixtures/test-credentials'
 
 const makeForgeKey = () => {
@@ -72,5 +73,32 @@ describe('getPemFromP12', () => {
     expect(() => getPemFromP12(p12, 'wrong')).toThrow(
       /Failed to extract PEM from PKCS#12/,
     )
+  })
+})
+
+describe('P12 helpers on the public API', () => {
+  // Apps that need the shared stores (rateLimitStore/tokenStore) cannot use
+  // fromP12, so they convert the P12 themselves and call create().
+  const { certificatePem, privateKeyPem } = getTestCredentials()
+  const leafKey = forge.pki.privateKeyFromPem(privateKeyPem)
+  const leafCert = forge.pki.certificateFromPem(certificatePem)
+
+  it('exports getPemFromP12 so a P12 can feed create() with injected stores', () => {
+    const p12 = buildP12([leafCert], leafKey, 'secret')
+    const pems = publicApi.getPemFromP12(p12, 'secret')
+    const client = MyInvoisClient.create({
+      clientId: 'id',
+      clientSecret: 'sec',
+      environment: 'sandbox',
+      ...pems,
+      tokenStore: new InMemoryTokenStore(),
+    })
+    expect(client).toBeInstanceOf(MyInvoisClient)
+  })
+
+  it('exports extractCertificateInfo for showing a certificate to users', () => {
+    const info = publicApi.extractCertificateInfo(certificatePem)
+    expect(info.serialNumber).toBeTruthy()
+    expect(info.issuerName).toContain('MyInvois Test Certificate')
   })
 })

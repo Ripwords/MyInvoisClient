@@ -40,6 +40,9 @@ import { InMemoryTokenStore, type TokenStore } from './utils/tokenStore'
 import { parseRetryAfterMs } from './utils/retryAfter'
 
 export { MyInvoisApiError, MyInvoisRateLimitError } from './errors'
+// P12 → PEM and certificate details, for apps that build the client with
+// create() (to inject stores) instead of fromP12().
+export { getPemFromP12, extractCertificateInfo } from './utils/certificate'
 export {
   InMemoryRateLimitStore,
   type RateLimitStore,

@@ -36,6 +36,21 @@ From PEM strings via `MyInvoisClient.create({ certificatePem, privateKeyPem, ...
 The constructor validates that the key pair matches and extracts the issuer
 name and serial number used in the XAdES `KeyInfo`.
 
+`fromP12` takes no options object, so to combine a P12 with
+[shared stores](/guide/rate-limiting) or `retryOn429`, convert it first:
+
+```typescript
+import { MyInvoisClient, getPemFromP12, extractCertificateInfo } from '@ripwords/myinvois-client'
+
+const pems = getPemFromP12(p12Buffer, passphrase) // throws on a wrong passphrase
+const client = MyInvoisClient.create({
+  clientId, clientSecret, environment: 'production',
+  ...pems,
+  rateLimitStore, tokenStore,
+})
+extractCertificateInfo(pems.certificatePem) // { issuerName, serialNumber }
+```
+
 ## Self-signed certificates for development
 
 A self-signed certificate lets you exercise the full pipeline in the sandbox:
