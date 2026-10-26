@@ -84,7 +84,12 @@ export interface MyInvoisClientOptions {
   certificatePem: string
   /** Private key in PEM format. Must match the certificate. */
   privateKeyPem: string
-  /** TIN of the taxpayer being represented, for intermediary access. */
+  /**
+   * Taxpayer being represented, for intermediary access. Accepts either the
+   * TIN alone (`'C1234567890'`) or TIN and registration number joined by a
+   * colon (`'C1234567890:201901234567'`, i.e. `TIN:ROB`) when the taxpayer
+   * registered with both.
+   */
   onBehalfOf?: string
   /** Enable verbose logging. Defaults to `MYINVOIS_DEBUG === 'true'`. */
   debug?: boolean
@@ -130,6 +135,10 @@ export class MyInvoisClient {
   /** Refresh this long before actual expiry so a token never dies mid-request. */
   private static readonly TOKEN_EXPIRY_MARGIN_MS = 60_000
 
+  /**
+   * @param onBehalfOf Taxpayer represented by an intermediary: a TIN
+   *   (`'C1234567890'`) or `TIN:ROB` (`'C1234567890:201901234567'`).
+   */
   constructor(
     clientId: string,
     clientSecret: string,
@@ -183,6 +192,12 @@ export class MyInvoisClient {
     }
   }
 
+  /**
+   * Switches the represented taxpayer (intermediary access) and logs in for
+   * them. Accepts a TIN (`'C1234567890'`) or `TIN:ROB`
+   * (`'C1234567890:201901234567'`). Tokens are cached per represented
+   * taxpayer, so switching back reuses the previous token if still valid.
+   */
   async updateOnBehalfOf(onBehalfOf: string): Promise<void> {
     this.onBehalfOf = onBehalfOf
     await this.refreshToken()

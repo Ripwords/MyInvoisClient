@@ -41,6 +41,67 @@ if (status === 202) {
 
 Prefer PEM strings? Use `MyInvoisClient.create({ clientId, clientSecret, environment, certificatePem, privateKeyPem })`.
 
+**Intermediaries:** pass `onBehalfOf` (in `create()` or as the constructor's
+sixth argument) to act for a represented taxpayer. It accepts the taxpayer's
+TIN alone (`'C1234567890'`) or `TIN:ROB` — TIN and registration number joined
+by a colon (`'C1234567890:201901234567'`) — when the taxpayer registered with
+both. Switch taxpayers at runtime with `client.updateOnBehalfOf(...)`; tokens
+are cached per represented taxpayer.
+
+## Build once, store, submit (`buildSignedDocuments`)
+
+Signing is deterministic but timestamped, so the recommended pattern is to
+build the signed payload once, store it, and submit the stored bytes — what
+you store is byte-for-byte what MyInvois received, which makes audits and
+resubmissions exact:
+
+```typescript
+// 1. Build (sign + hash + base64) without submitting
+const [payload] = client.buildSignedDocuments([invoice])
+// payload.document      — base64 of the signed JSON (the exact wire bytes)
+// payload.documentHash  — SHA-256 hex of those bytes
+// payload.signedDocument — parsed signed document, for preview/inspection
+
+// 2. Store it (e.g. in your DB) alongside your order record
+await db.insert(submissions).values({
+  codeNumber: payload.codeNumber,
+  document: payload.document,
+  documentHash: payload.documentHash,
+})
+
+// 3. Submit the stored payload — no re-signing, identical bytes
+const { data } = await client.submitDocument([payload])
+```
+
+`submitDocument` accepts plain documents and prebuilt payloads
+interchangeably. The lower-level pieces (`buildSignedDocument`,
+`generateCompleteDocument`, `calculateDocumentDigest`,
+`transformDocumentForHashing`) are also exported for custom pipelines.
+
+## Runtime code lists (`/codes`)
+
+The official MyInvois code tables ship as typed runtime arrays under a
+separate subpath, so they stay out of your main bundle unless imported:
+
+```typescript
+import {
+  TAX_TYPES, // { code: '01', description: 'Sales Tax' }, ...
+  CLASSIFICATION_CODES,
+  STATE_CODES,
+  COUNTRY_CODES,
+  CURRENCY_CODES,
+  E_INVOICE_TYPES,
+  PAYMENT_MODES,
+  UNIT_TYPES, // 2000+ UOM codes
+  MSIC_CODES, // 1000+ industry codes, with categoryReference
+} from '@ripwords/myinvois-client/codes'
+```
+
+Every entry's `code` is checked against the same union types the document
+builder uses, so the lists and the compile-time types can't drift apart. The
+tables are regenerated from the official SDK JSON files with
+`bun run scripts/generate-codes.ts`.
+
 ## Environment Variables (for this repo's integration tests)
 
 The library itself takes all credentials as constructor arguments. The
@@ -178,28 +239,78 @@ documents 100/min, get submission 300/min, cancel/reject 12/min). Requests that
 would exceed a category's limit are queued and released as the sliding window
 frees up — you can fire calls freely and the queue paces them.
 
+### Automatic `429` back-off
+
+If the API still answers `429` (e.g. other processes share your client ID),
+the client waits as instructed by the `Retry-After` header — seconds or
+HTTP-date, 5s when absent, capped at `maxDelayMs` — and retries, re-queued
+through the limiter:
+
+```typescript
+const client = MyInvoisClient.create({
+  // ...credentials...
+  retryOn429: { maxRetries: 2, maxDelayMs: 60_000 }, // the defaults
+  // retryOn429: false — disable and receive 429 responses raw
+})
+```
+
+### Multi-process deployments: injectable stores
+
+By default the rate-limit window and the token cache live in process memory,
+so horizontally-scaled deployments (clusters, serverless, multiple pods) each
+track their own counts and perform their own logins. Both can be backed by
+shared storage instead:
+
+```typescript
+import type { RateLimitStore, TokenStore } from '@ripwords/myinvois-client'
+
+// Sketch: Postgres-backed stores (any shared store works — Redis, etc.)
+const rateLimitStore: RateLimitStore = {
+  async tryAcquire(key, max, windowMs) {
+    // In one transaction: delete rows older than windowMs, count the rest;
+    // if count < max insert a row and return { ok: true }, else return
+    // { ok: false, retryAfterMs: oldestRow + windowMs - now }.
+    return acquireSlot(key, max, windowMs)
+  },
+}
+
+const tokenStore: TokenStore = {
+  // Keys are `${clientId}:${onBehalfOf ?? ''}` — one token per represented TIN
+  get: key => selectToken(key), // -> { token, expiresAt } | undefined
+  set: (key, value) => upsertToken(key, value),
+}
+
+const client = MyInvoisClient.create({
+  // ...credentials...
+  rateLimitStore,
+  tokenStore,
+})
+```
+
+`tryAcquire` must be atomic across processes. Pending requests and retry
+timers stay in-process; the shared store only decides whether a slot is free.
+A shared `tokenStore` also means one login serves all workers (the official
+limit is 12 logins/min per client ID) and tokens survive process restarts.
+
 ### Known limitations
 
-These are intentional trade-offs for a dependency-free, in-process limiter.
-Plan around them for production deployments:
+These are intentional trade-offs for a dependency-free default setup. Plan
+around them for production deployments:
 
-- **In-process only.** Limits are tracked in memory per Node.js process. If you
-  run multiple instances/workers (clustered NestJS, PM2 cluster, serverless,
-  multiple pods), each process tracks its own counts, so the *combined* traffic
-  can exceed the MyInvois limit. For horizontally-scaled deployments, throttle
-  upstream or route MyInvois calls through a single worker.
+- **In-process by default.** Without an injected `rateLimitStore`, limits are
+  tracked in memory per Node.js process, so the *combined* traffic of several
+  processes can exceed the MyInvois limit (the built-in `429` back-off then
+  recovers reactively). For horizontally-scaled deployments, inject shared
+  stores as above or route MyInvois calls through a single worker.
 - **Bursts within the cap.** The limiter allows up to `max` requests in the same
   instant (as long as the 60s window allows it). This is within the documented
   limit, but if you observe `429`s under heavy concurrency, reduce upstream
   concurrency.
-- **No automatic `429` / `Retry-After` back-off.** The limiter is proactive
-  only; it does not currently inspect rate-limit response headers and retry.
-  If you see a `429`, honour its `Retry-After` header in your own retry logic.
 - **Token refreshes are queued and deduplicated.** Logins go through the
   limiter (12/min per client ID) and concurrent requests share a single
-  in-flight refresh; tokens are reused until shortly before expiry. Still,
-  cache and reuse one client instance per credential set rather than
-  constructing clients per request.
+  in-flight refresh per represented taxpayer; tokens are reused until shortly
+  before expiry. Still, cache and reuse one client instance per credential set
+  rather than constructing clients per request.
 
 ## Production Certificates
 
