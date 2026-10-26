@@ -18,11 +18,11 @@ export async function getNotifications(
   const queryParams = new URLSearchParams()
   if (dateFrom) queryParams.set('dateFrom', dateFrom)
   if (dateTo) queryParams.set('dateTo', dateTo)
-  if (type) queryParams.set('type', type.toString())
+  if (type != null) queryParams.set('type', type.toString())
   if (language) queryParams.set('language', language)
-  if (status) queryParams.set('status', status.toString())
-  if (pageNo) queryParams.set('pageNo', pageNo.toString())
-  if (pageSize) queryParams.set('pageSize', pageSize.toString())
+  if (status != null) queryParams.set('status', status.toString())
+  if (pageNo != null) queryParams.set('pageNo', pageNo.toString())
+  if (pageSize != null) queryParams.set('pageSize', pageSize.toString())
 
   const response = await fetch(
     `/api/v1.0/notifications/taxpayer?${queryParams.toString()}`,

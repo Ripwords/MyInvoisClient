@@ -1,5 +1,6 @@
 import type {
   DocumentSummary,
+  DocumentSearchResult,
   DocumentStatus,
   EInvoiceTypeCode,
   DocumentValidationResult,
@@ -13,13 +14,38 @@ interface DocumentContext {
 
 const rawLogs = process.env.E_INV_RAW_LOGS === 'true'
 
+/**
+ * The search/recent endpoints are inconsistent about field casing across the
+ * official docs (`submissionUID` vs `submissionUid`, `supplierTIN` vs
+ * `supplierTin`, `longID` vs `longId`). Normalise every variant to camelCase.
+ */
+const normalizeSearchResult = (
+  doc: DocumentSearchResult & {
+    longID?: string
+    submissionUID?: string
+    supplierTIN?: string
+    buyerTIN?: string
+  },
+): DocumentSearchResult => {
+  const { longID, submissionUID, supplierTIN, buyerTIN, ...rest } = doc
+  return {
+    ...rest,
+    longId: longID ?? doc.longId,
+    submissionUid: submissionUID ?? doc.submissionUid,
+    supplierTin: supplierTIN ?? doc.supplierTin,
+    buyerTin: buyerTIN ?? doc.buyerTin,
+  }
+}
+
 export async function getDocument(
   context: DocumentContext,
   documentUid: string,
 ): Promise<DocumentSummary & { document: string }> {
   const { fetch } = context
 
-  const response = await fetch(`/api/v1.0/documents/${documentUid}/raw`)
+  const response = await fetch(
+    `/api/v1.0/documents/${encodeURIComponent(documentUid)}/raw`,
+  )
   const data = await response.json()
 
   if (rawLogs) {
@@ -44,7 +70,9 @@ export async function getDocumentDetails(
 > {
   const { fetch } = context
 
-  const response = await fetch(`/api/v1.0/documents/${documentUid}/details`)
+  const response = await fetch(
+    `/api/v1.0/documents/${encodeURIComponent(documentUid)}/details`,
+  )
   const data = await response.json()
   const resp = {
     ...data,
@@ -63,22 +91,26 @@ export async function getDocumentDetails(
   return resp
 }
 
+export interface SearchDocumentsParams {
+  uuid?: string
+  submissionDateFrom?: string
+  submissionDateTo?: string
+  pageSize?: number
+  pageNo?: number
+  issueDateFrom?: string
+  issueDateTo?: string
+  invoiceDirection?: 'Sent' | 'Received'
+  status?: DocumentStatus
+  documentType?: EInvoiceTypeCode
+  searchQuery?: string
+  /** Comma-separated classification codes to filter by. */
+  classificationCode?: string
+}
+
 export async function searchDocuments(
   context: DocumentContext,
-  params: {
-    uuid?: string
-    submissionDateFrom: string
-    submissionDateTo?: string
-    pageSize?: number
-    pageNo?: number
-    issueDateFrom?: string
-    issueDateTo?: string
-    invoiceDirection?: 'Sent' | 'Received'
-    status?: DocumentStatus
-    documentType?: EInvoiceTypeCode
-    searchQuery?: string
-  },
-): Promise<DocumentSummary[]> {
+  params: SearchDocumentsParams,
+): Promise<DocumentSearchResult[]> {
   const { fetch } = context
   const {
     uuid,
@@ -92,7 +124,19 @@ export async function searchDocuments(
     status,
     documentType,
     searchQuery,
+    classificationCode,
   } = params
+
+  // The API requires a complete date window: either both submission dates or
+  // both issue dates (each max 31 days apart), unless searching by uuid.
+  // https://sdk.myinvois.hasil.gov.my/einvoicingapi/09-search-documents/
+  const hasSubmissionWindow = !!submissionDateFrom && !!submissionDateTo
+  const hasIssueWindow = !!issueDateFrom && !!issueDateTo
+  if (!uuid && !hasSubmissionWindow && !hasIssueWindow) {
+    throw new Error(
+      'searchDocuments requires a complete date window: provide both submissionDateFrom and submissionDateTo, or both issueDateFrom and issueDateTo (or a uuid)',
+    )
+  }
 
   const queryParams = new URLSearchParams()
 
@@ -100,8 +144,8 @@ export async function searchDocuments(
   if (submissionDateFrom)
     queryParams.set('submissionDateFrom', submissionDateFrom)
   if (submissionDateTo) queryParams.set('submissionDateTo', submissionDateTo)
-  if (pageSize) queryParams.set('pageSize', pageSize.toString())
-  if (pageNo) queryParams.set('pageNo', pageNo.toString())
+  if (pageSize != null) queryParams.set('pageSize', pageSize.toString())
+  if (pageNo != null) queryParams.set('pageNo', pageNo.toString())
   if (issueDateFrom) queryParams.set('issueDateFrom', issueDateFrom)
   if (issueDateTo) queryParams.set('issueDateTo', issueDateTo)
   // NOT a bug: searchDocuments genuinely uses lowercase `invoiceDirection`,
@@ -113,6 +157,8 @@ export async function searchDocuments(
   if (status) queryParams.set('status', status)
   if (documentType) queryParams.set('documentType', documentType)
   if (searchQuery) queryParams.set('searchQuery', searchQuery)
+  if (classificationCode)
+    queryParams.set('classificationCode', classificationCode)
 
   const response = await fetch(
     `/api/v1.0/documents/search?${queryParams.toString()}`,
@@ -126,16 +172,11 @@ export async function searchDocuments(
 
   // The MyInvois API wraps results in `{ result: [...], metadata: {...} }`.
   // Fall back to a bare array for forward/backward compatibility.
-  const documents: (DocumentSummary & { longID?: string })[] = Array.isArray(
-    data,
-  )
+  const documents: DocumentSearchResult[] = Array.isArray(data)
     ? data
     : (data?.result ?? [])
 
-  return documents.map(doc => ({
-    ...doc,
-    longId: doc.longID ?? doc.longId,
-  })) as DocumentSummary[]
+  return documents.map(normalizeSearchResult)
 }
 
 /**
@@ -170,7 +211,7 @@ export async function getRecentDocuments(
     receiverTin?: string
     issuerTin?: string
   } = {},
-): Promise<DocumentSummary[]> {
+): Promise<DocumentSearchResult[]> {
   const { fetch } = context
   const {
     pageNo,
@@ -192,8 +233,8 @@ export async function getRecentDocuments(
 
   const queryParams = new URLSearchParams()
 
-  if (pageNo) queryParams.set('pageNo', pageNo.toString())
-  if (pageSize) queryParams.set('pageSize', pageSize.toString())
+  if (pageNo != null) queryParams.set('pageNo', pageNo.toString())
+  if (pageSize != null) queryParams.set('pageSize', pageSize.toString())
   if (submissionDateFrom)
     queryParams.set('submissionDateFrom', submissionDateFrom)
   if (submissionDateTo) queryParams.set('submissionDateTo', submissionDateTo)
@@ -226,14 +267,9 @@ export async function getRecentDocuments(
     console.log('Raw recent documents:', data)
   }
 
-  const documents: (DocumentSummary & { longID?: string })[] = Array.isArray(
-    data,
-  )
+  const documents: DocumentSearchResult[] = Array.isArray(data)
     ? data
     : (data?.result ?? [])
 
-  return documents.map(doc => ({
-    ...doc,
-    longId: doc.longID ?? doc.longId,
-  })) as DocumentSummary[]
+  return documents.map(normalizeSearchResult)
 }
