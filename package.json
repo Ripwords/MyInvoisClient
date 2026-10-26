@@ -35,6 +35,16 @@
         "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
       }
+    },
+    "./codes": {
+      "import": {
+        "types": "./dist/codes/index.d.ts",
+        "default": "./dist/codes/index.js"
+      },
+      "require": {
+        "types": "./dist/codes/index.d.cts",
+        "default": "./dist/codes/index.cjs"
+      }
     }
   },
   "devDependencies": {

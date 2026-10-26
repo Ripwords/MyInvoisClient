@@ -4,7 +4,7 @@ import { defineConfig } from 'tsdown'
 // declarations (index.d.ts) in one pass so there is no two-config race
 // over a shared dist/ that can drop one format's output.
 export default defineConfig({
-  entry: ['./src'],
+  entry: ['./src/index.ts', './src/codes/index.ts'],
   format: ['es', 'cjs'],
   sourcemap: true,
   platform: 'node',

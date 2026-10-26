@@ -17,6 +17,10 @@ const required = [
   'dist/index.cjs', // CJS entry (exports.require)
   'dist/index.d.ts', // ESM types (types / exports.import types)
   'dist/index.d.cts', // CJS types (exports.require types)
+  'dist/codes/index.js', // ./codes ESM entry
+  'dist/codes/index.cjs', // ./codes CJS entry
+  'dist/codes/index.d.ts', // ./codes ESM types
+  'dist/codes/index.d.cts', // ./codes CJS types
 ]
 
 const missing = required.filter((rel) => !existsSync(resolve(root, rel)))

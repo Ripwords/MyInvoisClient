@@ -28,4 +28,6 @@ export interface MSICCode {
     | MSIC_8X_CODE
     | MSIC_9X_CODE
   description: string
+  /** MSIC section letter (A-U), e.g. 'A' for agriculture. Empty for 00000. */
+  categoryReference?: string
 }

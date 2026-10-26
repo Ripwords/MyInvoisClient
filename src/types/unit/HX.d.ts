@@ -97,6 +97,7 @@ export type UnitTypeCode_HX =
   | 'H99'
   | 'HA'
   | 'HAD'
+  | 'HAR' // Hectare
   | 'HBA'
   | 'HBX'
   | 'HC'
