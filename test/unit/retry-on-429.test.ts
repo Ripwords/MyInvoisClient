@@ -33,6 +33,7 @@ const apiResponse = (status: number, retryAfter?: string) =>
     ok: status < 400,
     status,
     headers: { get: (name: string) => (name === 'Retry-After' ? (retryAfter ?? null) : null) },
+    text: () => Promise.resolve(''),
     json: () => Promise.resolve({}),
   }) as unknown as Response
 

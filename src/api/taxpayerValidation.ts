@@ -1,4 +1,4 @@
-import { MyInvoisApiError } from '../errors'
+import { ensureOk, toApiError } from '../errors'
 import { formatIdValue } from '../utils/formatIdValue'
 import type {
   Fetch,
@@ -76,14 +76,7 @@ export async function tinSearch(
         method: 'GET',
       },
     )
-    if (!response.ok) {
-      const body = await response.text()
-      throw new MyInvoisApiError(
-        `Failed to search TIN (HTTP ${response.status}): ${body}`,
-        response.status,
-        body,
-      )
-    }
+    await ensureOk(response, 'search TIN')
     return (await response.json()) as TinSearchResponse
   } catch (error) {
     if (debug) {
@@ -129,12 +122,7 @@ export async function verifyTin(
       return false
     }
 
-    const body = (await response.text?.()) ?? ''
-    throw new MyInvoisApiError(
-      `Failed to validate TIN (HTTP ${response.status}): ${body}`,
-      response.status,
-      body,
-    )
+    throw await toApiError(response, 'validate TIN')
   } catch (error) {
     if (debug) {
       console.error(error)
@@ -183,14 +171,7 @@ export async function taxpayerQRCode(
     `/api/v1.0/taxpayers/qrcodeinfo/${encodeURIComponent(decodeQrCodeText(qrCodeText))}`,
   )
 
-  if (!response.ok) {
-    const body = await response.text()
-    throw new MyInvoisApiError(
-      `Failed to fetch taxpayer QR code info (HTTP ${response.status}): ${body}`,
-      response.status,
-      body,
-    )
-  }
+  await ensureOk(response, 'fetch taxpayer QR code info')
 
   return response.json()
 }

@@ -79,6 +79,7 @@ describe('calculateInvoiceTotals', () => {
 describe('searchDocuments', () => {
   const makeContext = (payload: unknown) => ({
     fetch: vi.fn(async () => ({
+      ok: true,
       json: async () => payload,
     })) as unknown as typeof fetch,
   })

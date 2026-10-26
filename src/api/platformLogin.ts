@@ -1,4 +1,14 @@
 import type { ClientCredentials, TokenResponse } from '../types'
+import { MyInvoisApiError, toApiError } from '../errors'
+
+const oauthErrorDescription = (body: string): string | undefined => {
+  try {
+    const description = JSON.parse(body)?.error_description
+    return typeof description === 'string' ? description : undefined
+  } catch {
+    return undefined
+  }
+}
 
 export const platformLogin = async (
   client: ClientCredentials,
@@ -24,21 +34,14 @@ export const platformLogin = async (
 
     // If authentication fails, surface the error details immediately
     if (!response.ok) {
-      let errorBody: unknown
-      try {
-        errorBody = await response.json()
-      } catch {
-        /* ignored */
-      }
-
-      const errorMessage =
-        typeof errorBody === 'object' &&
-        errorBody !== null &&
-        'error_description' in errorBody
-          ? (errorBody as { error_description: string }).error_description
-          : `Platform login failed with status ${response.status}`
-
-      throw new Error(errorMessage)
+      const error = await toApiError(response, 'log in')
+      // OAuth errors carry the useful text in `error_description`
+      // (e.g. "invalid_client"); use it as the message. A 429 keeps its
+      // MyInvoisRateLimitError type.
+      const description = oauthErrorDescription(error.body)
+      throw description && error.status !== 429
+        ? new MyInvoisApiError(description, error.status, error.body)
+        : error
     }
 
     const tokenResponse: TokenResponse = await response.json()

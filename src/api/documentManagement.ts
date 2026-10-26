@@ -7,6 +7,7 @@ import type {
   DocumentValidationStepResult,
   Fetch,
 } from '../types'
+import { ensureOk } from '../errors'
 
 interface DocumentContext {
   fetch: Fetch
@@ -46,6 +47,7 @@ export async function getDocument(
   const response = await fetch(
     `/api/v1.0/documents/${encodeURIComponent(documentUid)}/raw`,
   )
+  await ensureOk(response, 'get document')
   const data = await response.json()
 
   if (rawLogs) {
@@ -73,6 +75,7 @@ export async function getDocumentDetails(
   const response = await fetch(
     `/api/v1.0/documents/${encodeURIComponent(documentUid)}/details`,
   )
+  await ensureOk(response, 'get document details')
   const data = await response.json()
   const resp = {
     ...data,
@@ -163,6 +166,7 @@ export async function searchDocuments(
   const response = await fetch(
     `/api/v1.0/documents/search?${queryParams.toString()}`,
   )
+  await ensureOk(response, 'search documents')
 
   const data = await response.json()
 
@@ -260,6 +264,7 @@ export async function getRecentDocuments(
   const response = await fetch(
     `/api/v1.0/documents/recent${query ? `?${query}` : ''}`,
   )
+  await ensureOk(response, 'get recent documents')
 
   const data = await response.json()
 

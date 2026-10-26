@@ -3,6 +3,7 @@ import type {
   NotificationResponse,
   NotificationSearchParams,
 } from '../types'
+import { ensureOk } from '../errors'
 
 interface NotificationContext {
   fetch: Fetch
@@ -27,6 +28,7 @@ export async function getNotifications(
   const response = await fetch(
     `/api/v1.0/notifications/taxpayer?${queryParams.toString()}`,
   )
+  await ensureOk(response, 'get notifications')
 
   const data = (await response.json()) as NotificationResponse
 

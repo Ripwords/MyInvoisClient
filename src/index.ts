@@ -39,7 +39,7 @@ import {
 import { InMemoryTokenStore, type TokenStore } from './utils/tokenStore'
 import { parseRetryAfterMs } from './utils/retryAfter'
 
-export { MyInvoisApiError } from './errors'
+export { MyInvoisApiError, MyInvoisRateLimitError } from './errors'
 export {
   InMemoryRateLimitStore,
   type RateLimitStore,
@@ -108,8 +108,9 @@ export interface MyInvoisClientOptions {
    * Automatic back-off when the API answers 429: wait as told by the
    * `Retry-After` header (seconds or HTTP-date; 5s when absent, capped at
    * `maxDelayMs`) and retry up to `maxRetries` times. Defaults to
-   * `{ maxRetries: 2, maxDelayMs: 60_000 }`; pass `false` to disable and
-   * receive 429 responses raw.
+   * `{ maxRetries: 2, maxDelayMs: 60_000 }`; pass `false` to disable. A 429
+   * that outlasts the retries (or any 429 when disabled) throws
+   * {@link MyInvoisRateLimitError}.
    */
   retryOn429?: false | { maxRetries?: number; maxDelayMs?: number }
 }
@@ -672,7 +673,10 @@ export class MyInvoisClient {
    *
    * @remarks
    * - Terminal statuses: 'Valid', 'PartiallyValid' and 'Invalid'
-   * - Automatically retries on network errors until maxRetries is reached
+   * - Retries network errors, 404 (a just-accepted submission is briefly
+   *   not found), 429 and 5xx until maxRetries is reached
+   * - Throws {@link MyInvoisApiError} for other 4xx (e.g. 400, 401) —
+   *   polling again would not fix them
    * - Returns 'TimedOut' status with a timeout error if processing takes too long
    * - Debug mode provides detailed logging of polling attempts and responses
    * - Use reasonable poll intervals to avoid overwhelming the API (300 requests/min limit)

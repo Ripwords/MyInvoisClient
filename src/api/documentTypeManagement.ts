@@ -4,6 +4,7 @@ import type {
   DocumentTypeVersionResponse,
   Fetch,
 } from '../types'
+import { ensureOk } from '../errors'
 
 interface DocumentTypeContext {
   fetch: Fetch
@@ -15,6 +16,7 @@ export async function getDocumentTypes(
   const { fetch } = context
 
   const response = await fetch('/api/v1.0/documenttypes')
+  await ensureOk(response, 'get document types')
   const data = (await response.json()) as DocumentTypesResponse
 
   return data
@@ -27,6 +29,7 @@ export async function getDocumentType(
   const { fetch } = context
 
   const response = await fetch(`/api/v1.0/documenttypes/${id}`)
+  await ensureOk(response, 'get document type')
   const data = (await response.json()) as DocumentTypeResponse
 
   return data
@@ -42,6 +45,7 @@ export async function getDocumentTypeVersion(
   const response = await fetch(
     `/api/v1.0/documenttypes/${id}/versions/${versionId}`,
   )
+  await ensureOk(response, 'get document type version')
 
   const data = (await response.json()) as DocumentTypeVersionResponse
 

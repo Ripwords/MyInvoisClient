@@ -11,6 +11,7 @@ import type {
   GetSubmissionResponse,
 } from '../types'
 import { generateCompleteDocument } from '../utils/document'
+import { ensureOk, MyInvoisApiError } from '../errors'
 
 interface SubmissionContext {
   fetch: Fetch
@@ -146,6 +147,7 @@ export async function submitDocument(
     },
     body: JSON.stringify(submissionPayload),
   })
+  await ensureOk(response, 'submit documents')
 
   const responseData = (await response.json()) as SubmissionResponse
 
@@ -220,6 +222,7 @@ export async function getSubmissionStatus(
     const response = await fetch(
       `/api/v1.0/documentsubmissions/${encodeURIComponent(submissionUid)}?pageNo=${pageNo}&pageSize=${pageSize}`,
     )
+    await ensureOk(response, 'get submission')
 
     const data = (await response.json()) as GetSubmissionResponse
 
@@ -271,6 +274,19 @@ export async function getSubmissionStatus(
         } satisfies StandardError),
     }
   } catch (error) {
+    // A 4xx such as 400/401/403 (bad request, bad token) will not fix itself
+    // by polling again — surface it rather than report a misleading
+    // TimedOut. Retried: network errors, 5xx, 429, and 404 — preprod answers
+    // NotFound for a submission UID for a moment after accepting it (202).
+    if (
+      error instanceof MyInvoisApiError &&
+      error.status >= 400 &&
+      error.status < 500 &&
+      error.status !== 404 &&
+      error.status !== 429
+    ) {
+      throw error
+    }
     // Handle any request errors by retrying if we have retries left
     if (maxRetries > 0) {
       if (debug) {
@@ -328,6 +344,10 @@ export async function performDocumentAction(
         reason,
       }),
     },
+  )
+  await ensureOk(
+    response,
+    status === 'cancelled' ? 'cancel document' : 'reject document',
   )
 
   const data = (await response.json()) as {

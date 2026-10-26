@@ -1,9 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
 import { performDocumentAction } from '../../src/api/documentSubmission'
+import { MyInvoisApiError } from '../../src/errors'
 
 describe('performDocumentAction', () => {
   it('makes PUT request with correct body for cancel', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
       json: () =>
         Promise.resolve({
           uuid: 'doc-123',
@@ -35,6 +37,7 @@ describe('performDocumentAction', () => {
 
   it('makes PUT request with correct body for reject', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
       json: () =>
         Promise.resolve({
           uuid: 'doc-456',
@@ -82,6 +85,7 @@ describe('performDocumentAction', () => {
 
   it('allows reason with exactly 300 characters', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
       json: () =>
         Promise.resolve({
           uuid: 'doc-123',
@@ -101,32 +105,37 @@ describe('performDocumentAction', () => {
     expect(result.uuid).toBe('doc-123')
   })
 
-  it('parses error response correctly', async () => {
+  it('throws a typed error carrying the LHDN error for a refused action', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
-      json: () =>
-        Promise.resolve({
-          uuid: 'doc-123',
-          status: 'Valid',
-          error: {
-            code: 'InvalidOperation',
-            message: 'Document cannot be cancelled after 72 hours',
-            target: 'document',
-            details: [],
-          },
-        }),
+      ok: false,
+      status: 400,
+      text: () =>
+        Promise.resolve(
+          JSON.stringify({
+            error: {
+              code: 'OperationPeriodOver',
+              message: 'Document cannot be cancelled after 72 hours',
+              target: 'document',
+              details: [],
+            },
+          }),
+        ),
     })
 
-    const result = await performDocumentAction(
+    const failure = performDocumentAction(
       { fetch: mockFetch },
       'doc-123',
       'cancelled',
       'Too late cancellation',
     )
 
-    expect(result.error).toBeDefined()
-    expect(result.error!.code).toBe('InvalidOperation')
-    expect(result.error!.message).toBe(
-      'Document cannot be cancelled after 72 hours',
-    )
+    await expect(failure).rejects.toThrow(MyInvoisApiError)
+    await failure.catch((err: MyInvoisApiError) => {
+      expect(err.status).toBe(400)
+      expect(err.apiError?.code).toBe('OperationPeriodOver')
+      expect(err.apiError?.message).toBe(
+        'Document cannot be cancelled after 72 hours',
+      )
+    })
   })
 })

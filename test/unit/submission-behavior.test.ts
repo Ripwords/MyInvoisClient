@@ -91,6 +91,7 @@ describe('submitDocument', () => {
   it('signs, hashes and base64-encodes a document into the submission payload', async () => {
     const invoice = buildMinimalInvoice()
     const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
       status: 202,
       json: () =>
         Promise.resolve({
@@ -151,6 +152,7 @@ describe('submitDocument', () => {
     const stored = JSON.parse(JSON.stringify(built)) as typeof built
 
     const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
       status: 202,
       json: () =>
         Promise.resolve({
@@ -203,6 +205,7 @@ describe('getSubmissionStatus', () => {
     vi.useFakeTimers()
 
     const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
       json: () => Promise.resolve({ overallStatus: 'InProgress' }),
     } as Response)
 
@@ -263,7 +266,10 @@ describe('platformLogin', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 400,
-      json: () => Promise.resolve({ error_description: 'invalid_client' }),
+      text: () =>
+        Promise.resolve(
+          JSON.stringify({ error_description: 'invalid_client' }),
+        ),
     } as Response)
     vi.stubGlobal('fetch', mockFetch)
 
@@ -274,12 +280,12 @@ describe('platformLogin', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 400,
-      json: () => Promise.reject(new Error('invalid json')),
+      text: () => Promise.resolve('<html>Bad Request</html>'),
     } as Response)
     vi.stubGlobal('fetch', mockFetch)
 
     await expect(platformLogin(credentials)).rejects.toThrow(
-      /Platform login failed with status 400/,
+      /Failed to log in \(HTTP 400\)/,
     )
   })
 
