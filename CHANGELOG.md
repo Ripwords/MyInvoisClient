@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.7.1
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.7.0...v0.7.1)
+
+### 🩹 Fixes
+
+- Typed MyInvoisApiError; verifyTin no longer reports outages as invalid ([ac020f2](https://github.com/Ripwords/MyInvoisClient/commit/ac020f2))
+
+### 📖 Documentation
+
+- Flag v0.7.0 breaking changes in the changelog ([8de40d1](https://github.com/Ripwords/MyInvoisClient/commit/8de40d1))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.7.0
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.6.0...v0.7.0)
