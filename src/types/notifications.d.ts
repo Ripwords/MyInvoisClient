@@ -14,15 +14,15 @@ export type NotificationMetadata = {
 
 export type Notification = {
   notificationId: string
-  receiverNName: string
+  receiverName: string
   notificationDeliveryId: string
   creationDateTime: string
   receivedDateTime: string
   notificationSubject: string
-  deliveredDateTime: string
+  deliveredDateTime?: string
   typeId: string
   typeName: string
-  finalMessage: string
+  finalMessage?: string
   address: string
   language: string
   status: string
@@ -30,7 +30,8 @@ export type Notification = {
 }
 
 export type NotificationResponse = {
-  notifications: Notification[]
+  /** The API wraps notifications in a `result` array. */
+  result: Notification[]
   metadata: NotificationMetadata
 }
 

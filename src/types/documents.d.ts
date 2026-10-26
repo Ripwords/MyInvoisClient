@@ -777,7 +777,11 @@ export type StandardError = {
   }[]
 }
 
-export type DocumentValidationResult = 'Valid' | 'Invalid' | 'Pending'
+/**
+ * Validation status values documented by Get Document Details:
+ * https://sdk.myinvois.hasil.gov.my/einvoicingapi/08-get-document-details/
+ */
+export type DocumentValidationResult = 'Submitted' | 'Valid' | 'Invalid'
 export interface DocumentValidationStepResult {
   name: string
   status: DocumentValidationResult
@@ -806,6 +810,52 @@ export interface DocumentSummary {
   rejectRequestDateTime: string | null
   documentStatusReason: string | null
   createdByUserId: string
+}
+
+/**
+ * Result shape returned by Search Documents and Get Recent Documents.
+ * These endpoints return different monetary/party field names than
+ * Get Submission / Get Document (`DocumentSummary`):
+ * https://sdk.myinvois.hasil.gov.my/einvoicingapi/09-search-documents/
+ * https://sdk.myinvois.hasil.gov.my/einvoicingapi/05-get-recent-documents/
+ *
+ * The client normalises the API's inconsistent casing (`submissionUID`,
+ * `supplierTIN`, `buyerTIN`, `longID`) to the camelCase fields below.
+ */
+export interface DocumentSearchResult {
+  uuid: string
+  submissionUid: string
+  longId: string
+  internalId: string
+  typeName: string
+  typeVersionName: string
+  issuerTin: string
+  /** Only documented on Search Documents. */
+  issuerName?: string
+  receiverId?: string
+  receiverName?: string
+  dateTimeIssued: string
+  dateTimeReceived: string
+  dateTimeValidated: string
+  totalSales: number
+  totalDiscount: number
+  netAmount: number
+  total: number
+  status: DocumentStatus
+  cancelDateTime: string | null
+  rejectRequestDateTime: string | null
+  documentStatusReason: string | null
+  createdByUserId: string
+  supplierTin: string
+  supplierName: string
+  buyerTin: string
+  buyerName: string
+  submissionChannel: string
+  intermediaryName: string | null
+  intermediaryTin: string | null
+  intermediaryRob: string | null
+  /** Only returned by Search Documents. */
+  classificationCodeValues?: string[]
 }
 
 export interface GetSubmissionResponse {
@@ -1506,17 +1556,17 @@ export interface DocumentTypeVersion {
   name: string
   description: string
   activeFrom: string
-  activeTo: string
+  activeTo?: string
   versionNumber: number
   status: 'draft' | 'published' | 'deactivated'
 }
 
 export interface WorkflowParameter {
   id: number
-  parameter: string
+  parameter: 'submissionDuration' | 'cancellationDuration' | 'rejectionDuration'
   value: number
   activeFrom: string
-  activeTo: string
+  activeTo?: string
 }
 
 export interface DocumentTypeResponse {
@@ -1524,7 +1574,7 @@ export interface DocumentTypeResponse {
   invoiceTypeCode: EInvoiceTypeCode
   description: string
   activeFrom: string
-  activeTo: string
+  activeTo?: string
   documentTypeVersions: DocumentTypeVersion[]
   workflowParameters: WorkflowParameter[]
 }
@@ -1539,5 +1589,5 @@ export interface DocumentTypeVersionResponse {
   versionNumber: number
   status: 'published' | 'deactivated'
   activeFrom: string
-  activeTo: string
+  activeTo?: string
 }

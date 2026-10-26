@@ -13,6 +13,7 @@ export interface TaxpayerQRCodeResponse {
   businessActivityDescriptionBM: string
   businessActivityDescriptionEN: string
   msic: MSICCode['code']
+  addressLine0: string
   addressLine1: string
   addressLine2: string
   postalZone: string
