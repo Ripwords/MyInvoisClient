@@ -1,6 +1,51 @@
 # Changelog
 
 
+## v0.7.0
+
+[compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.6.0...v0.7.0)
+
+### 🚀 Enhancements
+
+- Export buildSignedDocument; submitDocument accepts prebuilt payloads ([b747fb7](https://github.com/Ripwords/MyInvoisClient/commit/b747fb7))
+- Runtime code lists under ./codes subpath ([e21cdce](https://github.com/Ripwords/MyInvoisClient/commit/e21cdce))
+- Injectable RateLimitStore and TokenStore ([25f81eb](https://github.com/Ripwords/MyInvoisClient/commit/25f81eb))
+- Automatic 429 Retry-After back-off ([024258a](https://github.com/Ripwords/MyInvoisClient/commit/024258a))
+
+### 🩹 Fixes
+
+- **types:** Match response types to the official API docs ([0308674](https://github.com/Ripwords/MyInvoisClient/commit/0308674))
+- **api:** Treat PartiallyValid as terminal when polling submissions ([a31a4aa](https://github.com/Ripwords/MyInvoisClient/commit/a31a4aa))
+- **api:** Send the decoded QR token to the taxpayer QR endpoint ([f2927dd](https://github.com/Ripwords/MyInvoisClient/commit/f2927dd))
+- **api:** Search contract, zero-value params and casing normalisation ([a05dc26](https://github.com/Ripwords/MyInvoisClient/commit/a05dc26))
+- **client:** Harden token handling and rate-limit categorisation ([862abf3](https://github.com/Ripwords/MyInvoisClient/commit/862abf3))
+- Include HTTP status in searchTin errors and Document Signing EKU in cert templates ([f18c323](https://github.com/Ripwords/MyInvoisClient/commit/f18c323))
+
+### 💅 Refactors
+
+- Remove dead code and build each signed document once ([e7a5b55](https://github.com/Ripwords/MyInvoisClient/commit/e7a5b55))
+
+### 📖 Documentation
+
+- Install snippet, quick start, scope note and accurate operational notes ([d97ab10](https://github.com/Ripwords/MyInvoisClient/commit/d97ab10))
+- TIN:ROB, codes subpath, stored payloads, injectable stores, 429 back-off ([ad5229e](https://github.com/Ripwords/MyInvoisClient/commit/ad5229e))
+- Note vitest-on-Bun incompatibility in testing section ([c4edce0](https://github.com/Ripwords/MyInvoisClient/commit/c4edce0))
+
+### 🏡 Chore
+
+- Remove stale planning docs and unreferenced manual test scripts ([3f43899](https://github.com/Ripwords/MyInvoisClient/commit/3f43899))
+- Drop unused store parameter from processQueue ([fc38440](https://github.com/Ripwords/MyInvoisClient/commit/fc38440))
+
+### ✅ Tests
+
+- Make weak unit tests assert real behaviour ([28aee76](https://github.com/Ripwords/MyInvoisClient/commit/28aee76))
+- Extend live sandbox E2E and leave a run-report artifact ([0929c2a](https://github.com/Ripwords/MyInvoisClient/commit/0929c2a))
+- Live E2E for the build-store-submit payload flow ([b6f9cd0](https://github.com/Ripwords/MyInvoisClient/commit/b6f9cd0))
+
+### ❤️ Contributors
+
+- JJ <teohjjteoh@gmail.com>
+
 ## v0.6.0
 
 [compare changes](https://github.com/Ripwords/MyInvoisClient/compare/v0.5.0...v0.6.0)
